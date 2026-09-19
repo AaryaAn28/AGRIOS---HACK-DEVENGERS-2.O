@@ -103,8 +103,8 @@
             <p id="agro-doctor-name">Senior Crop Scientist • ICAR / PAU Advisory Fellow • Overseeing Agricultural Zoning & Diagnostics</p>
           </div>
           <div class="welcome-actions">
-            <button class="btn-secondary" onclick="openOnboardingWizard()">
-              ⚙️ 11-Pillar Configuration
+            <button class="btn-secondary" onclick="openOnboardingWizard(false)">
+              ⚙️ Precision Engine Configuration
             </button>
             <button class="btn-primary" onclick="switchTab('fieldcalibration')">
               🚶 Walk & Calibrate 3D Farm
@@ -123,13 +123,13 @@
                 Pristine Baseline • Awaiting Crop Configuration & Field Boundary Calibration
               </div>
               <div style="font-size:0.8rem; color:#64748b; margin-top:4px;" id="profile-sub-text">
-                Configure crop parameters $\to$ Walk and calibrate field $\to$ Master crop growing plan is auto-synthesized $\to$ Assign farmers and workers.
+                Calibrate workforce & crop parameters $\to$ Walk and calibrate field $\to$ Master crop growing plan is auto-synthesized.
               </div>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
               <span class="card-badge badge-success" id="profile-badge-status">Step 1: Configuration</span>
-              <button class="btn-primary" onclick="openOnboardingWizard()" style="height:34px; font-size:0.8rem;">
-                Open Wizard
+              <button class="btn-primary" onclick="openOnboardingWizard(false)" style="height:34px; font-size:0.8rem;">
+                ⚙️ Precision Engine
               </button>
             </div>
           </div>
@@ -202,10 +202,10 @@
               <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
                 <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">1</div>
                 <div style="flex-grow:1;">
-                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">11-Pillar Agricultural Configuration</div>
-                  <div style="font-size:0.8rem; color:#64748b;">Specify crop taxonomy, soil profile, water infrastructure, and climatic zone.</div>
+                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">8-Pillar Precision Crop Engine & Workforce Calibration</div>
+                  <div style="font-size:0.8rem; color:#64748b;">Calibrate workforce cadre capacity, agro-climatic jurisdiction, farming classification, and biophysical fatigue constraints.</div>
                 </div>
-                <button class="btn-secondary" onclick="openOnboardingWizard()" style="height:30px; padding:0 10px; font-size:0.75rem;">Configure</button>
+                <button class="btn-secondary" onclick="openOnboardingWizard(false)" style="height:30px; padding:0 10px; font-size:0.75rem;">Configure</button>
               </div>
 
               <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
@@ -282,14 +282,19 @@
       <!-- TAB 2: MASTER CROP GROWING PLAN -->
       <div id="tab-cropplan" class="vizitor-tab-content">
         <div class="card-panel">
-          <div class="panel-header">
+          <div class="panel-header" style="flex-wrap:wrap; gap:12px;">
             <div>
-              <h3 class="panel-title" id="crop-plan-header-title">Master Crop Growing Plan (60–120 Day Agronomic Calendar)</h3>
-              <p class="panel-subtitle">Comprehensive lifecycle stages, water regimes, nutrition protocols, and task schedules.</p>
+              <h3 class="panel-title" id="crop-plan-header-title">Master Crop Growing Plan & Precision Engine</h3>
+              <p class="panel-subtitle">Comprehensive lifecycle stages, water regimes, partitioned workforce tasks, and real-time weather adaptation protocols.</p>
             </div>
-            <button class="btn-primary" onclick="activateCropPlanOnFarm()">
-              ⚡ Activate Plan & Release Stage 1 Tasks
-            </button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-secondary" onclick="openOnboardingWizard(false)">
+                ⚙️ Reconfigure Precision Engine
+              </button>
+              <button class="btn-primary" onclick="activateCropPlanOnFarm()">
+                ⚡ Activate Plan & Release Stage 1 Tasks
+              </button>
+            </div>
           </div>
 
           <div id="crop-plan-container">
@@ -601,29 +606,41 @@
   </main>
 </div>
 
-<!-- Modal: 11-Pillar Agricultural Configuration Wizard -->
+<!-- Modal: Agronomic Diagnostic Questionnaire & Precision Crop Engine -->
 <div id="onboarding-wizard-modal" class="vizitor-modal-overlay">
-  <div class="vizitor-modal" style="max-width:760px;">
-    <div class="vizitor-modal-header">
-      <h3 class="vizitor-modal-title">11-Pillar Agricultural Configuration Wizard</h3>
-      <button onclick="closeOnboardingWizard()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+  <div class="vizitor-modal" style="max-width:880px; width:94%; max-height:92vh; display:flex; flex-direction:column;">
+    <div class="vizitor-modal-header" style="padding:1.25rem 1.5rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;">
+          Mandatory Diagnostic Gatekeeper
+        </div>
+        <h3 class="vizitor-modal-title" style="font-size:1.2rem; margin-top:2px;">
+          🌱 Agronomic Diagnostic Questionnaire & Precision Crop Engine
+        </h3>
+        <p style="margin:2px 0 0 0; font-size:0.8rem; color:#64748b;">
+          Calibrate workforce cadre capacity, agro-climatic jurisdiction, farming classification, and biophysical fatigue protection rules.
+        </p>
+      </div>
+      <button id="wizard-close-btn" onclick="closeOnboardingWizard()" style="border:none; background:none; font-size:1.3rem; cursor:pointer; color:#64748b; padding:2px 6px;">✕</button>
     </div>
 
-    <div class="vizitor-modal-body">
+    <div class="vizitor-modal-body" style="padding:1.25rem 1.5rem; overflow-y:auto; flex-grow:1;">
       <!-- Stepper Navigation -->
       <div class="wizard-stepper" id="wizard-stepper-container">
-        <!-- Injected via JS (11 steps) -->
+        <!-- Injected via JS (8 steps) -->
       </div>
 
       <!-- Step Container -->
-      <div id="wizard-step-content">
+      <div id="wizard-step-content" style="min-height:320px;">
         <!-- Dynamically rendered step -->
       </div>
     </div>
 
-    <div class="vizitor-modal-footer">
+    <div class="vizitor-modal-footer" style="padding:1rem 1.5rem; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
       <button type="button" class="btn-secondary" id="wizard-prev-btn" onclick="wizardPrevStep()">Back</button>
-      <button type="button" class="btn-primary" id="wizard-next-btn" onclick="wizardNextStep()">Next Step →</button>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-primary" id="wizard-next-btn" onclick="wizardNextStep()">Next Step →</button>
+      </div>
     </div>
   </div>
 </div>
@@ -785,29 +802,152 @@
   </div>
 </div>
 
+<!-- Modal: Modify Stage Equipment, Dosages & Protocols -->
+<div id="modify-stage-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal" style="max-width:560px;">
+    <div class="vizitor-modal-header">
+      <div>
+        <h3 class="vizitor-modal-title">✏️ Modify Stage Equipment & Dosages</h3>
+        <p style="font-size:0.8rem; color:#64748b; margin:2px 0 0 0;" id="modify-stage-num-display">Stage 1</p>
+      </div>
+      <button onclick="closeModifyStageModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <form onsubmit="handleModifyStageSubmit(event)">
+      <input type="hidden" id="modify-stage-num" value="1">
+      <div class="vizitor-modal-body">
+        <div class="input-group">
+          <label for="modify-stage-inputs">Prescribed Equipment & Chemical/Bio Inputs</label>
+          <input type="text" id="modify-stage-inputs" class="form-control" placeholder="e.g. Well-rotted Farmyard Manure (5 t/acre), DAP (55 kg/acre)">
+          <span style="font-size:0.75rem; color:#64748b;">Separate multiple items with commas.</span>
+        </div>
+
+        <div class="input-group" style="margin-top:1rem;">
+          <label for="modify-stage-protocol">Real-Time Weather Adaptation Protocol</label>
+          <select id="modify-stage-protocol" class="form-control">
+            <option value="">Baseline Agronomic Protocol (Normal)</option>
+            <option value="Precipitation Safeguard: Suspended Foliar Sprays, Opened Drainage Gates">🌧️ Precipitation Safeguard (Suspended Foliar Sprays, Opened Drainage Gates)</option>
+            <option value="Thermal Stress Shift: Labor 05:30-09:30 & 17:00-19:30, Night Drip Active">☀️ Thermal Stress Shift (Labor 05:30-09:30 & 17:00-19:30, Night Drip Active)</option>
+          </select>
+        </div>
+      </div>
+      <div class="vizitor-modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModifyStageModal()">Cancel</button>
+        <button type="submit" class="btn-primary">Save Modifications</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="js/api.js"></script>
 <script src="js/realtime.js"></script>
 <script src="js/components.js"></script>
 <script>
   let activeTab = "overview";
   let currentStep = 1;
-  const totalSteps = 11;
+  const totalSteps = 8;
+  let isMandatoryOnboarding = false;
   let activeFarmId = "9fca8bd1-344e-46b1-b5f8-4a94ebd4167c";
   let activeCropPlan = null;
   let gridPlants = [];
 
+  // Registered cadre list for Step 1 (Workforce capacity first)
+  let registeredCadre = [
+    { name: "Sunita Devi (Krishi Sakhi)", role: "worker", daily_hours_cap: 7.0 },
+    { name: "Mamata Behera (Field Assistant)", role: "worker", daily_hours_cap: 7.0 },
+    { name: "Balwinder Singh", role: "farmer", daily_hours_cap: 8.0 }
+  ];
+
+  // Survey responses state
+  let surveyState = {
+    agronomist_id: "",
+    farm_id: activeFarmId,
+    state: "Odisha",
+    district_basin: "Mahanadi River Basin (Cuttack/Jagatsinghpur)",
+    advisory_mandate: "Senior Crop Scientist & Precision Agriculture Fellow",
+    farming_classification: "Terrestrial Field Crops",
+    soil_texture: "Alluvial Silt Loam",
+    soil_ph: 6.8,
+    soil_npk: "Medium (N:280, P:22, K:240 kg/ha)",
+    water_source: "Canal Distributary Sluice + Solar Drip",
+    irrigation_method: "Automated Drip Lines",
+    season: "Rabi",
+    crop_name: "Wheat",
+    duration_days: 120,
+    expected_yield: 24.5,
+    worker_daily_hours_cap: 7.0,
+    mechanization: [
+      "Tractor & Multi-Row Seed Drill",
+      "Laser Land Leveler",
+      "Solar Drip Fertigation Automation"
+    ],
+    fatigue_rules: {
+      max_continuous_hours: 4.0,
+      thermal_cutoff: 38.0,
+      rain_lockdown_pct: 60,
+      fatigue_cap_pct: 85
+    }
+  };
+
+  const stateBasinMap = {
+    "Odisha": [
+      "Coastal Delta (Puri/Cuttack/Balasore)",
+      "Mahanadi River Basin (Cuttack/Jagatsinghpur)",
+      "Hirakud Command Basin (Sambalpur/Bargarh)",
+      "Koraput High-Altitude Plateau (Koraput/Rayagada)"
+    ],
+    "Punjab": [
+      "Central Plain Zone (Ludhiana/Jalandhar/Patiala)",
+      "Sub-Mountain Undulating Zone (Gurdaspur/Hoshiarpur/Ropar)",
+      "South-Western Semi-Arid Zone (Bathinda/Firozpur/Muktsar)"
+    ],
+    "Haryana": [
+      "Eastern Agro-Climatic Zone (Karnal/Ambala/Kurukshetra)",
+      "Western Semi-Arid Zone (Hisar/Sirsa/Bhiwani)"
+    ],
+    "Uttar Pradesh": [
+      "Western Plain Zone (Meerut/Muzaffarnagar)",
+      "Eastern Alluvial Plain (Varanasi/Gorakhpur)",
+      "Bundelkhand Semi-Arid Basin (Jhansi/Banda)"
+    ],
+    "West Bengal": [
+      "New Alluvial Zone (Nadia/Hooghly/Burdwan)",
+      "Terai Humid Zone (Jalpaiguri/Cooch Behar)"
+    ],
+    "Maharashtra": [
+      "Vidarbha Black Soil Basin (Nagpur/Amravati)",
+      "Marathwada Semi-Arid Plateau (Aurangabad/Nanded)",
+      "Western Ghats Coastal Zone (Nashik/Pune)"
+    ],
+    "Tamil Nadu": [
+      "Cauvery Delta Basin (Thanjavur/Tiruvarur)",
+      "Southern Agro-Climatic Zone (Madurai/Tirunelveli)"
+    ],
+    "Andhra Pradesh": [
+      "Krishna-Godavari Delta Basin (Vijayawada/Guntur)",
+      "Rayalaseema Dryland Zone (Anantapur/Kurnool)"
+    ]
+  };
+
+  const cropKnowledgeBase = {
+    "Wheat": { scientific: "Triticum aestivum", duration: 120, yield: 24.5, family: "Poaceae" },
+    "Rice": { scientific: "Oryza sativa", duration: 135, yield: 28.0, family: "Poaceae" },
+    "Potato": { scientific: "Solanum tuberosum", duration: 85, yield: 120.0, family: "Solanaceae" },
+    "Pisciculture": { scientific: "Labeo rohita / Catla catla", duration: 195, yield: 38.0, family: "Cyprinidae" },
+    "Tomato": { scientific: "Solanum lycopersicum", duration: 105, yield: 180.0, family: "Solanaceae" },
+    "Mustard": { scientific: "Brassica juncea", duration: 105, yield: 8.5, family: "Brassicaceae" },
+    "Moong": { scientific: "Vigna radiata", duration: 65, yield: 6.0, family: "Fabaceae" },
+    "Cotton": { scientific: "Gossypium hirsutum", duration: 155, yield: 12.0, family: "Malvaceae" }
+  };
+
   const wizardSteps = [
-    { num: 1, title: "Role & Jurisdiction" },
-    { num: 2, title: "Farming Types" },
-    { num: 3, title: "Crops Selection" },
-    { num: 4, title: "Farm Conditions" },
-    { num: 5, title: "Soil & Water Profile" },
-    { num: 6, title: "Climatic Zone" },
-    { num: 7, title: "Practices & Machines" },
-    { num: 8, title: "Pest History" },
-    { num: 9, title: "Resources & Stock" },
-    { num: 10, title: "Data Signals" },
-    { num: 11, title: "Rules & Activation" }
+    { num: 1, title: "Workforce & Farmer Cadre" },
+    { num: 2, title: "Jurisdiction & State" },
+    { num: 3, title: "Farming Classification" },
+    { num: 4, title: "Soil & Hydrology" },
+    { num: 5, title: "Season & Climate" },
+    { num: 6, title: "Crop Cultivar & Cycle" },
+    { num: 7, title: "Mechanization & Tools" },
+    { num: 8, title: "Biophysical Rules & Fatigue" }
   ];
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -881,90 +1021,357 @@
 
   async function loadAgronomistProfile() {
     const user = AgriosAPI.getCurrentUser() || { full_name: "Agronomist", persona_code: "AGRONOMIST-001" };
-    document.getElementById("agro-persona-badge").innerText = `${user.jurisdiction_code || 'Punjab'} • ${user.persona_code || 'AGRONOMIST'}`;
+    surveyState.agronomist_id = user.id;
+    document.getElementById("agro-persona-badge").innerText = `${user.jurisdiction_code || 'Odisha / Punjab'} • ${user.persona_code || 'AGRONOMIST'}`;
     document.getElementById("agro-doctor-name").innerText = `${user.full_name} • Senior Crop Scientist • Model Farm Calibration`;
 
     document.getElementById("health-ring-container").innerHTML = AgriosUI.renderHealthScoreRing(92);
 
-    if (user.has_completed_onboarding === false) {
-      openOnboardingWizard();
+    if (user.has_completed_onboarding === false || user.has_completed_onboarding === undefined) {
+      openOnboardingWizard(true);
     } else {
-      document.getElementById("profile-summary-text").innerText = "Crop: Wheat (PBW-550) • Soil: Alluvial Loam • Drip & Canal Irrigation Active";
+      const crop = activeCropPlan ? activeCropPlan.crop_name : surveyState.crop_name;
+      const state = activeCropPlan ? activeCropPlan.state : surveyState.state;
+      const basin = activeCropPlan ? activeCropPlan.district_basin : surveyState.district_basin;
+      document.getElementById("profile-summary-text").innerText = `Crop: ${crop} • Region: ${state} (${basin.split(' ')[0]}) • Workforce Armored & Balanced`;
       document.getElementById("profile-badge-status").innerText = "Calibrated & Active";
       document.getElementById("card-calibrated-acres").innerText = "14.5 Acres";
       document.getElementById("card-calibrated-badge").className = "card-badge badge-success";
       document.getElementById("card-calibrated-badge").innerText = "v1 Active";
-      document.getElementById("card-crop-name").innerText = "Wheat";
-      document.getElementById("card-duration-badge").innerText = "120 Days";
+      document.getElementById("card-crop-name").innerText = crop;
+      document.getElementById("card-duration-badge").innerText = `${activeCropPlan ? activeCropPlan.duration_days : surveyState.duration_days} Days`;
       document.getElementById("card-task-count").innerText = "3 Released";
     }
   }
 
   async function loadCropPlanPreview(cropName) {
     try {
-      const res = await fetch(`/api/crop-plans/generate?crop_name=${encodeURIComponent(cropName)}&duration_days=120`);
-      if (!res.ok) throw new Error("Failed to load crop plan");
-      const plan = await res.json();
-      activeCropPlan = plan;
+      let plan = activeCropPlan;
+      if (!plan) {
+        const res = await fetch(`/api/crop-plans/farm/${activeFarmId}`);
+        if (res.ok) {
+          plan = await res.json();
+        } else {
+          const genRes = await fetch(`/api/crop-plans/generate?crop_name=${encodeURIComponent(cropName || "Wheat")}&duration_days=120`);
+          if (genRes.ok) plan = await genRes.json();
+        }
+      }
+      if (plan) {
+        activeCropPlan = plan;
+        renderCalibratedCropPlan(plan);
+      }
+    } catch (err) {
+      console.error("Failed to load crop plan:", err);
+    }
+  }
 
-      document.getElementById("crop-plan-header-title").innerText = `Master Crop Growing Plan: ${plan.crop_name} (${plan.scientific_name}) • ${plan.duration_days} Days`;
+  function renderCalibratedCropPlan(plan) {
+    if (!plan) return;
+    activeCropPlan = plan;
 
-      const container = document.getElementById("crop-plan-container");
-      container.innerHTML = `
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1.5rem; background:#f8fafc; padding:1rem; border-radius:8px; border:1px solid #e2e8f0;">
-          <div><strong style="color:#0f172a;">Optimal Temp:</strong> <span style="color:#059669;">${plan.optimal_temperature}</span></div>
-          <div><strong style="color:#0f172a;">Water Need:</strong> <span style="color:#059669;">${plan.water_requirement}</span></div>
-          <div><strong style="color:#0f172a;">Seed Rate:</strong> <span style="color:#059669;">${plan.seed_rate_kg_acre} kg/acre</span></div>
-          <div><strong style="color:#0f172a;">Soil Preference:</strong> <span style="color:#64748b;">${plan.soil_preference}</span></div>
+    document.getElementById("crop-plan-header-title").innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span>Master Crop Growing Plan: ${plan.crop_name} (${plan.scientific_name || ''})</span>
+        <span class="card-badge badge-success" style="font-size:0.75rem;">${plan.duration_days} Days</span>
+        <span class="card-badge badge-neutral" style="font-size:0.75rem;">${plan.state || 'Odisha'} • ${plan.district_basin || 'Mahanadi Basin'}</span>
+      </div>
+    `;
+
+    const container = document.getElementById("crop-plan-container");
+    const fatigueRows = (plan.worker_fatigue_matrix || []).map(w => `
+      <tr>
+        <td><strong>${w.worker_name}</strong></td>
+        <td><span class="card-badge ${w.role === 'farmer' ? 'badge-warning' : 'badge-neutral'}">${(w.role || 'worker').toUpperCase()}</span></td>
+        <td><strong>${w.stage1_total_hours} hrs</strong> (Stage 1)</td>
+        <td>${w.daily_hours_allocated} hrs / ${w.daily_hours_cap} hrs cap</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="flex-grow:1; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+              <div style="width:${Math.min(100, w.fatigue_index_pct)}%; height:100%; background:${w.status_color};"></div>
+            </div>
+            <span style="font-weight:700; font-size:0.8rem; color:${w.status_color};">${w.fatigue_index_pct}%</span>
+          </div>
+        </td>
+        <td><span class="card-badge" style="background:${w.status_color}18; color:${w.status_color}; font-weight:700;">${w.load_status}</span></td>
+      </tr>
+    `).join("");
+
+    const yieldProj = plan.yield_projection || {};
+
+    container.innerHTML = `
+      <!-- Precision KPIs -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Projected Yield</div>
+          <div style="font-size:1.3rem; font-weight:800; color:#0f172a; margin-top:2px;">${yieldProj.projected_yield_qtl_acre || 24.5} <span style="font-size:0.85rem; font-weight:500; color:#64748b;">qtl/acre</span></div>
+          <div style="font-size:0.75rem; color:#059669; margin-top:4px;">Confidence: ${yieldProj.biophysical_confidence || '94.2%'}</div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          ${plan.stages.map(s => `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1.25rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div style="font-weight:800; font-size:1rem; color:#0f172a;">
-                  Stage ${s.stage_num}: ${s.name}
-                </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Water Efficiency</div>
+          <div style="font-size:1.3rem; font-weight:800; color:#0284c7; margin-top:2px;">+${yieldProj.water_savings_vs_traditional_pct || 32.5}% <span style="font-size:0.85rem; font-weight:500; color:#64748b;">Savings</span></div>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Via ${plan.soil_profile ? plan.soil_profile.water_source : 'Solar Drip'}</div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #d97706; border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Labor Cadre Capacity</div>
+          <div style="font-size:1.3rem; font-weight:800; color:#0f172a; margin-top:2px;">${plan.registered_cadre_summary ? plan.registered_cadre_summary.total_registered_workers : 2} <span style="font-size:0.85rem; font-weight:500; color:#64748b;">Workers Active</span></div>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">${plan.registered_cadre_summary ? plan.registered_cadre_summary.total_daily_labor_capacity_hours : 14} hrs max daily labor pool</div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #6366f1; border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Farming Classification</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#4338ca; margin-top:4px;">${plan.farming_classification || 'Terrestrial Field Crops'}</div>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Soil: ${plan.soil_profile ? plan.soil_profile.texture : 'Loam'} (pH ${plan.soil_profile ? plan.soil_profile.ph : 6.8})</div>
+        </div>
+      </div>
+
+      <!-- Worker Fatigue & Load Allocation Matrix -->
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:1.5rem; overflow:hidden;">
+        <div style="padding:1rem 1.25rem; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#0f172a;">👥 Workforce Labor Allocation & Physical Fatigue Matrix</h4>
+            <p style="margin:2px 0 0 0; font-size:0.78rem; color:#64748b;">Stage 1 task hours partitioned across registered personnel with daily physical effort caps.</p>
+          </div>
+          <span class="card-badge badge-success" style="font-size:0.75rem;">Load Balancing: Calibrated</span>
+        </div>
+        <div class="vizitor-table-container">
+          <table class="vizitor-table">
+            <thead>
+              <tr>
+                <th>Personnel Name</th>
+                <th>Cadre Role</th>
+                <th>Allocated Load</th>
+                <th>Daily Rate vs Cap</th>
+                <th>Physical Fatigue Index</th>
+                <th>Protection Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fatigueRows || '<tr><td colspan="6" style="text-align:center; padding:1rem; color:#64748b;">No registered workers.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Interactive Weather Adaptation Center -->
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem; margin-bottom:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:1rem;">
+          <div>
+            <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#0f172a;">⚡ Real-Time Weather Adaptation Protocols</h4>
+            <p style="margin:2px 0 0 0; font-size:0.78rem; color:#64748b;">Trigger live biophysical safeguards to alter scheduled water regimes, equipment, and worker shifts.</p>
+          </div>
+          <button class="btn-secondary" style="height:32px; font-size:0.75rem;" onclick="resetWeatherAdaptation()">
+            ↺ Reset to Baseline
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <!-- Rain safeguard -->
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <strong style="color:#166534; font-size:0.85rem;">🌧️ Precipitation & Inundation Safeguard</strong>
+              <span class="card-badge badge-success" id="rain-protocol-badge">Armed & Calibrated</span>
+            </div>
+            <p style="font-size:0.78rem; color:#15803d; line-height:1.4; margin-bottom:10px;">
+              Suspends foliar chemical applications for 48h. Opens contour drainage gates to prevent hypoxia. Delays top-dressing until soil moisture &lt;75%.
+            </p>
+            <button class="btn-primary" style="height:32px; font-size:0.78rem; background:#059669;" onclick="triggerWeatherProtocol('rain')">
+              🌧️ Trigger Rain Safeguard
+            </button>
+          </div>
+
+          <!-- Heatwave protocol -->
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <strong style="color:#92400e; font-size:0.85rem;">☀️ Transpiration & Heatwave Shift Protocol</strong>
+              <span class="card-badge badge-warning" id="heat-protocol-badge">Armed & Calibrated</span>
+            </div>
+            <p style="font-size:0.78rem; color:#b45309; line-height:1.4; margin-bottom:10px;">
+              Mandatory field labor shift: 05:30–09:30 AM &amp; 17:00–19:30 PM (midday rest 11:30–15:30). Activates night drip pulses and anti-transpirant.
+            </p>
+            <button class="btn-primary" style="height:32px; font-size:0.78rem; background:#d97706;" onclick="triggerWeatherProtocol('heatwave')">
+              ☀️ Trigger Heatwave Protocol
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage-by-Stage Agronomic Plan -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h4 style="margin:0; font-size:1rem; font-weight:700; color:#0f172a;">📅 Calibrated Growth Stages (${(plan.stages || []).length} Stages)</h4>
+        <button class="btn-primary" onclick="activateCropPlanOnFarm()" style="height:34px; font-size:0.8rem;">
+          ⚡ Execute Plan & Release Stage 1 Tasks
+        </button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        ${(plan.stages || []).map(s => `
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <span style="font-weight:800; font-size:1rem; color:#0f172a;">Stage ${s.stage_num}: ${s.name}</span>
+                ${s.active_adaptation_protocol ? `<span class="card-badge badge-warning" style="margin-left:8px; font-size:0.7rem;">⚠️ ${s.active_adaptation_protocol}</span>` : ''}
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
                 <span class="card-badge badge-neutral" style="font-weight:700;">
                   Days ${s.start_day} – ${s.end_day} (${s.end_day - s.start_day + 1} Days)
                 </span>
+                <button class="btn-secondary" style="height:30px; font-size:0.75rem; padding:0 8px;" onclick="openModifyStageModal(${s.stage_num}, '${(s.inputs || []).join(', ')}')">
+                  ✏️ Modify Stage
+                </button>
               </div>
-              <p style="font-size:0.85rem; color:#475569; margin:8px 0;">${s.description}</p>
-              
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; font-size:0.8rem;">
-                <div style="background:#f8fafc; padding:8px 12px; border-radius:6px;">
-                  <strong style="color:#059669;">Required Inputs:</strong>
-                  <div style="color:#334155; margin-top:2px;">${s.inputs ? s.inputs.join(" • ") : 'Standard basal mix'}</div>
-                </div>
-                <div style="background:#f8fafc; padding:8px 12px; border-radius:6px;">
-                  <strong style="color:#0284c7;">Water & Moisture:</strong>
-                  <div style="color:#334155; margin-top:2px;">${s.water_regime || 'Standard regime'}</div>
-                </div>
-              </div>
-
-              ${s.tasks && s.tasks.length ? `
-                <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #e2e8f0;">
-                  <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Scheduled Tasks:</span>
-                  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
-                    ${s.tasks.map(t => `<span class="card-badge badge-neutral" style="font-size:0.7rem;">✓ ${t.title}</span>`).join("")}
-                  </div>
-                </div>
-              ` : ''}
             </div>
-          `).join("")}
-        </div>
-      `;
-    } catch (err) {
-      console.error(err);
-    }
+            <p style="font-size:0.85rem; color:#475569; margin:8px 0;">${s.description}</p>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; font-size:0.8rem;">
+              <div style="background:#f8fafc; padding:8px 12px; border-radius:6px;">
+                <strong style="color:#059669;">Required Inputs & Dosages:</strong>
+                <div style="color:#334155; margin-top:2px;">${s.inputs ? s.inputs.join(" • ") : 'Standard basal mix'}</div>
+              </div>
+              <div style="background:#f8fafc; padding:8px 12px; border-radius:6px;">
+                <strong style="color:#0284c7;">Water & Moisture Regime:</strong>
+                <div style="color:#334155; margin-top:2px;">${s.water_regime || 'Standard regime'}</div>
+              </div>
+            </div>
+
+            ${s.tasks && s.tasks.length ? `
+              <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Partitioned Workforce Tasks:</span>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:8px; margin-top:6px;">
+                  ${s.tasks.map(t => `
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+                      <div>
+                        <div style="font-size:0.8rem; font-weight:600; color:#0f172a;">${t.title}</div>
+                        <div style="font-size:0.72rem; color:#059669; font-weight:600;">👤 Assigned: ${t.assigned_to || 'Field Personnel'}</div>
+                      </div>
+                      <div style="text-align:right;">
+                        <span class="card-badge badge-neutral" style="font-size:0.68rem;">${t.estimated_hours || 2.5}h</span>
+                        <div style="font-size:0.68rem; color:#64748b; margin-top:2px;">MET: ${t.met_effort_score || 3.0}</div>
+                      </div>
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
   function updateCropPlanPreview(cropName) {
     loadCropPlanPreview(cropName);
   }
 
-  async function activateCropPlanOnFarm() {
+  async function triggerWeatherProtocol(type) {
     if (!activeCropPlan) return;
+    let protocolText = "";
+    if (type === "rain") {
+      protocolText = "Precipitation Safeguard: Suspended Foliar Sprays, Opened Drainage Gates";
+      const badge = document.getElementById("rain-protocol-badge");
+      if (badge) { badge.innerText = "ACTIVE (In Effect)"; badge.className = "card-badge badge-warning"; }
+    } else if (type === "heatwave") {
+      protocolText = "Thermal Stress Shift: Labor 05:30-09:30 & 17:00-19:30, Night Drip Active";
+      const badge = document.getElementById("heat-protocol-badge");
+      if (badge) { badge.innerText = "ACTIVE (In Effect)"; badge.className = "card-badge badge-warning"; }
+    }
+
+    try {
+      const res = await fetch(`/api/crop-plans/farm/${activeFarmId}/modify-stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stage_num: 1,
+          adaptation_protocol: protocolText
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to update protocol");
+
+      AgriosUI.showToast("Protocol Activated", `${protocolText} applied across field directives.`, "⚡");
+      if (activeCropPlan.stages && activeCropPlan.stages[0]) {
+        activeCropPlan.stages[0].active_adaptation_protocol = protocolText;
+        renderCalibratedCropPlan(activeCropPlan);
+      }
+    } catch (err) {
+      AgriosUI.showToast("Protocol Error", err.message, "❌");
+    }
+  }
+
+  async function resetWeatherAdaptation() {
+    if (!activeCropPlan) return;
+    try {
+      await fetch(`/api/crop-plans/farm/${activeFarmId}/modify-stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stage_num: 1,
+          adaptation_protocol: ""
+        })
+      });
+      if (activeCropPlan.stages && activeCropPlan.stages[0]) {
+        activeCropPlan.stages[0].active_adaptation_protocol = "";
+        renderCalibratedCropPlan(activeCropPlan);
+      }
+      AgriosUI.showToast("Baseline Restored", "Weather adaptation protocols returned to baseline standard.", "↺");
+    } catch (err) {
+      AgriosUI.showToast("Reset Error", err.message, "❌");
+    }
+  }
+
+  function openModifyStageModal(stageNum, currentInputs) {
+    document.getElementById("modify-stage-num").value = stageNum;
+    document.getElementById("modify-stage-num-display").innerText = `Stage ${stageNum}`;
+    document.getElementById("modify-stage-inputs").value = currentInputs || "";
+    document.getElementById("modify-stage-modal").style.display = "flex";
+  }
+
+  function closeModifyStageModal() {
+    document.getElementById("modify-stage-modal").style.display = "none";
+  }
+
+  async function handleModifyStageSubmit(e) {
+    e.preventDefault();
+    const stageNum = parseInt(document.getElementById("modify-stage-num").value);
+    const inputsStr = document.getElementById("modify-stage-inputs").value.trim();
+    const protocol = document.getElementById("modify-stage-protocol").value;
+    const inputsList = inputsStr ? inputsStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+    try {
+      const res = await fetch(`/api/crop-plans/farm/${activeFarmId}/modify-stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stage_num: stageNum,
+          inputs: inputsList.length ? inputsList : undefined,
+          adaptation_protocol: protocol || undefined
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Stage modification failed");
+
+      closeModifyStageModal();
+      AgriosUI.showToast("Stage Modified", data.message, "✏️");
+
+      if (activeCropPlan && activeCropPlan.stages) {
+        const s = activeCropPlan.stages.find(st => st.stage_num === stageNum);
+        if (s) {
+          if (inputsList.length) s.inputs = inputsList;
+          if (protocol) s.active_adaptation_protocol = protocol;
+          renderCalibratedCropPlan(activeCropPlan);
+        }
+      }
+    } catch (err) {
+      AgriosUI.showToast("Modification Failed", err.message, "❌");
+    }
+  }
+
+  async function activateCropPlanOnFarm() {
+    if (!activeCropPlan) {
+      AgriosUI.showToast("No Plan Loaded", "Please generate or calibrate a crop plan first.", "⚠️");
+      return;
+    }
     try {
       const res = await fetch(`/api/crop-plans/farm/${activeFarmId}/activate`, {
         method: "POST",
@@ -1183,15 +1590,91 @@
     }
   }
 
-  // 11-Step Wizard Logic
-  function openOnboardingWizard() {
+  // 8-Step Agronomic Diagnostic Questionnaire & Precision Engine Logic
+  function openOnboardingWizard(mandatory = false) {
+    isMandatoryOnboarding = mandatory;
     currentStep = 1;
-    document.getElementById("onboarding-wizard-modal").style.display = "flex";
+    const modal = document.getElementById("onboarding-wizard-modal");
+    const closeBtn = document.getElementById("wizard-close-btn");
+    if (closeBtn) {
+      closeBtn.style.display = mandatory ? "none" : "block";
+    }
+    modal.style.display = "flex";
     renderWizardStep();
   }
 
   function closeOnboardingWizard() {
+    if (isMandatoryOnboarding) {
+      AgriosUI.showToast("Calibration Mandatory", "Complete all 8 diagnostic steps to calibrate precision agronomic models before entering dashboard.", "⚠️");
+      return;
+    }
     document.getElementById("onboarding-wizard-modal").style.display = "none";
+  }
+
+  function addCadreMember() {
+    const nameInput = document.getElementById("cadre-new-name");
+    const roleInput = document.getElementById("cadre-new-role");
+    const capInput = document.getElementById("cadre-new-cap");
+    if (!nameInput || !nameInput.value.trim()) {
+      AgriosUI.showToast("Name Required", "Please enter full name of field worker or farmer.", "⚠️");
+      return;
+    }
+    const name = nameInput.value.trim();
+    const role = roleInput ? roleInput.value : "worker";
+    const cap = parseFloat(capInput ? capInput.value : 7.0) || 7.0;
+
+    registeredCadre.push({ name, role, daily_hours_cap: cap });
+    renderWizardStep();
+  }
+
+  function removeCadreMember(idx) {
+    if (registeredCadre.length <= 1) {
+      AgriosUI.showToast("Minimum Personnel", "At least 1 field worker or farmer must remain registered.", "⚠️");
+      return;
+    }
+    registeredCadre.splice(idx, 1);
+    renderWizardStep();
+  }
+
+  function updateBasinDropdown(state) {
+    surveyState.state = state;
+    const basins = stateBasinMap[state] || ["General Alluvial Command"];
+    surveyState.district_basin = basins[0];
+
+    const basinSelect = document.getElementById("wiz-basin-select");
+    if (basinSelect) {
+      basinSelect.innerHTML = basins.map(b => `<option value="${b}">${b}</option>`).join("");
+    }
+  }
+
+  function selectFarmingClassification(cls) {
+    surveyState.farming_classification = cls;
+    renderWizardStep();
+  }
+
+  function selectSeason(season) {
+    surveyState.season = season;
+    renderWizardStep();
+  }
+
+  function handleCropSelect(crop) {
+    surveyState.crop_name = crop;
+    const kb = cropKnowledgeBase[crop] || { duration: 100, yield: 25.0 };
+    surveyState.duration_days = kb.duration;
+    surveyState.expected_yield = kb.yield;
+
+    const durInput = document.getElementById("wiz-crop-duration");
+    const yldInput = document.getElementById("wiz-crop-yield");
+    if (durInput) durInput.value = kb.duration;
+    if (yldInput) yldInput.value = kb.yield;
+  }
+
+  function toggleMechanization(toolId, isChecked) {
+    if (isChecked && !surveyState.mechanization.includes(toolId)) {
+      surveyState.mechanization.push(toolId);
+    } else if (!isChecked) {
+      surveyState.mechanization = surveyState.mechanization.filter(t => t !== toolId);
+    }
   }
 
   function renderWizardStep() {
@@ -1207,96 +1690,286 @@
     const nextBtn = document.getElementById("wizard-next-btn");
 
     prevBtn.style.display = currentStep === 1 ? "none" : "block";
-    nextBtn.innerText = currentStep === totalSteps ? "Save & Activate Models" : "Next Step →";
+    nextBtn.innerText = currentStep === totalSteps ? "🚀 Save & Activate Precision Engine" : "Next Step →";
+    nextBtn.style.background = currentStep === totalSteps ? "#059669" : "";
 
     if (currentStep === 1) {
+      // Step 1: Workforce & Farmer Cadre Registration (FIRST!)
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 1: Role & Jurisdiction</h4>
-        <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.25rem;">Define scientific advisory jurisdiction and primary administrative mandate.</p>
-        <div class="input-group">
-          <label>Advisory Mandate / Title</label>
-          <input type="text" class="form-control" value="Senior Agronomist Fellow">
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:12px; margin-bottom:1rem; font-size:0.82rem; color:#065f46;">
+          <strong>Labor Partitioning First:</strong> Worker and farmer capacity registration establishes the labor pool BEFORE plan generation. Daily task hours, machine operations, and physical fatigue indices (MET scores) are partitioned across registered people with physical fatigue limits.
         </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <h4 style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0;">Active Registered Cadre (${registeredCadre.length} Personnel)</h4>
+          <span class="card-badge badge-success" style="font-size:0.75rem;">Global Cap: ${surveyState.worker_daily_hours_cap}h/day</span>
+        </div>
+
+        <div class="vizitor-table-container" style="max-height:170px; overflow-y:auto; margin-bottom:1rem; border:1px solid #e2e8f0; border-radius:6px;">
+          <table class="vizitor-table" style="font-size:0.8rem;">
+            <thead>
+              <tr>
+                <th>Personnel Name</th>
+                <th>Cadre Role</th>
+                <th>Daily Hours Cap</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${registeredCadre.map((c, idx) => `
+                <tr>
+                  <td><strong>${c.name}</strong></td>
+                  <td><span class="card-badge ${c.role === 'farmer' ? 'badge-warning' : 'badge-neutral'}">${(c.role || 'worker').toUpperCase()}</span></td>
+                  <td>${c.daily_hours_cap || 7.0} hrs / day</td>
+                  <td>
+                    <button type="button" onclick="removeCadreMember(${idx})" style="border:none; background:none; color:#ef4444; font-weight:700; cursor:pointer; font-size:0.9rem;" title="Remove">✕</button>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Quick Add Cadre Row -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:1rem;">
+          <div style="font-size:0.8rem; font-weight:700; color:#0f172a; margin-bottom:8px;">+ Register Additional Personnel:</div>
+          <div style="display:grid; grid-template-columns:2fr 1.5fr 1fr auto; gap:8px; align-items:center;">
+            <input type="text" id="cadre-new-name" placeholder="Full Name (e.g. Jaspreet Kaur)" class="form-control" style="height:34px; font-size:0.8rem;">
+            <select id="cadre-new-role" class="form-control" style="height:34px; font-size:0.8rem;">
+              <option value="worker">Field Worker / Krishi Sakhi</option>
+              <option value="farmer">Lead Farmer Custodian</option>
+            </select>
+            <input type="number" id="cadre-new-cap" step="0.5" value="7.0" min="4" max="12" class="form-control" style="height:34px; font-size:0.8rem;" title="Daily Hours Cap">
+            <button type="button" class="btn-secondary" onclick="addCadreMember()" style="height:34px; font-size:0.8rem; white-space:nowrap;">+ Add</button>
+          </div>
+        </div>
+
         <div class="input-group">
-          <label>Jurisdiction Area</label>
-          <input type="text" class="form-control" value="Punjab Ludhiana Central Zone">
+          <label style="font-weight:600; font-size:0.85rem; color:#334155;">Global Daily Physical Exertion Cap (Hours/Day)</label>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <input type="range" min="5" max="10" step="0.5" value="${surveyState.worker_daily_hours_cap}" class="form-control" style="flex-grow:1;" oninput="surveyState.worker_daily_hours_cap=parseFloat(this.value); document.getElementById('cap-val-label').innerText = this.value + ' hrs/day';">
+            <span id="cap-val-label" style="font-weight:800; color:#059669; font-size:0.95rem; min-width:80px;">${surveyState.worker_daily_hours_cap} hrs/day</span>
+          </div>
         </div>
       `;
     } else if (currentStep === 2) {
+      // Step 2: Jurisdiction & Agro-Ecological State
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 2: Farming Classification</h4>
-        <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.25rem;">Select primary farming taxonomies applicable to your zone.</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
-          <label style="padding:10px; background:#f8fafc; border:1px solid #10b981; border-radius:8px;"><input type="checkbox" checked> 🌾 Terrestrial Field Crops</label>
-          <label style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;"><input type="checkbox" checked> 🍎 Commercial Horticulture</label>
-          <label style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;"><input type="checkbox"> 🐟 Pisciculture & Aquaculture</label>
-          <label style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;"><input type="checkbox"> 🌳 Agroforestry</label>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 2: Jurisdiction & Agro-Ecological State</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select state territory and agricultural basin to calibrate climate baselines and telemetry models.</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">State / Union Territory</label>
+            <select class="form-control" id="wiz-state-select" onchange="updateBasinDropdown(this.value)">
+              ${Object.keys(stateBasinMap).map(st => `
+                <option value="${st}" ${surveyState.state === st ? 'selected' : ''}>${st}</option>
+              `).join("")}
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label style="font-weight:600;">Agro-Ecological Sub-Basin / District</label>
+            <select class="form-control" id="wiz-basin-select" onchange="surveyState.district_basin = this.value;">
+              ${(stateBasinMap[surveyState.state] || []).map(b => `
+                <option value="${b}" ${surveyState.district_basin === b ? 'selected' : ''}>${b}</option>
+              `).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div class="input-group" style="margin-top:0.75rem;">
+          <label style="font-weight:600;">Scientific Advisory Mandate Title</label>
+          <input type="text" class="form-control" id="wiz-mandate" value="${surveyState.advisory_mandate}" oninput="surveyState.advisory_mandate = this.value;">
+        </div>
+
+        <div class="input-group" style="margin-top:0.75rem;">
+          <label style="font-weight:600;">Total Monitored Acreage Under Advisory</label>
+          <input type="number" class="form-control" value="14.5" step="0.5" id="wiz-acreage">
         </div>
       `;
     } else if (currentStep === 3) {
+      // Step 3: Farming Classification (5 options)
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 3: Primary Crop Cultivars & Target Cycle</h4>
-        <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.25rem;">Select targeted crops. The agronomic engine will compile specific 60–120 day calendars.</p>
-        <div class="input-group">
-          <label>Lead Monitored Crop</label>
-          <select class="form-control" id="wiz-crop-select">
-            <option value="Wheat" selected>Wheat (Triticum aestivum) • 120 Days</option>
-            <option value="Rice">Paddy / Rice (Oryza sativa) • 120 Days</option>
-            <option value="Tomato">Tomato (Solanum lycopersicum) • 100 Days</option>
-            <option value="Maize">Maize (Zea mays) • 95 Days</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label>Target Cycle Duration</label>
-          <select class="form-control">
-            <option value="90">90 Days (Express)</option>
-            <option value="120" selected>120 Days (Full Season)</option>
-          </select>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 3: Farming Classification & Taxonomy</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select the primary agricultural taxonomy applicable to your jurisdiction parcel.</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          ${[
+            { id: "Terrestrial Field Crops", icon: "🌾", title: "Terrestrial Field Crops", desc: "Open-field grains, cereals, pulses, and oilseeds with mechanized harvesting." },
+            { id: "Commercial Horticulture & Orchards", icon: "🍎", title: "Commercial Horticulture", desc: "High-density fruit orchards, perennial groves, and commercial vegetables." },
+            { id: "Pisciculture & Aquaculture", icon: "🐟", title: "Pisciculture & Aquaculture", desc: "Freshwater carp polyculture, aerated farm ponds, and fingerling nursery." },
+            { id: "Terrace & Hill Agriculture", icon: "⛰️", title: "Terrace & Hill Farming", desc: "Contour stepped agriculture, watershed runoff terraces, and mountain slopes." },
+            { id: "Polyhouse & Protected Cultivation", icon: "🏛️", title: "Polyhouse & Protected", desc: "Climate-controlled greenhouse, nursery shade netting, and micro-sprinklers." }
+          ].map(fc => `
+            <div onclick="selectFarmingClassification('${fc.id}')" style="cursor:pointer; padding:12px; border-radius:8px; border:2px solid ${surveyState.farming_classification === fc.id ? '#10b981' : '#e2e8f0'}; background:${surveyState.farming_classification === fc.id ? '#ecfdf5' : '#ffffff'}; transition:all 0.15s;">
+              <div style="display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.9rem; color:#0f172a;">
+                <span style="font-size:1.2rem;">${fc.icon}</span> ${fc.title}
+              </div>
+              <p style="font-size:0.75rem; color:#64748b; margin:6px 0 0 0; line-height:1.3;">${fc.desc}</p>
+            </div>
+          `).join("")}
         </div>
       `;
     } else if (currentStep === 4) {
+      // Step 4: Soil Profile & Hydrology
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 4: Physical Farm Conditions</h4>
-        <div class="input-group"><label>Total Jurisdiction Acreage</label><input type="number" class="form-control" value="1420"></div>
-        <div class="input-group"><label>Topography</label><input type="text" class="form-control" value="Flat Indo-Gangetic Alluvial Plain"></div>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 4: Soil Profile & Hydrological Infrastructure</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Configure physical soil chemistry and water conveyance network.</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">Soil Texture Classification</label>
+            <select class="form-control" id="wiz-soil-texture" onchange="surveyState.soil_texture = this.value;">
+              <option value="Alluvial Silt Loam" ${surveyState.soil_texture === 'Alluvial Silt Loam' ? 'selected' : ''}>Alluvial Silt Loam (Indo-Gangetic / Mahanadi Basin)</option>
+              <option value="Red & Laterite Soil" ${surveyState.soil_texture === 'Red & Laterite Soil' ? 'selected' : ''}>Red & Laterite Soil (Odisha Highlands / Plateau)</option>
+              <option value="Black Cotton Soil (Vertisol)" ${surveyState.soil_texture.includes('Black') ? 'selected' : ''}>Black Cotton Soil / Vertisol (Central / Deccan)</option>
+              <option value="Sandy Loam" ${surveyState.soil_texture === 'Sandy Loam' ? 'selected' : ''}>Sandy Loam (Sub-Arid / Coastal dunes)</option>
+              <option value="Clay Loam" ${surveyState.soil_texture === 'Clay Loam' ? 'selected' : ''}>Clay Loam (Lowland Paddy / Wetland)</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label style="font-weight:600;">Soil pH Level (Optimal: 6.5 – 7.5)</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="number" step="0.1" min="4.5" max="9.5" class="form-control" value="${surveyState.soil_ph}" onchange="surveyState.soil_ph = parseFloat(this.value);">
+              <span class="card-badge badge-success" style="font-size:0.75rem;">Optimal</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">Primary Water Conveyance Source</label>
+            <select class="form-control" onchange="surveyState.water_source = this.value;">
+              <option value="Canal Distributary Sluice + Solar Drip" selected>Canal Distributary Sluice + Solar Drip</option>
+              <option value="Hirakud Gravity Canal Command">Hirakud Gravity Canal Command (Odisha)</option>
+              <option value="Solar Submersible Tube Well (75m Depth)">Solar Submersible Tube Well (75m Depth)</option>
+              <option value="River Lift Irrigation Network">River Lift Irrigation Network</option>
+              <option value="Perennial Farm Pond Rainwater Harvesting">Perennial Farm Pond Rainwater Harvesting</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label style="font-weight:600;">Field Irrigation Methodology</label>
+            <select class="form-control" onchange="surveyState.irrigation_method = this.value;">
+              <option value="Automated Drip Lines" selected>Automated Drip Lines (Water-Efficient)</option>
+              <option value="Micro-Sprinkler Overhead Network">Micro-Sprinkler Overhead Network</option>
+              <option value="Controlled Laser-Leveled Furrow Flooding">Controlled Laser-Leveled Furrow Flooding</option>
+              <option value="Pond Aeration & Sluice Inflow">Pond Aeration & Sluice Inflow (Aquaculture)</option>
+            </select>
+          </div>
+        </div>
       `;
     } else if (currentStep === 5) {
+      // Step 5: Season & Agro-Climate
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 5: Soil & Irrigation Infrastructure</h4>
-        <div class="input-group"><label>Soil Texture Classification</label><input type="text" class="form-control" value="Alluvial Silt Loam (pH 7.2)"></div>
-        <div class="input-group"><label>Irrigation Network</label><input type="text" class="form-control" value="Canal Distributary + Solar Submersible Tube Wells"></div>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 5: Season & Agro-Climatic Window</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select growing season to calibrate degree-day thermal sums and monsoonal precipitation safeguards.</p>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+          ${[
+            { id: "Kharif", icon: "🌧️", label: "Kharif Season", months: "June – October (Monsoon)" },
+            { id: "Rabi", icon: "❄️", label: "Rabi Season", months: "November – March (Winter)" },
+            { id: "Zaid", icon: "☀️", label: "Zaid Season", months: "March – June (Summer)" },
+            { id: "Perennial", icon: "🔄", label: "Perennial / Year-Round", months: "365-Day Aquaculture/Orchard" }
+          ].map(s => `
+            <div onclick="selectSeason('${s.id}')" style="cursor:pointer; padding:12px; border-radius:8px; border:2px solid ${surveyState.season === s.id ? '#10b981' : '#e2e8f0'}; background:${surveyState.season === s.id ? '#ecfdf5' : '#ffffff'}; text-align:center;">
+              <div style="font-size:1.5rem;">${s.icon}</div>
+              <div style="font-weight:700; font-size:0.85rem; color:#0f172a; margin-top:4px;">${s.label}</div>
+              <div style="font-size:0.7rem; color:#64748b; margin-top:2px;">${s.months}</div>
+            </div>
+          `).join("")}
+        </div>
+
+        <div style="margin-top:1.25rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.8rem; color:#64748b;">
+          <strong style="color:#0f172a;">Agro-Climatic Baseline:</strong> Annual precipitation window calibrated between <strong>650 mm – 1150 mm</strong>. Relative humidity swings tracked via Sentinel-2 & AWS telemetry.
+        </div>
       `;
     } else if (currentStep === 6) {
+      // Step 6: Crop Cultivar & Cycle Duration
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 6: Agro-Climatic Zone</h4>
-        <div class="input-group"><label>Agro-Climatic Zone</label><input type="text" class="form-control" value="Trans-Gangetic Plain Zone (Zone VI)"></div>
-        <div class="input-group"><label>Rainfall Average</label><input type="text" class="form-control" value="650 - 750 mm annually"></div>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 6: Lead Crop Cultivar & Cycle Duration</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Choose targeted crop. The precision engine will calibrate specific nutrition, water regimes, and duration calendars.</p>
+
+        <div class="input-group">
+          <label style="font-weight:600;">Lead Monitored Crop</label>
+          <select class="form-control" id="wiz-crop-select" onchange="handleCropSelect(this.value)">
+            <option value="Wheat" ${surveyState.crop_name === 'Wheat' ? 'selected' : ''}>Wheat (Triticum aestivum / PBW-550) • 120 Days</option>
+            <option value="Rice" ${surveyState.crop_name === 'Rice' ? 'selected' : ''}>Paddy / Rice (Oryza sativa / Swarna Sub-1) • 135 Days</option>
+            <option value="Potato" ${surveyState.crop_name === 'Potato' ? 'selected' : ''}>Potato (Solanum tuberosum / Kufri Pukhraj) • 85 Days</option>
+            <option value="Pisciculture" ${surveyState.crop_name === 'Pisciculture' ? 'selected' : ''}>Pisciculture / Freshwater Carp Polyculture • 195 Days</option>
+            <option value="Tomato" ${surveyState.crop_name === 'Tomato' ? 'selected' : ''}>Tomato (Solanum lycopersicum / Pusa Hybrid) • 105 Days</option>
+            <option value="Mustard" ${surveyState.crop_name === 'Mustard' ? 'selected' : ''}>Mustard (Brassica juncea / Pusa Bold) • 105 Days</option>
+            <option value="Moong" ${surveyState.crop_name === 'Moong' ? 'selected' : ''}>Summer Moong (Vigna radiata / SML-668) • 65 Days</option>
+            <option value="Cotton" ${surveyState.crop_name === 'Cotton' ? 'selected' : ''}>Cotton (Gossypium hirsutum / Bt Cotton) • 155 Days</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">Target Cycle Duration (Days)</label>
+            <input type="number" class="form-control" id="wiz-crop-duration" value="${surveyState.duration_days}" onchange="surveyState.duration_days = parseInt(this.value) || 120;">
+          </div>
+          <div class="input-group">
+            <label style="font-weight:600;">Expected Yield Target (qtl/acre)</label>
+            <input type="number" step="0.5" class="form-control" id="wiz-crop-yield" value="${surveyState.expected_yield}" onchange="surveyState.expected_yield = parseFloat(this.value) || 24.5;">
+          </div>
+        </div>
       `;
     } else if (currentStep === 7) {
+      // Step 7: Mechanization Tools
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 7: Agricultural Practices</h4>
-        <div class="input-group"><label>Mechanization Level</label><input type="text" class="form-control" value="High (Tractor, Super SMS Combine, Laser Leveler)"></div>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 7: Available Farm Tools & Mechanization</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select available machinery. Tasks will only specify equipment verified in this inventory.</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          ${[
+            { id: "Tractor & Multi-Row Seed Drill", icon: "🚜", label: "Tractor & Multi-Row Zero-Till Seed Drill" },
+            { id: "Laser Land Leveler", icon: "📐", label: "Laser Land Leveler & Precision Grader" },
+            { id: "Solar Drip Fertigation Automation", icon: "💧", label: "Solar Drip Fertigation Automated Manifold" },
+            { id: "Drone & Knapsack Battery Sprayers", icon: "🚁", label: "Drone & Battery-Assisted Knapsack Sprayers" },
+            { id: "Paddle Aerators & O2 Probes", icon: "🌀", label: "Paddlewheel Aerators & Dissolved O2 Probes" },
+            { id: "Combine Harvester & Straw Baler", icon: "🌾", label: "Combine Harvester with Super SMS Straw Baler" }
+          ].map(m => `
+            <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:0.82rem;">
+              <input type="checkbox" ${surveyState.mechanization.includes(m.id) ? 'checked' : ''} onchange="toggleMechanization('${m.id}', this.checked)">
+              <span style="font-size:1.1rem;">${m.icon}</span>
+              <span style="font-weight:600; color:#334155;">${m.label}</span>
+            </label>
+          `).join("")}
+        </div>
       `;
     } else if (currentStep === 8) {
+      // Step 8: Biophysical Protection Rules & Sign-Off
       content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 8: Endemic Pests & Pathogens</h4>
-        <div class="input-group"><label>Primary Pathogens to Watch</label><input type="text" class="form-control" value="Yellow Rust (Puccinia striiformis), Karnal Bunt, Aphids"></div>
-      `;
-    } else if (currentStep === 9) {
-      content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 9: Machinery & Inputs Supply</h4>
-        <div class="input-group"><label>Seed Source</label><input type="text" class="form-control" value="PAU Certified Breeder Seed Lots"></div>
-      `;
-    } else if (currentStep === 10) {
-      content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 10: IoT Sensor Feeds</h4>
-        <div class="input-group"><label>Telemetry Feeds Active</label><input type="text" class="form-control" value="Sentinel-2 Multispectral, LoRa Soil Tensiometers, Weather Stations"></div>
-      `;
-    } else if (currentStep === 11) {
-      content.innerHTML = `
-        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 11: Final Calibration & Model Sign-off</h4>
-        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:14px; font-size:0.85rem; color:#065f46;">
-          ✓ Ready to activate model calibrations. On completion, the system will direct you to walk & calibrate the 3D Farm Digital Twin.
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 8: Biophysical Protection Rules & Engine Sign-Off</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Configure safety shutoffs that safeguard field workers and farmers against physiological exhaustion and heat illness.</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">Max Continuous Exertion Without Rest</label>
+            <select class="form-control" onchange="surveyState.fatigue_rules.max_continuous_hours = parseFloat(this.value);">
+              <option value="3.5">3.5 Hours (Strict)</option>
+              <option value="4.0" selected>4.0 Hours (Standard OSHA/ICAR)</option>
+              <option value="4.5">4.5 Hours (Extended)</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label style="font-weight:600;">Thermal Shift Threshold (°C)</label>
+            <input type="number" class="form-control" value="38.0" step="0.5" onchange="surveyState.fatigue_rules.thermal_cutoff = parseFloat(this.value);">
+            <span style="font-size:0.72rem; color:#64748b;">Splits hours to 05:30–09:30 & 17:00–19:30 when ambient exceeds this temp.</span>
+          </div>
+        </div>
+
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:14px; margin-bottom:1rem;">
+          <div style="font-weight:700; font-size:0.9rem; color:#065f46; margin-bottom:4px;">Ready to Synthesize Calibrated Precision Engine</div>
+          <div style="font-size:0.8rem; color:#047857; line-height:1.4;">
+            ✓ <strong>Cadre Pool:</strong> ${registeredCadre.length} Registered Individuals (${registeredCadre.filter(c => c.role === 'worker').length} Workers, ${registeredCadre.filter(c => c.role === 'farmer').length} Farmers)<br>
+            ✓ <strong>Jurisdiction:</strong> ${surveyState.state} • ${surveyState.district_basin}<br>
+            ✓ <strong>Target Crop:</strong> ${surveyState.crop_name} (${surveyState.duration_days} Days) • Classification: ${surveyState.farming_classification}
+          </div>
         </div>
       `;
     }
@@ -1319,31 +1992,67 @@
       currentStep++;
       renderWizardStep();
     } else {
-      // Save profile
-      const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
-      try {
-        await fetch("/api/onboarding/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.id,
-            farming_categories: ["field", "horticulture"],
-            primary_crops: ["Wheat", "Rice"],
-            soil_types: ["Alluvial Loam"],
-            irrigation_methods: ["Canal", "Tube Well"]
-          })
-        });
+      await submitPrecisionEngineCalibration();
+    }
+  }
 
-        user.has_completed_onboarding = true;
-        localStorage.setItem("agrios_user", JSON.stringify(user));
+  async function submitPrecisionEngineCalibration() {
+    const nextBtn = document.getElementById("wizard-next-btn");
+    nextBtn.disabled = true;
+    nextBtn.innerText = "Synthesizing Precision Models...";
 
-        closeOnboardingWizard();
-        AgriosUI.showToast("Models Calibrated", "11-Pillar Agricultural Profile saved. Proceed to Step 2: Walk & Calibrate.", "🔬");
-        await loadAgronomistProfile();
-        switchTab("fieldcalibration");
-      } catch (err) {
-        AgriosUI.showToast("Save Failed", err.message, "❌");
+    const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
+    
+    // Build survey payload
+    const payload = {
+      agronomist_id: user.id,
+      farm_id: activeFarmId,
+      crop_name: surveyState.crop_name,
+      duration_days: parseInt(surveyState.duration_days) || 120,
+      state: surveyState.state,
+      district_basin: surveyState.district_basin,
+      farming_classification: surveyState.farming_classification,
+      soil_texture: surveyState.soil_texture,
+      soil_ph: parseFloat(surveyState.soil_ph) || 6.8,
+      water_source: surveyState.water_source,
+      irrigation_method: surveyState.irrigation_method,
+      worker_daily_hours_cap: parseFloat(surveyState.worker_daily_hours_cap) || 7.0,
+      workers: registeredCadre.filter(c => c.role === "worker"),
+      farmers: registeredCadre.filter(c => c.role === "farmer"),
+      mechanization: surveyState.mechanization,
+      fatigue_protection_rules: surveyState.fatigue_rules
+    };
+
+    try {
+      const res = await fetch("/api/crop-plans/generate-and-calibrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to calibrate precision engine");
       }
+      const calibratedPlan = await res.json();
+      activeCropPlan = calibratedPlan;
+
+      // Mark onboarding as complete
+      user.has_completed_onboarding = true;
+      localStorage.setItem("agrios_user", JSON.stringify(user));
+      isMandatoryOnboarding = false;
+      document.getElementById("onboarding-wizard-modal").style.display = "none";
+
+      AgriosUI.showToast("Precision Engine Calibrated", `Master plan generated for ${calibratedPlan.crop_name} (${calibratedPlan.state}). Workforce load balanced.`, "🌱");
+
+      // Render plan and refresh profile
+      renderCalibratedCropPlan(calibratedPlan);
+      await loadAgronomistProfile();
+      switchTab("cropplan");
+    } catch (err) {
+      AgriosUI.showToast("Calibration Error", err.message, "❌");
+    } finally {
+      nextBtn.disabled = false;
+      nextBtn.innerText = "🚀 Save & Activate Precision Engine";
     }
   }
 

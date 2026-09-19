@@ -307,11 +307,15 @@
     }
   async function handleGoogleSignIn() {
     const alertBox = document.getElementById("login-alert");
+    const enteredEmail = document.getElementById("email") ? document.getElementById("email").value.trim() : "";
     try {
       const res = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: "google_oauth_mock_token" })
+        body: JSON.stringify({
+          token: "google_oauth_mock_token",
+          email: enteredEmail || undefined
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Google Sign-in failed");

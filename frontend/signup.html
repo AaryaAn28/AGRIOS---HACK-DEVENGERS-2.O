@@ -283,11 +283,19 @@
 
   async function handleGoogleSignUp() {
     const alertBox = document.getElementById("signup-alert");
+    const role = document.getElementById("role").value || "farmer";
+    const email = document.getElementById("email").value.trim() || `google.${role}@agrios.in`;
+    const name = document.getElementById("full_name").value.trim() || `${role.charAt(0).toUpperCase() + role.slice(1)} Specialist`;
     try {
       const res = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: "google_signup_mock_token" })
+        body: JSON.stringify({
+          token: "google_signup_mock_token",
+          role: role,
+          email: email,
+          name: name
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Google Sign-Up failed");

@@ -45,7 +45,7 @@
             </button>
             <button class="btn-primary" onclick="openRegisterAgronomistModal()">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              + Appoint Regional Agronomist
+              Appoint Regional Agronomist
             </button>
           </div>
         </div>
@@ -110,9 +110,6 @@
               <h3 class="panel-title">Regional Agronomist Cadre</h3>
               <p class="panel-subtitle">Appointed agricultural scientists leading field calibration, model tuning, and farmer oversight.</p>
             </div>
-            <button class="btn-primary" onclick="openRegisterAgronomistModal()">
-              + Appoint Agronomist
-            </button>
           </div>
 
           <!-- Dynamic Agronomist List -->
@@ -183,82 +180,105 @@
 
       <!-- TAB 3: Strategic Reserves -->
       <div id="tab-foodsecurity" class="vizitor-tab-content">
+        <!-- Panel 1: State Buffer Silo Capacity -->
         <div class="card-panel">
           <div class="panel-header">
             <div>
-              <h3 class="panel-title">Strategic Food Grain & Fertilizer Reserves</h3>
-              <p class="panel-subtitle">Markfed warehouses, state buffer silos, and logistics rake positioning.</p>
+              <h3 class="panel-title">State Strategic Food Grain Reserves</h3>
+              <p class="panel-subtitle">Markfed centralized warehousing, FCI buffer silos, and district consumption coverage.</p>
             </div>
             <div style="display:flex; gap:8px;">
-              <button class="btn-secondary" onclick="rebalanceFertilizers()">🚚 Dispatch Rake</button>
+              <button class="btn-secondary" onclick="retrainSpoilageModel()">🧪 Retrain Spoilage Model</button>
               <button class="btn-primary" onclick="triggerRationingCheck()">🛡️ Run Reserve Audit</button>
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
-              <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Markfed Central Silo (Ludhiana)</div>
-              <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">Wheat: 65,000 MT • Paddy: 42,000 MT</div>
-              <div style="margin-top:12px; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
-                <div style="width:78%; height:100%; background:#10b981;"></div>
-              </div>
-              <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.75rem; color:#475569;">
-                <span>Capacity Utilized</span>
-                <span style="font-weight:700; color:#059669;">78% (Safe)</span>
-              </div>
-            </div>
+          <div id="grain-reserves-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
 
+        <!-- Panel 2: ML Spoilage & Mycotoxin Forecasting Model -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <span class="card-badge badge-success">ML Model v2.4 Active</span>
+                <span style="font-size:0.75rem; color:#64748b;" id="spoilage-accuracy-label">Accuracy: 96.4% on 5-Yr Historical Runs</span>
+              </div>
+              <h3 class="panel-title">RandomForest Grain Spoilage & Mycotoxin Risk Model</h3>
+              <p class="panel-subtitle">Multi-sensor thermodynamic inference tracking core temperature delta, headspace CO2, and kernel moisture.</p>
+            </div>
+            <button class="btn-primary" id="btn-retrain-spoilage" onclick="retrainSpoilageModel()">
+              ⚡ Retrain & Recalibrate Sensors
+            </button>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; margin-bottom:1.25rem; font-size:0.8rem; color:#475569;">
+            <strong style="color:#0f172a;">Active Training Feature Vector:</strong> Core Temp Diurnal Delta (ΔT) • Headspace CO2 (ppm) • Equilibrium Moisture Content (EMC %) • Silo Aeration Velocity (m/s) • Storage Age (Days)
+          </div>
+
+          <div class="vizitor-table-container">
+            <table class="vizitor-table">
+              <thead>
+                <tr>
+                  <th>Silo ID & Facility</th>
+                  <th>Commodity</th>
+                  <th>Core Temp</th>
+                  <th>Relative Humidity</th>
+                  <th>Headspace CO2</th>
+                  <th>Spoilage Risk</th>
+                  <th>Aeration Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="silo-telemetry-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 3: Dynamic Buffer Release & Inflation Damper (OMSS Optimizer) -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Dynamic Price Stabilization Buffer Release (OMSS Optimizer)</h3>
+              <p class="panel-subtitle">Predictive Open Market Sale Scheme (OMSS) algorithm balancing retail food inflation against strategic reserve security.</p>
+            </div>
+            <button class="btn-primary" onclick="executePriceStabilizationRelease()">
+              🚀 Execute AI Buffer Release Mandate
+            </button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem;">
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
-              <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Bathinda Southern Buffer Hub</div>
-              <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">Urea: 18,500 MT • DAP: 9,200 MT</div>
-              <div style="margin-top:12px; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
-                <div style="width:62%; height:100%; background:#0284c7;"></div>
-              </div>
-              <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.75rem; color:#475569;">
-                <span>Fertilizer Buffer</span>
-                <span style="font-weight:700; color:#0284c7;">62% (Adequate)</span>
-              </div>
+              <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Mandi Benchmark Price</div>
+              <div style="font-size:1.6rem; font-weight:800; color:#0f172a; margin-top:4px;" id="omss-benchmark">₹2,410 / qtl</div>
+              <div style="font-size:0.75rem; color:#059669; margin-top:2px;">Safe &lt; ₹2,650 Trigger</div>
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+              <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Optimal Release Volume</div>
+              <div style="font-size:1.6rem; font-weight:800; color:#0284c7; margin-top:4px;" id="omss-volume">14,500 MT</div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Target Impact: -4.6% Retail Index</div>
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+              <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Stockout Probability</div>
+              <div style="font-size:1.6rem; font-weight:800; color:#059669; margin-top:4px;" id="omss-stockout">0.04%</div>
+              <div style="font-size:0.75rem; color:#059669; margin-top:2px;">Hyper-Resilient Buffer</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 4: District Telemetry -->
-      <div id="tab-telemetry" class="vizitor-tab-content">
-        <div class="card-panel">
-          <div class="panel-header">
-            <div>
-              <h3 class="panel-title">Agro-Climatic Zone Surveillance</h3>
-              <p class="panel-subtitle">Satellite NDVI canopy density, groundwater depth, and canal discharge rates.</p>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
-            <div class="gis-district-card" onclick="selectDistrict('Ludhiana', this)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; cursor:pointer;">
-              <div style="font-weight:700; color:#0f172a;">Ludhiana Central</div>
-              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">NDVI: 0.82 • Canal: 3,200 cusecs</div>
-            </div>
-            <div class="gis-district-card" onclick="selectDistrict('Sangrur', this)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; cursor:pointer;">
-              <div style="font-weight:700; color:#0f172a;">Sangrur Basin</div>
-              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">NDVI: 0.79 • Canal: 4,850 cusecs</div>
-            </div>
-            <div class="gis-district-card" onclick="selectDistrict('Patiala', this)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; cursor:pointer;">
-              <div style="font-weight:700; color:#0f172a;">Patiala South</div>
-              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">NDVI: 0.81 • Canal: 2,100 cusecs</div>
-            </div>
-            <div class="gis-district-card" onclick="selectDistrict('Bhatinda', this)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; cursor:pointer;">
-              <div style="font-weight:700; color:#0f172a;">Bhatinda Semi-Arid</div>
-              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">NDVI: 0.68 • Canal: 1,420 cusecs</div>
-            </div>
-          </div>
-        </div>
       <!-- TAB 4: Fertilizer Logistics & Stocks -->
       <div id="tab-fertilizers" class="vizitor-tab-content">
+        <!-- Panel 1: Buffer Reserves Table -->
         <div class="card-panel">
           <div class="panel-header">
             <div>
-              <h3 class="panel-title">State Fertilizer Buffer & Railhead Logistics</h3>
-              <p class="panel-subtitle">Markfed centralized procurement, cooperative buffer reserves, and inter-district rake shipments.</p>
+              <h3 class="panel-title">State Fertilizer Buffer Reserves & Rake Logistics</h3>
+              <p class="panel-subtitle">Centralized procurement buffers, cooperative depot inventory, and days of consumption coverage.</p>
             </div>
             <button class="btn-primary" onclick="openLogisticsRakeModal()">
               🚚 + Dispatch Freight Rake
@@ -273,6 +293,7 @@
                   <th>Current Reserve Stock</th>
                   <th>Allocated Depots</th>
                   <th>Days Consumption Coverage</th>
+                  <th>Daily Burn Rate</th>
                   <th>Transit Rakes</th>
                   <th>Action</th>
                 </tr>
@@ -281,6 +302,61 @@
                 <!-- Populated dynamically -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Panel 2: Live Freight Rakes in Transit Grid -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Railhead Freight Rakes in Transit</h3>
+              <p class="panel-subtitle">Dedicated freight corridor (DFC) rakes carrying bulk fertilizers from maritime ports to state railheads.</p>
+            </div>
+            <span class="card-badge badge-success">3 Rakes En Route</span>
+          </div>
+
+          <div id="freight-rakes-container" style="display:flex; flex-direction:column; gap:1rem;">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: District Telemetry -->
+      <div id="tab-telemetry" class="vizitor-tab-content">
+        <!-- Panel 1: Orbital Passes & Ingestion -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Earth Observation Satellite Constellation Telemetry</h3>
+              <p class="panel-subtitle">Calibrated multispectral and SAR orbital passes tracking canopy health and moisture.</p>
+            </div>
+            <span class="card-badge badge-success">Live Orbital Ingestion Active</span>
+          </div>
+
+          <div id="orbital-passes-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem;">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Panel 2: Multi-Spectral Indices & District Surveillance -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Multi-Spectral Agro-GIS & District Radar Metrics</h3>
+              <p class="panel-subtitle">Switch spectral indices and select district basins across Punjab and Odisha to view granular telemetry.</p>
+            </div>
+            <div id="spectral-index-pills" style="display:flex; gap:6px; flex-wrap:wrap;">
+              <!-- Index selector pills -->
+            </div>
+          </div>
+
+          <div id="gis-district-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+            <!-- Populated dynamically with 8 districts -->
+          </div>
+
+          <!-- Selected District Telemetry Inspector -->
+          <div id="selected-district-inspector" style="background:#f8fafc; border:1px solid #10b981; border-radius:8px; padding:1.25rem;">
+            <!-- Populated on click -->
           </div>
         </div>
       </div>
@@ -615,29 +691,29 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     renderNavigation();
-    await loadGovKPIs();
-    await loadAgronomists();
-    await loadGovSubsidies();
-    await loadBufferReserves();
-    await loadDirectives();
-    await loadCropIntel();
-    await loadWorkforceRegistry();
-    await loadFinancialOverview();
-    await loadInfrastructureStatus();
-    await loadComplianceAudit();
+    const loaders = [
+      loadGovKPIs,
+      loadAgronomists,
+      loadGovSubsidies,
+      loadGovFoodSecurity,
+      loadGovFertilizers,
+      loadGovTelemetry,
+      loadGovDirectives,
+      loadCropIntel,
+      loadWorkforceRegistry,
+      loadFinancialOverview,
+      loadInfrastructureStatus,
+      loadComplianceAudit
+    ];
+    for (const loader of loaders) {
+      try { await loader(); } catch (err) { console.error("Initial load error:", err); }
+    }
 
-    window.addEventListener("agrios:event", (e) => {
+    window.addEventListener("agrios:event", async (e) => {
       console.log("[Government] Live domain event received:", e.detail.event_type);
-      loadGovKPIs();
-      loadAgronomists();
-      loadGovSubsidies();
-      loadBufferReserves();
-      loadDirectives();
-      loadCropIntel();
-      loadWorkforceRegistry();
-      loadFinancialOverview();
-      loadInfrastructureStatus();
-      loadComplianceAudit();
+      for (const loader of loaders) {
+        try { await loader(); } catch (err) { console.error("Event update error:", err); }
+      }
     });
   });
 
@@ -832,7 +908,111 @@
     }
   }
 
-  async function loadBufferReserves() {
+  let stateTelemetryData = null;
+  let activeSpectralIndex = "NDVI";
+  let activeSelectedDistrict = "Ludhiana Central";
+
+  async function loadGovFoodSecurity() {
+    try {
+      const res = await AgriosAPI.getBufferReserves();
+      const grid = document.getElementById("grain-reserves-grid");
+      if (grid && res.grain_reserves) {
+        grid.innerHTML = res.grain_reserves.map(g => {
+          const pct = Math.min(100, Math.round((g.current_stock_mt / g.buffer_target_mt) * 100));
+          const color = pct >= 90 ? "#10b981" : (pct >= 60 ? "#0284c7" : "#d97706");
+          return `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <h4 style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0;">${g.commodity}</h4>
+                  <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">${g.depot}</div>
+                </div>
+                <span class="card-badge ${g.status === 'surplus' ? 'badge-success' : (g.status === 'adequate' ? 'badge-neutral' : 'badge-warning')}">
+                  ${g.status.toUpperCase()}
+                </span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:14px;">
+                <span style="font-size:1.35rem; font-weight:800; color:#0f172a;">${g.current_stock_mt.toLocaleString()} <span style="font-size:0.8rem; font-weight:500; color:#64748b;">MT</span></span>
+                <span style="font-size:0.75rem; color:#64748b;">Target: ${g.buffer_target_mt.toLocaleString()} MT</span>
+              </div>
+              <div style="margin-top:8px; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                <div style="width:${pct}%; height:100%; background:${color};"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.75rem; color:#475569;">
+                <span>${pct}% Target Held</span>
+                <span style="font-weight:700; color:${color};">${g.coverage_months} Months Safe</span>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // Populate Silo Telemetry & Spoilage Model
+      if (res.ml_spoilage_model) {
+        const accLabel = document.getElementById("spoilage-accuracy-label");
+        if (accLabel) accLabel.innerText = `Accuracy: ${res.ml_spoilage_model.accuracy_score}`;
+        const tbody = document.getElementById("silo-telemetry-table-body");
+        if (tbody && res.ml_spoilage_model.silo_risks) {
+          tbody.innerHTML = res.ml_spoilage_model.silo_risks.map(s => `
+            <tr>
+              <td>
+                <strong style="color:#0f172a;">${s.silo_id}</strong>
+                <div style="font-size:0.75rem; color:#64748b;">${s.location}</div>
+              </td>
+              <td>${s.crop}</td>
+              <td style="font-weight:700; color:${s.core_temp_c > 25 ? '#dc2626' : '#059669'};">${s.core_temp_c}°C</td>
+              <td>${s.rh_pct}%</td>
+              <td><code>${s.co2_ppm} ppm</code></td>
+              <td>
+                <span class="card-badge ${s.spoilage_risk_pct < 3 ? 'badge-success' : (s.spoilage_risk_pct < 5 ? 'badge-neutral' : 'badge-warning')}">
+                  ${s.spoilage_risk_pct}% (${s.status})
+                </span>
+              </td>
+              <td><span style="font-size:0.8rem; color:#0284c7; font-weight:600;">⚡ ${s.aeration}</span></td>
+              <td>
+                <button class="btn-secondary" style="height:30px; font-size:0.75rem; padding:0 8px;" onclick="triggerSiloAeration('${s.silo_id}')">
+                  🌬️ Aerate
+                </button>
+              </td>
+            </tr>
+          `).join("");
+        }
+      }
+
+      // Populate OMSS Price Stabilization
+      if (res.ml_price_stabilization_model) {
+        const omss = res.ml_price_stabilization_model;
+        const bEl = document.getElementById("omss-benchmark");
+        if (bEl) bEl.innerText = `₹${omss.current_mandi_benchmark_inr.toLocaleString()} / qtl`;
+        const vEl = document.getElementById("omss-volume");
+        if (vEl) vEl.innerText = `${omss.recommended_release_volume_mt.toLocaleString()} MT`;
+        const sEl = document.getElementById("omss-stockout");
+        if (sEl) sEl.innerText = `${omss.stockout_probability_pct}%`;
+      }
+    } catch (err) {
+      console.error("Food security load error:", err);
+    }
+  }
+
+  function triggerSiloAeration(siloId) {
+    AgriosUI.showToast("Aeration Commenced", `Activated forced pneumatic cross-draft in ${siloId} to depress internal temperature.`, "🌬️");
+  }
+
+  async function retrainSpoilageModel() {
+    const btn = document.getElementById("btn-retrain-spoilage");
+    if (btn) { btn.disabled = true; btn.innerText = "Training Epochs..."; }
+    await new Promise(r => setTimeout(r, 600));
+    const accLabel = document.getElementById("spoilage-accuracy-label");
+    if (accLabel) accLabel.innerText = "Accuracy: 96.8% on 5-Yr Historical Runs (Calibrated)";
+    AgriosUI.showToast("Model Retrained", "RandomForest Spoilage Predictor converged at 96.8% cross-validation accuracy. Sensor telemetry synchronized.", "🧪");
+    if (btn) { btn.disabled = false; btn.innerText = "⚡ Retrain & Recalibrate Sensors"; }
+  }
+
+  function executePriceStabilizationRelease() {
+    AgriosUI.showToast("OMSS Release Mandate Issued", "Authorized 14,500 MT grain release across Markfed terminals. Projected -4.6% retail food price moderation.", "🚀");
+  }
+
+  async function loadGovFertilizers() {
     try {
       const res = await AgriosAPI.getBufferReserves();
       const tbody = document.getElementById("fertilizer-reserves-table");
@@ -843,6 +1023,7 @@
             <td><span style="font-weight:700; color:#059669;">${f.stock_mt.toLocaleString()} MT</span></td>
             <td>${f.allocated_depots} Regional Hubs</td>
             <td><span class="card-badge badge-success">${f.days_coverage} Days Safe</span></td>
+            <td style="font-size:0.8rem; color:#64748b;">${f.daily_burn_mt || 750} MT/day</td>
             <td>${f.rake_shipments_in_transit} In Transit</td>
             <td>
               <button class="btn-secondary" style="height:30px; font-size:0.75rem; padding:0 8px;" onclick="openLogisticsRakeModal()">
@@ -852,12 +1033,168 @@
           </tr>
         `).join("");
       }
+
+      const rakesContainer = document.getElementById("freight-rakes-container");
+      if (rakesContainer && res.freight_rakes_in_transit) {
+        rakesContainer.innerHTML = res.freight_rakes_in_transit.map(r => `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="card-badge badge-neutral" style="font-weight:700;">${r.rake_id}</span>
+                  <strong style="color:#0f172a;">${r.fertilizer}</strong>
+                  <span style="font-size:0.8rem; color:#64748b;">(${r.tonnage_mt.toLocaleString()} MT • ${r.wagons} Wagons)</span>
+                </div>
+                <div style="font-size:0.85rem; color:#334155; margin-top:4px;">
+                  Route: <strong>${r.origin}</strong> ➔ <strong>${r.destination}</strong>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="card-badge badge-success">${r.status}</span>
+                <div style="font-size:0.8rem; font-weight:700; color:#0284c7; margin-top:4px;">ETA: ~${r.eta_hours} Hours</div>
+              </div>
+            </div>
+          </div>
+        `).join("");
+      }
     } catch (err) {
-      console.error("Buffer reserves error:", err);
+      console.error("Fertilizers load error:", err);
     }
   }
 
-  async function loadDirectives() {
+  async function loadGovTelemetry() {
+    try {
+      const res = await fetch("/api/government/state-telemetry");
+      if (!res.ok) throw new Error("Failed to load telemetry");
+      const data = await res.json();
+      stateTelemetryData = data;
+
+      // Render Orbital Passes
+      const passesGrid = document.getElementById("orbital-passes-grid");
+      if (passesGrid && data.orbital_passes) {
+        passesGrid.innerHTML = data.orbital_passes.map(p => `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h4 style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0;">🛰️ ${p.satellite}</h4>
+              <span class="card-badge badge-success">${p.status}</span>
+            </div>
+            <div style="font-size:0.8rem; color:#475569; margin-top:8px;">
+              Bands: <strong>${p.bands}</strong> • Res: <strong>${p.resolution}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:0.75rem; color:#64748b;">
+              <span>Cadence: ${p.revisit}</span>
+              <span style="font-weight:700; color:#059669;">Next: ${p.next_pass}</span>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      // Render Spectral Index Pills
+      const pillsContainer = document.getElementById("spectral-index-pills");
+      if (pillsContainer && data.spectral_indices) {
+        pillsContainer.innerHTML = data.spectral_indices.map(idx => `
+          <button class="btn-secondary" style="height:32px; font-size:0.75rem; padding:0 10px; ${activeSpectralIndex === idx.code ? 'border-color:#10b981; color:#059669; font-weight:700; background:#ecfdf5;' : ''}" onclick="selectSpectralIndex('${idx.code}')">
+            ${idx.code} (${idx.range})
+          </button>
+        `).join("");
+      }
+
+      // Render District Grid
+      renderDistrictGrid();
+
+    } catch (err) {
+      console.error("Telemetry load error:", err);
+    }
+  }
+
+  function selectSpectralIndex(code) {
+    activeSpectralIndex = code;
+    if (stateTelemetryData) {
+      const pillsContainer = document.getElementById("spectral-index-pills");
+      if (pillsContainer && stateTelemetryData.spectral_indices) {
+        pillsContainer.innerHTML = stateTelemetryData.spectral_indices.map(idx => `
+          <button class="btn-secondary" style="height:32px; font-size:0.75rem; padding:0 10px; ${activeSpectralIndex === idx.code ? 'border-color:#10b981; color:#059669; font-weight:700; background:#ecfdf5;' : ''}" onclick="selectSpectralIndex('${idx.code}')">
+            ${idx.code} (${idx.range})
+          </button>
+        `).join("");
+      }
+      renderDistrictGrid();
+    }
+  }
+
+  function renderDistrictGrid() {
+    if (!stateTelemetryData || !stateTelemetryData.districts) return;
+    const grid = document.getElementById("gis-district-grid");
+    if (!grid) return;
+
+    grid.innerHTML = stateTelemetryData.districts.map(d => {
+      const isSelected = d.name === activeSelectedDistrict;
+      const indexVal = activeSpectralIndex === "NDWI" ? d.ndwi : (activeSpectralIndex === "SAVI" ? d.savi : d.ndvi);
+      return `
+        <div class="gis-district-card" onclick="selectDistrict('${d.name}', this)" style="background:#f8fafc; border:${isSelected ? '2px solid #10b981' : '1px solid #e2e8f0'}; border-radius:8px; padding:1rem; cursor:pointer;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700; color:#0f172a;">${d.name}</div>
+            <span class="card-badge ${d.state === 'Odisha' ? 'badge-neutral' : 'badge-success'}">${d.state}</span>
+          </div>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:6px;">
+            ${activeSpectralIndex}: <strong style="color:#059669;">${indexVal}</strong> • Canal: ${d.canal_discharge_cusecs.toLocaleString()} cusecs
+          </div>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+            Soil Moisture: <strong>${d.soil_moisture_pct}%</strong> • Anomaly: ${d.rainfall_anomaly_pct > 0 ? '+' : ''}${d.rainfall_anomaly_pct}%
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const activeObj = stateTelemetryData.districts.find(d => d.name === activeSelectedDistrict) || stateTelemetryData.districts[0];
+    if (activeObj) renderDistrictInspector(activeObj);
+  }
+
+  function renderDistrictInspector(d) {
+    const inspector = document.getElementById("selected-district-inspector");
+    if (!inspector) return;
+    inspector.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <div style="font-size:0.75rem; font-weight:700; color:#059669; text-transform:uppercase;">Active Basin Telemetry Inspector</div>
+          <h4 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:2px 0;">${d.name} (${d.state})</h4>
+          <div style="font-size:0.8rem; color:#64748b;">Monitored Cultivated Area: <strong>${d.crop_area_acres.toLocaleString()} Acres</strong></div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <span class="card-badge ${d.status === 'healthy' ? 'badge-success' : 'badge-warning'}">
+            ${d.status.toUpperCase()}
+          </span>
+          <button class="btn-primary" style="height:32px; font-size:0.75rem;" onclick="AgriosUI.showToast('GIS Boundary Locked', 'Vector boundary shapefile exported for ${d.name}.', '🛰️')">
+            Export GIS Layer
+          </button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-top:1rem;">
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">
+          <div style="font-size:0.7rem; color:#64748b;">NDVI Greenness</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#059669;">${d.ndvi}</div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">
+          <div style="font-size:0.7rem; color:#64748b;">NDWI Moisture</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#0284c7;">${d.ndwi}</div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">
+          <div style="font-size:0.7rem; color:#64748b;">SAVI Soil Adj</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#0f172a;">${d.savi}</div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">
+          <div style="font-size:0.7rem; color:#64748b;">Root Moisture</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#059669;">${d.soil_moisture_pct}%</div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">
+          <div style="font-size:0.7rem; color:#64748b;">Canal Discharge</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#0284c7;">${d.canal_discharge_cusecs.toLocaleString()} cfs</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadGovDirectives() {
     try {
       const dirs = await AgriosAPI.listDisasterDirectives();
       const container = document.getElementById("disaster-directives-container");
@@ -886,6 +1223,9 @@
       console.error("Directives error:", err);
     }
   }
+
+  const loadBufferReserves = loadGovFertilizers;
+  const loadDirectives = loadGovDirectives;
 
   function openLogisticsRakeModal() {
     document.getElementById("dispatch-rake-modal").style.display = "flex";
@@ -982,11 +1322,6 @@
     AgriosUI.showToast("Digest Exported", "Generated Punjab Agricultural State Economic Intelligence Report.", "📊");
   }
 
-  function selectDistrict(name, el) {
-    document.querySelectorAll(".gis-district-card").forEach(c => c.style.borderColor = "#e2e8f0");
-    el.style.borderColor = "#10b981";
-    AgriosUI.showToast("District Telemetry Selected", `Active telemetry locked to ${name} agro-climatic basin.`, "🛰️");
-  }
 
   async function loadGovKPIs() {
     try {
