@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine, Base, ensure_schema
 from app.seed_agrios import seed_database
 
 # Import all routers
@@ -26,12 +26,16 @@ from app.routes.simulator import router as simulator_router
 from app.routes.websockets import router as websockets_router
 from app.routes.cameras import router as cameras_router
 from app.routes.workforce import router as workforce_router
+from app.routes.onboarding import router as onboarding_router
+from app.routes.farm_structures import router as farm_structures_router
+from app.routes.crop_plans import router as crop_plans_router
+from app.routes.agrios_ecosystem import router as ecosystem_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(f"[Lifespan] Initializing {settings.PROJECT_NAME}...")
-    # 1. Create DB tables
-    Base.metadata.create_all(bind=engine)
+    # 1. Create DB tables & migrate columns
+    ensure_schema()
     # 2. Seed initial canonical data
     seed_database()
     print(f"[Lifespan] AGRIOS startup completed. Ready for demo.")
@@ -79,6 +83,10 @@ app.include_router(digital_twin_router)
 app.include_router(simulator_router)
 app.include_router(cameras_router)
 app.include_router(workforce_router)
+app.include_router(onboarding_router)
+app.include_router(farm_structures_router)
+app.include_router(crop_plans_router)
+app.include_router(ecosystem_router)
 
 @app.get("/health")
 @app.get("/api/health")
@@ -92,6 +100,16 @@ def health_check():
 
 # Clean frontend routes without .html extension
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+
+@app.get("/")
+@app.get("/index.html")
+@app.get("/login")
+def get_index_page():
+    return FileResponse(os.path.join(frontend_path, "index.html"))
+
+@app.get("/logout")
+def get_logout_page():
+    return FileResponse(os.path.join(frontend_path, "index.html"))
 
 @app.get("/farmer")
 def get_farmer_page():

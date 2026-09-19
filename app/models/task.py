@@ -78,3 +78,6 @@ class WorkLog(Base):
             "verification_photo": self.verification_photo,
             "logged_at": self.logged_at.isoformat() if self.logged_at else None
         }
+
+# Alias for backwards-compatibility
+Task = FarmTask

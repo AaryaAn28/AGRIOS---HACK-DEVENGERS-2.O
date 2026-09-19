@@ -12,6 +12,8 @@ from app.models.digital_twin import DigitalTwinSnapshot
 from app.models.audit import DomainEventLog
 from app.models.camera import Camera, CameraObservation
 from app.models.workforce import WorkerProfile, LeaveRequest
+from app.models.agricultural_profile import AgriculturalProfile
+from app.models.farm_structure import FarmStructureVersion
 
 __all__ = [
     "Base",
@@ -40,4 +42,6 @@ __all__ = [
     "CameraObservation",
     "WorkerProfile",
     "LeaveRequest",
+    "AgriculturalProfile",
+    "FarmStructureVersion",
 ]

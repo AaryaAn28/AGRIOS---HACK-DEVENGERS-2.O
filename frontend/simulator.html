@@ -84,6 +84,31 @@
   <div id="navbar-container"></div>
 
   <main class="simulator-container">
+    <!-- Judge Demo Live Status Banner -->
+    <div class="glass-panel" style="padding: 0.75rem 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; background: rgba(0, 245, 155, 0.04); border: 1px solid var(--accent-neon); border-radius: var(--radius-md); flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.85rem;">
+        <span style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; color: var(--accent-neon);">
+          <span class="beacon-dot"></span> DEMO STATE: LIVE
+        </span>
+        <span style="color: var(--border-subtle);">|</span>
+        <span style="color: var(--text-secondary);">
+          Events simulated: <strong id="sim-events-count" style="color: var(--text-primary);">0</strong>
+        </span>
+        <span style="color: var(--border-subtle);">|</span>
+        <span style="color: var(--text-secondary);">
+          Last event: <strong id="sim-last-event-name" style="color: var(--accent-cyan); font-family: monospace;">Pristine Baseline</strong>
+        </span>
+      </div>
+      <div style="display: flex; gap: 0.4rem;">
+        <button class="btn btn-secondary" onclick="handleUndoEvent()" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">
+          ↩ Undo Last Event
+        </button>
+        <button class="btn btn-danger" onclick="openResetModal()" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
+          ↻ RESET DEMO
+        </button>
+      </div>
+    </div>
+
     <!-- Header -->
     <div style="text-align: center; margin-bottom: 1.5rem;">
       <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">🎮</div>
@@ -91,16 +116,6 @@
       <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">
         Inject live environmental, biological, and operational shocks into the God Database to demonstrate instantaneous real-time ripple propagation across all 4 operational portals.
       </p>
-      <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;">
-        <div class="live-beacon">
-          <span class="beacon-dot"></span>
-          <span id="connection-status">WebSocket State Stream Connected</span>
-        </div>
-        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem;">
-          <span>⚡ Events Ingested:</span>
-          <strong id="events-count" style="color: var(--accent-emerald);">0</strong>
-        </div>
-      </div>
     </div>
 
     <!-- Quick 1-Click Navigation to All 4 Portals -->
@@ -221,31 +236,17 @@
     <!-- Scenario 6: Reset to Pristine Baseline -->
     <div class="scenario-card">
       <div class="scenario-header">
-        <div class="scenario-title">🔄 Shock 6: Reset Demo to Pristine State</div>
-        <span class="badge badge-optimal">CLEAN BASELINE</span>
-      </div>
-      <div class="scenario-desc">
-        Restores Green Valley Model Farm to 92.5% optimal vitality, resets soil moisture to 44%, clears severe outbreak flags, and re-enables all farm equipment.
-      </div>
-      <button class="btn btn-secondary" onclick="triggerScenario('reset_demo')" style="width: 100%;">
-        🔄 Reset to Pristine Baseline
-      </button>
-    </div>
-
-    <!-- Live Canonical Event Bus Stream Terminal -->
-    <div style="margin-top: 2rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <div class="card-title" style="margin-bottom: 0;">
-          <span>Live Canonical Domain Event Stream</span>
-          <span style="font-size:0.75rem; color:var(--text-muted); margin-left: 0.5rem;">/ws/live-feed</span>
-        </div>
-        <button class="btn btn-secondary" onclick="clearEventStream()" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
-          Clear Terminal
-        </button>
-      </div>
-      <div class="event-stream-box" id="event-stream-container">
-        <div class="event-entry">
-          <span style="color:var(--text-muted);">[SYSTEM BOOT]</span> Subscribed to AGRIOS Canonical God Database Event Stream. Ready for scenario injection.
+    <!-- Reset Confirmation Modal -->
+    <div id="reset-confirm-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; backdrop-filter: blur(8px); align-items: center; justify-content: center;">
+      <div class="glass-panel" style="max-width: 440px; width: 90%; padding: 1.75rem; border: 1px solid var(--accent-amber); text-align: center;">
+        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">⚠️</div>
+        <h3 style="font-size: 1.2rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Reset AGRIOS Demo?</h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.5rem;">
+          This will restore all simulated data to the prepared baseline state across connected portals and Digital Twin.
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button class="btn btn-secondary" onclick="closeResetModal()">Cancel</button>
+          <button class="btn btn-danger" onclick="confirmResetDemo()">↻ Reset Demo Now</button>
         </div>
       </div>
     </div>
@@ -257,15 +258,18 @@
   <script>
     let eventsCount = 0;
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Judge Simulator", "simulator");
+      await updateSimulatorStatus();
 
       // Subscribe to real-time events
       window.addEventListener("agrios:event", (e) => {
         eventsCount++;
-        document.getElementById("events-count").innerText = eventsCount;
+        document.getElementById("sim-events-count").innerText = eventsCount;
 
         const ev = e.detail;
+        document.getElementById("sim-last-event-name").innerText = ev.event_type || "Domain Event Ingested";
+
         const box = document.getElementById("event-stream-container");
         const entry = document.createElement("div");
         entry.className = "event-entry";
@@ -274,6 +278,7 @@
         if (ev.event_type && ev.event_type.includes("outbreak")) color = "var(--accent-rose)";
         if (ev.event_type && ev.event_type.includes("drought")) color = "var(--accent-amber)";
         if (ev.event_type && ev.event_type.includes("maintenance")) color = "var(--accent-cyan)";
+        if (ev.event_type && ev.event_type.includes("undo")) color = "var(--accent-neon)";
 
         entry.innerHTML = `
           <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.7rem; margin-bottom:0.2rem;">
@@ -288,11 +293,53 @@
       });
     });
 
+    async function updateSimulatorStatus() {
+      try {
+        const status = await AgriosAPI.getSimulationStatus();
+        if (status) {
+          eventsCount = status.events_simulated || 0;
+          document.getElementById("sim-events-count").innerText = eventsCount;
+          document.getElementById("sim-last-event-name").innerText = status.last_event || "Pristine Baseline";
+        }
+      } catch (err) {
+        console.error("Status load error:", err);
+      }
+    }
+
+    function openResetModal() {
+      document.getElementById("reset-confirm-modal").style.display = "flex";
+    }
+
+    function closeResetModal() {
+      document.getElementById("reset-confirm-modal").style.display = "none";
+    }
+
+    async function confirmResetDemo() {
+      closeResetModal();
+      await triggerScenario('reset_demo');
+    }
+
+    async function handleUndoEvent() {
+      try {
+        AgriosUI.showToast("Reverting Event", "Undoing last simulation action...", "↩");
+        const res = await AgriosAPI.undoSimulation();
+        if (res.status === "noop") {
+          AgriosUI.showToast("Nothing to Undo", res.message, "ℹ️");
+        } else {
+          AgriosUI.showToast("Event Undone", res.message, "✓");
+          await updateSimulatorStatus();
+        }
+      } catch (err) {
+        AgriosUI.showToast("Undo Failed", err.message, "❌");
+      }
+    }
+
     async function triggerScenario(name) {
       try {
         AgriosUI.showToast("Broadcasting Shock", `Injecting [${name}] into God Database...`, "🎯");
         const res = await AgriosAPI.triggerSimulator(name);
         AgriosUI.showToast("Scenario Propagated", res.message || "State updated across all portals", "⚡");
+        await updateSimulatorStatus();
       } catch (err) {
         AgriosUI.showToast("Simulation Failed", err.message, "❌");
       }
@@ -305,7 +352,7 @@
         </div>
       `;
       eventsCount = 0;
-      document.getElementById("events-count").innerText = "0";
+      document.getElementById("sim-events-count").innerText = "0";
     }
   </script>
 </body>

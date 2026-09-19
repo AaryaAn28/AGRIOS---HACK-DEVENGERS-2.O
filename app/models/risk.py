@@ -55,6 +55,11 @@ class RiskAlert(Base):
     resolved = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    def __init__(self, **kwargs):
+        if "category" in kwargs and "alert_category" not in kwargs:
+            kwargs["alert_category"] = kwargs.pop("category")
+        super().__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,

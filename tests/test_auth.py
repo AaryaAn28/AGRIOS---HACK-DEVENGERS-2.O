@@ -19,8 +19,8 @@ def test_jwt_token_generation_and_decoding():
 
 def test_seeded_personas_exist():
     db = SessionLocal()
-    roles = ["farmer", "worker", "agronomist", "government"]
-    for r in roles:
-        user = db.query(User).filter(User.role == r).first()
-        assert user is not None, f"User with role {r} should exist in seeded database"
+    # At clean slate, Government admin is pre-seeded
+    gov = db.query(User).filter(User.role == "government").first()
+    assert gov is not None, "Government admin must exist in clean-slate baseline"
+    assert gov.email == "gov@agrios.in"
     db.close()

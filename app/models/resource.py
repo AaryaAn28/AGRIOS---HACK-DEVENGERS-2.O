@@ -21,6 +21,14 @@ class FarmResource(Base):
 
     transactions = relationship("ResourceTransaction", back_populates="resource", cascade="all, delete-orphan")
 
+    def __init__(self, **kwargs):
+        if "resource_type" in kwargs and "category" not in kwargs:
+            kwargs["category"] = kwargs.pop("resource_type")
+        if "current_stock" in kwargs and "quantity" not in kwargs:
+            kwargs["quantity"] = kwargs.pop("current_stock")
+        kwargs.pop("capacity", None)
+        super().__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,

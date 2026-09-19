@@ -28,6 +28,14 @@ class Camera(Base):
 
     observations = relationship("CameraObservation", back_populates="camera", cascade="all, delete-orphan")
 
+    def __init__(self, **kwargs):
+        kwargs.pop("ip_stream_url", None)
+        if "location_lat" not in kwargs:
+            kwargs["location_lat"] = 30.9010
+        if "location_lon" not in kwargs:
+            kwargs["location_lon"] = 75.8573
+        super().__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,

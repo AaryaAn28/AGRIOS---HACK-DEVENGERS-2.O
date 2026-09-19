@@ -7,7 +7,7 @@ import asyncio
 class DomainEvent:
     def __init__(
         self,
-        event_type: str,
+        event_type: Optional[str] = None,
         actor_id: Optional[str] = None,
         actor_role: Optional[str] = None,
         entity_name: Optional[str] = None,
@@ -18,12 +18,15 @@ class DomainEvent:
         correlation_id: Optional[str] = None,
         causation_id: Optional[str] = None,
         previous_version: int = 1,
-        new_version: int = 2
+        new_version: int = 2,
+        producer: Optional[str] = None,
+        event_name: Optional[str] = None
     ):
         self.event_id = str(uuid.uuid4())
-        self.event_type = event_type
+        self.event_type = event_type or event_name or "domain_event"
         self.actor_id = actor_id or "SYSTEM"
         self.actor_role = actor_role or "system"
+        self.producer = producer or self.actor_role
         self.entity_name = entity_name or aggregate_type or "Entity"
         self.entity_id = entity_id or aggregate_id or str(uuid.uuid4())
         self.aggregate_type = aggregate_type or self.entity_name
@@ -43,6 +46,7 @@ class DomainEvent:
             "aggregate_id": self.aggregate_id,
             "actor_id": self.actor_id,
             "actor_role": self.actor_role,
+            "producer": self.producer,
             "entity_name": self.entity_name,
             "entity_id": self.entity_id,
             "correlation_id": self.correlation_id,
@@ -85,6 +89,18 @@ class EventBus:
                         await res
                 except Exception as e:
                     print(f"[EventBus] Error in subscriber {handler} for {event.event_type}: {e}")
+
+    @classmethod
+    def publish(cls, event: DomainEvent):
+        """Synchronous bridge to publish domain event across global event bus."""
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(event_bus.emit(event))
+        except RuntimeError:
+            try:
+                asyncio.run(event_bus.emit(event))
+            except Exception:
+                pass
 
 # Global singleton event bus
 event_bus = EventBus()

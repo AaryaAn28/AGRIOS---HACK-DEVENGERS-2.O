@@ -3,549 +3,325 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AGRIOS — The Living Agricultural Operating System</title>
-  <link rel="stylesheet" href="css/agrios.css">
+  <title>Login — AGRIOS Living Agricultural OS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/vizitor-theme.css">
   <style>
-    body {
-      font-family: 'Plus Jakarta Sans', var(--font-sans);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background: #060A08;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    .ambient-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.6;
-    }
-
     .login-container {
-      position: relative;
-      z-index: 10;
-      max-width: 1280px;
-      margin: 0 auto;
-      width: 100%;
-      min-height: 100vh;
       display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      align-items: center;
-      padding: 3rem 2rem;
-      gap: 3rem;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+      width: 100vw;
     }
-
-    @media (max-width: 1024px) {
+    @media (max-width: 960px) {
       .login-container {
         grid-template-columns: 1fr;
-        padding: 2rem 1.25rem;
-        gap: 2rem;
+      }
+      .login-visual {
+        display: none;
       }
     }
-
-    /* Left Hero Showcase */
-    .hero-showcase {
+    .login-visual {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
       display: flex;
       flex-direction: column;
-      justify-content: center;
-    }
-
-    .brand-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--accent-neon);
-      background: rgba(0, 245, 155, 0.08);
-      border: 1px solid rgba(0, 245, 155, 0.25);
-      padding: 0.35rem 0.9rem;
-      border-radius: var(--radius-full);
-      margin-bottom: 1.5rem;
-      width: fit-content;
-    }
-
-    .hero-title {
-      font-size: 3.2rem;
-      line-height: 1.1;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, #FFFFFF 20%, #A7F3D0 60%, #34D399 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    @media (max-width: 768px) {
-      .hero-title {
-        font-size: 2.3rem;
-      }
-    }
-
-    .hero-desc {
-      font-size: 1.05rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-      max-width: 540px;
-      margin-bottom: 2rem;
-    }
-
-    .spec-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 2.5rem;
-    }
-
-    .spec-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 0.9rem;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-subtle);
-      font-size: 0.8rem;
-      color: var(--text-primary);
-    }
-
-    .spec-badge strong {
-      color: var(--accent-neon);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Live Telemetry Ticker Card */
-    .telemetry-preview-card {
-      background: rgba(13, 20, 16, 0.75);
-      border: 1px solid var(--border-emerald);
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-      max-width: 520px;
-    }
-
-    .ticker-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 700;
-    }
-
-    .ticker-stream {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      line-height: 1.7;
-    }
-
-    .ticker-stream .tick-highlight {
-      color: var(--accent-neon);
-    }
-
-    /* Right Auth Card */
-    .auth-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-emerald);
-      border-radius: var(--radius-lg);
-      padding: 2.25rem;
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      box-shadow: var(--shadow-glass), 0 0 35px rgba(16, 185, 129, 0.15);
+      justify-content: flex-end;
+      padding: 4.5rem 3.5rem;
       position: relative;
+      overflow: hidden;
     }
-
-    .auth-card::before {
+    .login-visual::before {
       content: "";
       position: absolute;
-      top: 0;
-      left: 15%;
-      right: 15%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent-neon), transparent);
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at 20% 30%, rgba(52, 211, 153, 0.25) 0%, transparent 60%),
+                  radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.2) 0%, transparent 60%);
+      pointer-events: none;
     }
-
-    .persona-btn-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
-      margin: 1.5rem 0;
+    .login-visual-box {
+      position: relative;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      padding: 2rem 2.25rem;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      max-width: 500px;
     }
-
-    .persona-option {
-      background: rgba(255, 255, 255, 0.025);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      padding: 0.9rem 1.1rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      text-align: left;
+    .login-visual-box h2 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
     }
-
-    .persona-option:hover {
-      background: rgba(16, 185, 129, 0.08);
-      border-color: var(--border-glow);
-      transform: translateX(4px);
+    .login-visual-box p {
+      font-size: 0.9rem;
+      color: #475569;
+      line-height: 1.5;
     }
-
-    .persona-icon {
-      font-size: 1.5rem;
-      margin-right: 0.85rem;
-      width: 40px;
-      height: 40px;
+    .login-form-side {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.04);
-      flex-shrink: 0;
+      padding: 3rem 2rem;
+      background-color: #ffffff;
+      overflow-y: auto;
     }
-
-    .persona-meta {
-      flex-grow: 1;
+    .login-form-wrapper {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
     }
-
-    .persona-name {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-primary);
+    .brand-logo-row {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 10px;
+      margin-bottom: 2.5rem;
     }
-
-    .persona-subtext {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.15rem;
+    .brand-logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
     }
-
-    .persona-arrow {
-      color: var(--text-muted);
-      font-size: 1.1rem;
-      transition: transform var(--transition-fast);
+    .brand-logo-text {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
     }
-
-    .persona-option:hover .persona-arrow {
-      color: var(--accent-neon);
-      transform: translateX(3px);
+    .quick-personas-section {
+      margin-top: 2rem;
+      padding-top: 1.75rem;
+      border-top: 1px solid #e2e8f0;
     }
-
-    .divider {
-      text-align: center;
-      margin: 1.5rem 0;
-      position: relative;
-    }
-
-    .divider hr {
-      border: 0;
-      border-top: 1px solid var(--border-subtle);
-    }
-
-    .divider span {
-      position: absolute;
-      top: -9px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #0B120E;
-      padding: 0 0.8rem;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-    }
-
-    .form-group {
-      margin-bottom: 1rem;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 0.4rem;
-    }
-
-    .form-input {
-      width: 100%;
+    .persona-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding: 0.75rem 1rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      background: rgba(0, 0, 0, 0.35);
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.85rem;
-      transition: border-color var(--transition-fast);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 0.6rem;
+      transition: all 0.15s;
     }
-
-    .form-input:focus {
-      outline: none;
-      border-color: var(--accent-emerald);
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    .persona-card:hover {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
     }
   </style>
 </head>
 <body>
 
-  <!-- Ambient Animated Terrain Background -->
-  <canvas id="ambient-canvas" class="ambient-canvas"></canvas>
-
-  <div class="login-container">
-    
-    <!-- Left Showcase Section -->
-    <div class="hero-showcase">
-      <div class="brand-eyebrow">
-        <span>🌱</span>
-        <span>Living Agricultural Operating System</span>
+<div class="login-container">
+  <!-- Visual Left Side -->
+  <div class="login-visual">
+    <div class="login-visual-box">
+      <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+        <span>🌱</span> Clean-Slate Agricultural OS
       </div>
-
-      <h1 class="hero-title">
-        The Precision OS for Global Food Sovereignty.
-      </h1>
-
-      <p class="hero-desc">
-        One canonical state engine uniting Farmers, Extension Workers, Agronomists, and Public Command Centers with real-time biological telemetry, predictive disease mitigation, and transparent direct benefits.
-      </p>
-
-      <div class="spec-badges">
-        <div class="spec-badge">
-          <span>⚡</span>
-          <span>Canonical <strong>God Database</strong></span>
-        </div>
-        <div class="spec-badge">
-          <span>📡</span>
-          <span>Real-Time <strong>WebSockets</strong></span>
-        </div>
-        <div class="spec-badge">
-          <span>🛰️</span>
-          <span><strong>Claude Opus 3D</strong> Ready</span>
-        </div>
-        <div class="spec-badge">
-          <span>🛡️</span>
-          <span>Strict <strong>RBAC</strong> Security</span>
-        </div>
-      </div>
-
-      <!-- Live Telemetry Stream Card -->
-      <div class="telemetry-preview-card">
-        <div class="ticker-header">
-          <div style="display:flex; align-items:center; gap:0.5rem;">
-            <span class="beacon-dot"></span>
-            <span>Live Canonical Telemetry Feed</span>
-          </div>
-          <span style="font-family:'JetBrains Mono'; color:var(--accent-neon);">PORT 8000</span>
-        </div>
-        <div class="ticker-stream">
-          <div>[<span class="tick-highlight">09:42:15</span>] FARM #01 VITALITY: <span style="color:#10B981;">92.5% OPTIMAL</span> (Ludhiana)</div>
-          <div>[<span class="tick-highlight">09:42:18</span>] SATELLITE NDVI MEAN: <span style="color:#06B6D4;">0.785</span> • SOIL MOISTURE: <span style="color:#06B6D4;">58.2%</span></div>
-          <div>[<span class="tick-highlight">09:42:20</span>] APMC KHANNA MANDI: <span style="color:#F59E0B;">WHEAT ₹2,410/qtl (+₹135)</span></div>
-          <div>[<span class="tick-highlight">09:42:23</span>] EXTENSION SYNC: <span style="color:#A7F3D0;">100% GROUND TRUTH VERIFIED</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Authentication Box -->
-    <div class="auth-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="logo-badge" style="width: 44px; height: 44px; font-size: 1.4rem;">🌿</div>
-          <div>
-            <h2 class="logo-text" style="font-size: 1.6rem; margin: 0;">AGRIOS</h2>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Access Operational Portals</div>
-          </div>
-        </div>
-        <div class="live-beacon">
-          <span class="beacon-dot"></span>
-          <span class="beacon-text">Online</span>
-        </div>
-      </div>
-
-      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-        1-Click Persona Access (Instant Demo)
-      </div>
-
-      <div class="persona-btn-grid">
-        <!-- Farmer -->
-        <div class="persona-option" onclick="quickLogin('farmer', 'farmer.html')">
-          <div class="persona-icon">🌾</div>
-          <div class="persona-meta">
-            <div class="persona-name">Farmer Portal <span class="badge badge-optimal" style="font-size:0.65rem;">Primary</span></div>
-            <div class="persona-subtext">Balwinder Singh • Green Valley Farm (14.5 Ac)</div>
-          </div>
-          <div class="persona-arrow">→</div>
-        </div>
-
-        <!-- Krishi Sakhi / Field Worker -->
-        <div class="persona-option" onclick="quickLogin('worker', 'worker.html')">
-          <div class="persona-icon">👩‍🌾</div>
-          <div class="persona-meta">
-            <div class="persona-name">Krishi Sakhi Portal</div>
-            <div class="persona-subtext">Sunita Devi • Senior Field Extension Worker</div>
-          </div>
-          <div class="persona-arrow">→</div>
-        </div>
-
-        <!-- Agronomist -->
-        <div class="persona-option" onclick="quickLogin('agronomist', 'agronomist.html')">
-          <div class="persona-icon">🔬</div>
-          <div class="persona-meta">
-            <div class="persona-name">Agronomist Intelligence Lab</div>
-            <div class="persona-subtext">Dr. Priya Sharma • Crop Diagnostic Scientist</div>
-          </div>
-          <div class="persona-arrow">→</div>
-        </div>
-
-        <!-- Government Command Center -->
-        <div class="persona-option" onclick="quickLogin('government', 'government.html')">
-          <div class="persona-icon">🏛️</div>
-          <div class="persona-meta">
-            <div class="persona-name">Government Command Center</div>
-            <div class="persona-subtext">Dr. Vikramaditya Sen • Deputy Director of Agriculture</div>
-          </div>
-          <div class="persona-arrow">→</div>
-        </div>
-      </div>
-
-      <div class="divider">
-        <hr>
-        <span>OR MANUAL CREDENTIALS</span>
-      </div>
-
-      <form id="login-form" onsubmit="handleManualLogin(event)">
-        <div class="form-group">
-          <label class="form-label">Account Email</label>
-          <input type="email" id="login-email" class="form-input" value="farmer@agrios.in" required>
-        </div>
-        <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label class="form-label">Password</label>
-          <input type="password" id="login-password" class="form-input" value="Admin@123" required>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-weight: 700; letter-spacing: 0.02em;">
-          Sign In to Portal
-        </button>
-      </form>
-
-      <!-- Judge Simulator Trigger Link -->
-      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); text-align: center;">
-        <a href="simulator.html" style="font-size: 0.85rem; color: var(--accent-neon); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); background: rgba(0,245,155,0.06); border: 1px dashed rgba(0,245,155,0.3);">
-          <span>🎮</span>
-          <span>Launch Hackathon Demo Controller (Simulator) →</span>
-        </a>
-      </div>
+      <h2>AGRIOS Living Operating System</h2>
+      <p>Synchronized agricultural intelligence connecting Government Command, Agronomist Labs, Farmers, and Krishi Sakhis across a single canonical state.</p>
     </div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/realtime.js"></script>
-  <script src="js/components.js"></script>
-  <script>
-    // Subtle animated terrain / particles on canvas
-    (function initAmbientCanvas() {
-      const canvas = document.getElementById("ambient-canvas");
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      let w, h;
-      let particles = [];
+  <!-- Form Right Side -->
+  <div class="login-form-side">
+    <div class="login-form-wrapper">
+      
+      <div class="brand-logo-row">
+        <div class="brand-logo-icon">🌿</div>
+        <div class="brand-logo-text">AGRIOS</div>
+        <span style="margin-left:auto; font-size:0.75rem; font-weight:700; background:#ecfdf5; color:#059669; padding:4px 8px; border-radius:6px; border:1px solid #a7f3d0;">
+          VIZITOR Core
+        </span>
+      </div>
 
-      function resize() {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
+      <div style="margin-bottom: 1.75rem;">
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">Sign In</h1>
+        <p style="font-size: 0.9rem; color: #64748b; margin-top: 4px;">Enter your credentials to access your operating terminal.</p>
+      </div>
+
+      <!-- Alert box -->
+      <div id="login-alert" style="display:none; padding:10px 14px; border-radius:8px; font-size:0.85rem; margin-bottom:1.25rem;"></div>
+
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="input-group">
+          <label for="email">Official Email Address</label>
+          <input type="email" id="email" required placeholder="e.g. gov@agrios.in or agronomist001@agrios.in" autocomplete="username">
+        </div>
+
+        <div class="input-group">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label for="password">Password</label>
+            <span style="font-size:0.75rem; color:#059669; font-weight:600;">Default: Admin@123</span>
+          </div>
+          <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn-primary" style="width:100%; height:44px; justify-content:center; margin-top:0.5rem; font-size:0.95rem;" id="login-btn">
+          Sign In to AGRIOS
+        </button>
+      </form>
+
+      <!-- Dynamic Registered Personas for 1-Click Demonstration -->
+      <div class="quick-personas-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+          <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.05em;">
+            Active System Personas
+          </span>
+          <button class="btn-secondary" onclick="loadQuickPersonas()" style="height:26px; padding:0 8px; font-size:0.7rem;">
+            ↻ Refresh
+          </button>
+        </div>
+
+        <div id="quick-personas-container">
+          <!-- Dynamically populated via /api/auth/quick-personas -->
+          <div style="text-align:center; padding:1.5rem; color:#94a3b8; font-size:0.85rem;">
+            Loading active personas...
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  async function loadQuickPersonas() {
+    const container = document.getElementById("quick-personas-container");
+    try {
+      const res = await fetch("/api/auth/quick-personas");
+      if (!res.ok) throw new Error("Failed to load personas");
+      const users = await res.json();
+
+      if (!users || users.length === 0) {
+        container.innerHTML = `
+          <div style="padding:1rem; border:1px dashed #cbd5e1; border-radius:8px; text-align:center; font-size:0.8rem; color:#64748b;">
+            Zero personas registered. Sign in with Government admin to appoint first agronomist.
+          </div>
+        `;
+        return;
       }
-      window.addEventListener("resize", resize);
-      resize();
 
-      for (let i = 0; i < 40; i++) {
-        particles.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          radius: Math.random() * 2 + 1,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
-          alpha: Math.random() * 0.5 + 0.2
-        });
-      }
+      container.innerHTML = users.map(u => {
+        let badgeColor = "#059669";
+        let badgeBg = "#ecfdf5";
+        let roleTitle = u.role.toUpperCase();
 
-      function loop() {
-        ctx.clearRect(0, 0, w, h);
-        
-        // Draw terrain contours
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.05)";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i++) {
-          ctx.beginPath();
-          ctx.arc(w * 0.3, h * 0.5, 200 + i * 80, 0, Math.PI * 2);
-          ctx.stroke();
+        if (u.role === "government") {
+          badgeColor = "#0284c7"; badgeBg = "#f0f9ff";
+        } else if (u.role === "worker") {
+          badgeColor = "#d97706"; badgeBg = "#fffbeb";
         }
 
-        // Particles
-        particles.forEach(p => {
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < 0) p.x = w;
-          if (p.x > w) p.x = 0;
-          if (p.y < 0) p.y = h;
-          if (p.y > h) p.y = 0;
+        return `
+          <div class="persona-card">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:34px; height:34px; border-radius:50%; background:${badgeBg}; color:${badgeColor}; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:0.8rem; border:1px solid ${badgeColor}33;">
+                ${(u.full_name || "U").substring(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div style="font-size:0.85rem; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                  ${u.full_name}
+                  ${u.persona_code ? `<span style="font-size:0.65rem; background:#f1f5f9; padding:1px 5px; border-radius:4px; font-weight:600; color:#475569;">${u.persona_code}</span>` : ''}
+                </div>
+                <div style="font-size:0.75rem; color:#64748b;">
+                  <span style="font-weight:600; color:${badgeColor};">${roleTitle}</span> • ${u.email}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn-secondary" style="height:30px; padding:0 8px; font-size:0.75rem;" onclick="autofillCreds('${u.email}', '${u.password_hint || 'Admin@123'}')">
+                Autofill
+              </button>
+              <button type="button" class="btn-primary" style="height:30px; padding:0 10px; font-size:0.75rem;" onclick="quickLoginUser('${u.id}')">
+                1-Click
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
 
-          ctx.fillStyle = `rgba(52, 211, 153, ${p.alpha})`;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        requestAnimationFrame(loop);
-      }
-      loop();
-    })();
-
-    async function quickLogin(role, targetPage) {
-      try {
-        AgriosUI.showToast("Authenticating Persona", `Logging in as ${role.toUpperCase()}...`, "🔑");
-        await AgriosAPI.quickLogin(role);
-        window.location.href = targetPage;
-      } catch (err) {
-        AgriosUI.showToast("Authentication Failed", err.message, "❌");
-      }
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = `<div style="color:#ef4444; font-size:0.8rem; padding:0.5rem;">Error loading personas</div>`;
     }
+  }
 
-    async function handleManualLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById("login-email").value;
-      const pass = document.getElementById("login-password").value;
-      try {
-        const res = await AgriosAPI.login(email, pass);
-        const role = res.user.role;
-        AgriosUI.showToast("Login Successful", `Welcome back, ${res.user.full_name}`, "🌱");
-        if (role === "farmer") window.location.href = "farmer.html";
-        else if (role === "worker") window.location.href = "worker.html";
-        else if (role === "agronomist") window.location.href = "agronomist.html";
-        else if (role === "government") window.location.href = "government.html";
-        else window.location.href = "farmer.html";
-      } catch (err) {
-        AgriosUI.showToast("Login Failed", err.message, "❌");
-      }
+  function autofillCreds(email, pass) {
+    document.getElementById("email").value = email;
+    document.getElementById("password").value = pass;
+  }
+
+  async function quickLoginUser(userId) {
+    const alertBox = document.getElementById("login-alert");
+    try {
+      const res = await fetch(`/api/auth/quick-login-user/${userId}`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Quick login failed");
+
+      localStorage.setItem("agrios_token", data.access_token);
+      localStorage.setItem("agrios_user", JSON.stringify(data.user));
+
+      redirectUser(data.user.role);
+    } catch (err) {
+      alertBox.style.display = "block";
+      alertBox.style.background = "#fef2f2";
+      alertBox.style.border = "1px solid #fecaca";
+      alertBox.style.color = "#dc2626";
+      alertBox.innerText = err.message;
     }
-  </script>
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const alertBox = document.getElementById("login-alert");
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const btn = document.getElementById("login-btn");
+
+    btn.disabled = true;
+    btn.innerText = "Authenticating...";
+
+    try {
+      const data = await AgriosAPI.login(email, password);
+      redirectUser(data.user.role);
+    } catch (err) {
+      alertBox.style.display = "block";
+      alertBox.style.background = "#fef2f2";
+      alertBox.style.border = "1px solid #fecaca";
+      alertBox.style.color = "#dc2626";
+      alertBox.innerText = err.message || "Invalid credentials.";
+      btn.disabled = false;
+      btn.innerText = "Sign In to AGRIOS";
+    }
+  }
+
+  function redirectUser(role) {
+    if (role === "government") window.location.href = "government.html";
+    else if (role === "agronomist") window.location.href = "agronomist.html";
+    else if (role === "farmer") window.location.href = "farmer.html";
+    else if (role === "worker") window.location.href = "worker.html";
+    else window.location.href = "government.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadQuickPersonas();
+  });
+</script>
 </body>
 </html>

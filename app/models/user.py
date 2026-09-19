@@ -16,6 +16,9 @@ class User(Base):
     farm_id = Column(String(64), nullable=True)
     avatar_url = Column(String(256), nullable=True)
     is_verified = Column(Boolean, default=True)
+    persona_code = Column(String(40), nullable=True, index=True) # e.g., "AGRONOMIST-001"
+    registered_by_id = Column(String(64), nullable=True)
+    has_completed_onboarding = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
@@ -29,5 +32,8 @@ class User(Base):
             "farm_id": self.farm_id,
             "avatar_url": self.avatar_url,
             "is_verified": self.is_verified,
+            "persona_code": self.persona_code,
+            "registered_by_id": self.registered_by_id,
+            "has_completed_onboarding": self.has_completed_onboarding,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }

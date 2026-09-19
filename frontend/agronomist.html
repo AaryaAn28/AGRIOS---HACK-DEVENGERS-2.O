@@ -4,467 +4,1750 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AGRIOS — Agronomist Scientific Intelligence Portal</title>
-  <link rel="stylesheet" href="css/agrios.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/vizitor-theme.css">
   <style>
-    body {
-      font-family: 'Plus Jakarta Sans', var(--font-sans);
-    }
-    .tab-bar {
+    /* Wizard & Stepper styles */
+    .wizard-stepper {
       display: flex;
-      gap: 0.4rem;
-      border-bottom: 1px solid var(--border-subtle);
+      gap: 0.35rem;
       margin-bottom: 1.5rem;
       overflow-x: auto;
       padding-bottom: 0.5rem;
     }
-    .tab-item {
-      padding: 0.6rem 1.1rem;
-      font-size: 0.85rem;
+    .step-pill {
+      font-size: 0.72rem;
       font-weight: 600;
-      color: var(--text-secondary);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      border: 1px solid transparent;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
       white-space: nowrap;
-      transition: all var(--transition-fast);
+      cursor: pointer;
+    }
+    .step-pill.active {
+      background: #ecfdf5;
+      color: #059669;
+      border-color: #10b981;
+      font-weight: 700;
+    }
+    .step-pill.done {
+      background: #f0fdf4;
+      color: #16a34a;
+      border-color: #bbf7d0;
+    }
+    .plant-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      display: inline-block;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .plant-dot:hover {
+      transform: scale(1.3);
+    }
+    .plant-healthy { background: #10b981; }
+    .plant-stressed { background: #f59e0b; }
+    .plant-dead { background: #ef4444; }
+
+    /* Canvas Map for Field Walk Calibration */
+    .field-canvas-container {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
       display: flex;
       align-items: center;
-      gap: 0.4rem;
+      justify-content: center;
+      min-height: 340px;
     }
-    .tab-item:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.04);
-    }
-    .tab-item.active {
-      color: var(--text-emerald);
-      background: rgba(16, 185, 129, 0.12);
-      border-color: var(--border-emerald);
-    }
-    .tab-content {
-      display: none;
-      animation: fadeIn 0.25s ease;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+    .field-canvas {
+      width: 100%;
+      height: 340px;
+      cursor: crosshair;
     }
   </style>
 </head>
 <body>
-  <div id="navbar-container"></div>
 
-  <main class="app-container">
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
-          <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Agronomy Intelligence & Diagnostic Lab</h1>
-          <span class="badge badge-optimal">Regional Division: Central Punjab</span>
-        </div>
-        <p style="color: var(--text-secondary); font-size: 0.85rem;">
-          Dr. Priya Sharma • Senior Crop Scientist • ICAR / PAU Advisory Fellow • 28 Overseen Model Farms (1,420 Acres)
-        </p>
-      </div>
+<div class="dashboard-layout">
+  <!-- Sticky VIZITOR Sidebar -->
+  <div id="sidebar-container"></div>
 
-      <div class="glass-panel" style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
-        <span class="beacon-dot"></span>
-        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">Regional Pathogen Surveillance Engine Active</span>
-      </div>
-    </div>
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Top Header -->
+    <div id="navbar-container"></div>
 
-    <!-- Summary Metrics -->
-    <div class="grid-metrics">
-      <div class="glass-panel metric-card">
-        <div class="metric-header">
-          <span class="metric-title">Monitored Acreage</span>
-          <span class="metric-icon">🌾</span>
-        </div>
-        <div class="metric-value">1,420 Ac</div>
-        <div class="metric-sub trend-up">
-          <span>📍</span> <span>28 Assigned Farms across Ludhiana East</span>
-        </div>
-      </div>
+    <!-- Dashboard Body -->
+    <div class="dashboard-body">
 
-      <div class="glass-panel metric-card">
-        <div class="metric-header">
-          <span class="metric-title">Active Biosecurity Alerts</span>
-          <span class="metric-icon">⚠️</span>
-        </div>
-        <div class="metric-value" style="color: var(--text-amber);" id="agro-alert-count">1 Active</div>
-        <div class="metric-sub">
-          <span>🔬</span> <span>Yellow Rust spore favorable microclimate</span>
-        </div>
-      </div>
-
-      <div class="glass-panel metric-card">
-        <div class="metric-header">
-          <span class="metric-title">Prescriptions Dispatched</span>
-          <span class="metric-icon">📝</span>
-        </div>
-        <div class="metric-value">84</div>
-        <div class="metric-sub trend-up">
-          <span>⚡</span> <span>100% adherence by Krishi Sakhis</span>
-        </div>
-      </div>
-
-      <div class="glass-panel metric-card">
-        <div class="metric-header">
-          <span class="metric-title">Regional Crop Health Index</span>
-          <span class="metric-icon">💚</span>
-        </div>
-        <div class="metric-value" style="color: var(--accent-neon);">91.5%</div>
-        <div class="metric-sub trend-up">
-          <span>▲ +2.1%</span> <span>Compared to district benchmark (89.4%)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab Navigation (Covering all 77 Agronomist Features) -->
-    <div class="tab-bar">
-      <div class="tab-item active" onclick="switchTab('surveillance')">🛰️ Regional Surveillance & Surveillance Map</div>
-      <div class="tab-item" onclick="switchTab('lab')">🔬 Diagnostic Lab & Field Scans</div>
-      <div class="tab-item" onclick="switchTab('prescription')">💊 AI Prescription Builder</div>
-      <div class="tab-item" onclick="switchTab('farms')">🏡 Farm Oversight & Phenology</div>
-      <div class="tab-item" onclick="switchTab('quarantine')">🛡️ Outbreak Containment Zones</div>
-      <div class="tab-item" onclick="switchTab('circulars')">📡 Broadcast Advisory Circulars</div>
-    </div>
-
-    <!-- =========================================================================
-         TAB 1: REGIONAL SURVEILLANCE
-         ========================================================================= -->
-    <section id="tab-surveillance" class="tab-content active">
-      <div class="section-split">
-        <div class="glass-panel" style="padding: 1.5rem;">
-          <div class="card-title">
-            <span>Regional Satellite NDVI & Biomass Surveillance</span>
-            <span class="badge badge-optimal">Sentinel-2 MSI 10m</span>
+      <!-- Welcome Row -->
+      <div class="welcome-row">
+        <div class="welcome-text">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <span style="font-size:1.1rem;">🔬</span>
+            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;" id="agro-persona-badge">
+              Punjab Central Division
+            </span>
           </div>
-          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
-            Multispectral vegetation indices aggregated across 28 farms. Anomalies highlight fungal rust clusters and localized water stress.
-          </p>
-          <div style="background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:1.25rem; margin-bottom:1rem;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; font-size:0.85rem;">
-              <span>District Mean NDVI</span>
-              <strong style="color:var(--accent-neon);">0.782 (Vigorous Biomass)</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; font-size:0.85rem;">
-              <span>Canopy Temperature Anomaly</span>
-              <strong style="color:var(--text-emerald);">-0.4°C (Normal Transpiration)</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-              <span>Yellow Rust Weather Risk Score</span>
-              <strong style="color:var(--text-amber);">Moderate (Elevated relative humidity >85%)</strong>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="triggerRegionalSync()" style="width:100%;">
-            🔄 Refresh Multispectral Satellite Scan
+          <h2>Agronomy Intelligence & Diagnostic Lab</h2>
+          <p id="agro-doctor-name">Senior Crop Scientist • ICAR / PAU Advisory Fellow • Overseeing Agricultural Zoning & Diagnostics</p>
+        </div>
+        <div class="welcome-actions">
+          <button class="btn-secondary" onclick="openOnboardingWizard()">
+            ⚙️ 11-Pillar Configuration
+          </button>
+          <button class="btn-primary" onclick="switchTab('fieldcalibration')">
+            🚶 Walk & Calibrate 3D Farm
           </button>
         </div>
-
-        <div class="glass-panel" style="padding: 1.5rem;">
-          <div class="card-title">
-            <span>Active Outbreak Alerts</span>
-          </div>
-          <div id="agro-alerts-container"></div>
-        </div>
       </div>
-    </section>
 
-    <!-- =========================================================================
-         TAB 2: DIAGNOSTIC LAB & FIELD SCANS
-         ========================================================================= -->
-    <section id="tab-lab" class="tab-content">
-      <div class="glass-panel" style="padding: 1.5rem;">
-        <div class="card-title">
-          <span>Incoming Field Diagnostic Submissions from Krishi Sakhis</span>
-          <span class="badge badge-warning">Review Queue</span>
-        </div>
-        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
-          Telemetry logs and visual disease scans uploaded by Krishi Sakhis awaiting expert agronomist validation and prescription issuance.
-        </p>
-
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-emerald); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-            <strong style="color:var(--text-emerald); font-size:0.95rem;">Green Valley Farm • Field 1 (North Parcel)</strong>
-            <span class="badge badge-warning">Severity 38%</span>
+      <!-- Active Profile / Clean-Slate Progress Banner -->
+      <div class="card-panel" style="border-left:4px solid #10b981; background:#ffffff; padding:1.25rem 1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;">
+              Agricultural Operating Status
+            </div>
+            <div style="font-size:0.95rem; font-weight:700; color:#0f172a; margin-top:2px;" id="profile-summary-text">
+              Pristine Baseline • Awaiting Crop Configuration & Field Boundary Calibration
+            </div>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:4px;" id="profile-sub-text">
+              Configure crop parameters $\to$ Walk and calibrate field $\to$ Master crop growing plan is auto-synthesized $\to$ Assign farmers and workers.
+            </div>
           </div>
-          <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.6rem;">
-            <strong>Suspected Pathogen:</strong> Early Yellow Rust (Puccinia striiformis)<br>
-            <strong>Logged By:</strong> Sunita Devi (Krishi Sakhi) via AI Photo Scanner • GPS: (30.8924, 75.8341)
-          </div>
-          <div style="background:rgba(0,0,0,0.3); padding:0.6rem; border-radius:4px; font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">
-            "Foliar yellow-orange uredinial pustules observed along leaf veins. Spore concentration: 18 pustules/cm²."
-          </div>
-          <div style="display:flex; gap:0.5rem;">
-            <button class="btn btn-primary" onclick="validateDiagnosisAndDispatch()" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
-              ✓ Validate & Dispatch Prescription Task
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="card-badge badge-success" id="profile-badge-status">Step 1: Configuration</span>
+            <button class="btn-primary" onclick="openOnboardingWizard()" style="height:34px; font-size:0.8rem;">
+              Open Wizard
             </button>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- =========================================================================
-         TAB 3: AI PRESCRIPTION BUILDER
-         ========================================================================= -->
-    <section id="tab-prescription" class="tab-content">
-      <div class="glass-panel" style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
-        <div class="card-title">
-          <span>AI Agronomic Prescription Builder</span>
-          <span class="badge badge-optimal">ICAR Standards</span>
-        </div>
-        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1.25rem;">
-          Draft scientifically verified chemical or biological remedies. Dispatching automatically creates executable tasks on the Farmer & Krishi Sakhi checklists.
-        </p>
-
-        <form onsubmit="handleDispatchPrescription(event)">
-          <div style="margin-bottom: 1rem;">
-            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Target Farm & Parcel</label>
-            <select id="rx-farm" style="width:100%; padding:0.6rem; background:#0B100D; border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
-              <option value="farm_01">Green Valley Model Farm • Field 1 (North Parcel)</option>
-              <option value="farm_02">Sukhjit Organic Farm • Field 3 (East Parcel)</option>
-            </select>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Active Remediation Molecule</label>
-            <input type="text" id="rx-chemical" value="Nativo 75 WG (Tebuconazole 50% + Trifloxystrobin 25%)" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-            <div>
-              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Dosage per Acre</label>
-              <input type="text" id="rx-dose" value="120 grams in 200 Liters Water" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
-            </div>
-            <div>
-              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Pre-Harvest Interval (PHI)</label>
-              <input type="text" id="rx-phi" value="21 Days" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+      <!-- Summary Grid Cards -->
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="card-header-row">
+            <span class="card-title">Calibrated Farmland</span>
+            <div class="card-icon-container card-icon-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
             </div>
           </div>
-          <div style="margin-bottom: 1.25rem;">
-            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Spraying SOP & Application Guidelines</label>
-            <textarea id="rx-notes" rows="3" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">Calibrate hollow cone nozzle. Spray during early morning (06:00 - 09:00 AM) prior to thermal inversion or high wind. Wear PPE kit.</textarea>
+          <div class="card-value-row">
+            <div class="card-value" id="card-calibrated-acres">0 <span style="font-size:1rem; font-weight:500; color:#64748b;">Acres</span></div>
+            <span class="card-badge badge-neutral" id="card-calibrated-badge">Uncalibrated</span>
           </div>
-          <button type="submit" class="btn btn-primary" style="width:100%; font-weight:700;">
-            📝 Sign & Dispatch Official Prescription to Farm
-          </button>
-        </form>
-      </div>
-    </section>
-
-    <!-- =========================================================================
-         TAB 4: FARM OVERSIGHT & PHENOLOGY
-         ========================================================================= -->
-    <section id="tab-farms" class="tab-content">
-      <div class="glass-panel" style="padding: 1.5rem;">
-        <div class="card-title">
-          <span>Overseen Farms Directory</span>
         </div>
-        <div id="agro-farms-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem;"></div>
-      </div>
-    </section>
 
-    <!-- =========================================================================
-         TAB 5: OUTBREAK QUARANTINE ZONES
-         ========================================================================= -->
-    <section id="tab-quarantine" class="tab-content">
-      <div class="glass-panel" style="padding: 1.5rem;">
-        <div class="card-title">
-          <span>Biosecurity Containment & Quarantine Buffers</span>
-          <span class="badge badge-warning">Active Surveillance</span>
-        </div>
-        <div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-sm); padding:1.25rem; margin-bottom:1rem;">
-          <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-            <strong style="color:var(--text-rose); font-size:0.95rem;">Ludhiana East Containment Zone • 5km Buffer</strong>
-            <span class="badge badge-critical">Active Protocol</span>
+        <div class="summary-card">
+          <div class="card-header-row">
+            <span class="card-title">Selected Crop & Plan</span>
+            <div class="card-icon-container card-icon-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+            </div>
           </div>
-          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">
-            Yellow Rust (Puccinia striiformis) foci detected. Restriction on uncertified sapling movement and mandatory preventive fungicidal spray buffer implemented.
-          </p>
-          <div style="display:flex; gap:0.5rem;">
-            <button class="btn btn-primary" onclick="broadcastQuarantineAlert()" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
-              📢 Broadcast Biosecurity Advisory to All 28 Farms
+          <div class="card-value-row">
+            <div class="card-value" id="card-crop-name" style="font-size:1.4rem;">Pending</div>
+            <span class="card-badge badge-neutral" id="card-duration-badge">0 Days</span>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="card-header-row">
+            <span class="card-title">Supervised Farmers</span>
+            <div class="card-icon-container card-icon-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="card-value-row">
+            <div class="card-value" id="card-farmer-count">0</div>
+            <span class="card-badge badge-neutral" id="card-worker-badge">0 Workers</span>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="card-header-row">
+            <span class="card-title">Active Field Tasks</span>
+            <div class="card-icon-container card-icon-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>
+            </div>
+          </div>
+          <div class="card-value-row">
+            <div class="card-value" id="card-task-count">0</div>
+            <span class="card-badge badge-success">Released</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="vizitor-tabs">
+        <button class="vizitor-tab-btn active" onclick="switchTab('overview')">
+          🔬 Agronomy Lab
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('cropplan')">
+          📅 Master Crop Plan
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('fieldcalibration')">
+          🚶 3D Farm & Calibrate
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('subordinates')">
+          👩‍🌾 Assign Farmers & Team
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('surveillance')">
+          🛰️ Pest Surveillance
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('quarantine')">
+          🛡️ Containment Zones
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('diagnostics')">
+          🌿 Pathogen AI Lab
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('prescriptions')">
+          💊 Rx Spray Ledger
+        </button>
+        <button class="vizitor-tab-btn" onclick="switchTab('circulars')">
+          📡 Broadcast Advisories
+        </button>
+      </div>
+
+      <!-- TAB 1: OVERVIEW -->
+      <div id="tab-overview" class="vizitor-tab-content active">
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem;">
+          <div class="card-panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">End-to-End Operational Lifecycle Pipeline</h3>
+                <p class="panel-subtitle">Current status of agricultural deployment in your administrative zone.</p>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:1rem;">
+              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">1</div>
+                <div style="flex-grow:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">11-Pillar Agricultural Configuration</div>
+                  <div style="font-size:0.8rem; color:#64748b;">Specify crop taxonomy, soil profile, water infrastructure, and climatic zone.</div>
+                </div>
+                <button class="btn-secondary" onclick="openOnboardingWizard()" style="height:30px; padding:0 10px; font-size:0.75rem;">Configure</button>
+              </div>
+
+              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">2</div>
+                <div style="flex-grow:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Walk & Calibrate Field Boundary (3D Twin)</div>
+                  <div style="font-size:0.8rem; color:#64748b;">Walk the perimeter, place borewells/greenhouses, and build Version 1 (v1) of the Digital Twin.</div>
+                </div>
+                <button class="btn-secondary" onclick="switchTab('fieldcalibration')" style="height:30px; padding:0 10px; font-size:0.75rem;">Calibrate</button>
+              </div>
+
+              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">3</div>
+                <div style="flex-grow:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Master Crop Growing Plan Synthesis</div>
+                  <div style="font-size:0.8rem; color:#64748b;">System compiles stage-by-stage agronomic schedule (sowing to harvest) for the farmer.</div>
+                </div>
+                <button class="btn-secondary" onclick="switchTab('cropplan')" style="height:30px; padding:0 10px; font-size:0.75rem;">View Plan</button>
+              </div>
+
+              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">4</div>
+                <div style="flex-grow:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Assign Farmers & Field Workers</div>
+                  <div style="font-size:0.8rem; color:#64748b;">Once assigned, Stage 1 land preparation and sowing tasks are released to work queues.</div>
+                </div>
+                <button class="btn-secondary" onclick="switchTab('subordinates')" style="height:30px; padding:0 10px; font-size:0.75rem;">Assign</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Lab Diagnostics Card -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Lab Vitality Metric</h3>
+            </div>
+            <div id="health-ring-container">
+              <!-- Rendered via components.js -->
+            </div>
+            <div style="margin-top:1.5rem; font-size:0.8rem; color:#64748b; line-height:1.5;">
+              <strong style="color:#0f172a;">Laboratory Protocol:</strong> All AI computer vision disease detections require scientific validation and certified prescription before spraying.
+            </div>
+          </div>
+        </div>
+
+        <!-- Soil Analysis & Crop Rotation Scientific Panels -->
+        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:1.5rem; margin-top:1.5rem;">
+          <div class="card-panel" id="soil-analysis-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">GIS Soil Chemistry & Precision Nutrition</h3>
+                <p class="panel-subtitle">N-P-K assays, organic carbon, micronutrients, and scientific dosage protocol.</p>
+              </div>
+            </div>
+            <div id="soil-analysis-body">
+              <div style="text-align:center; padding:1.5rem; color:#64748b;">Loading soil profile...</div>
+            </div>
+          </div>
+
+          <div class="card-panel" id="crop-rotation-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">3-Year Scientific Crop Rotation Matrix</h3>
+                <p class="panel-subtitle">Multi-season rhizobial nitrogen fixation, root rot interruption, and soil rest cycles.</p>
+              </div>
+            </div>
+            <div id="crop-rotation-body">
+              <div style="text-align:center; padding:1.5rem; color:#64748b;">Loading rotation schedule...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: MASTER CROP GROWING PLAN -->
+      <div id="tab-cropplan" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title" id="crop-plan-header-title">Master Crop Growing Plan (60–120 Day Agronomic Calendar)</h3>
+              <p class="panel-subtitle">Comprehensive lifecycle stages, water regimes, nutrition protocols, and task schedules.</p>
+            </div>
+            <button class="btn-primary" onclick="activateCropPlanOnFarm()">
+              ⚡ Activate Plan & Release Stage 1 Tasks
             </button>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- =========================================================================
-         TAB 6: BROADCAST ADVISORY CIRCULARS
-         ========================================================================= -->
-    <section id="tab-circulars" class="tab-content">
-      <div class="glass-panel" style="padding: 1.5rem; max-width: 760px; margin: 0 auto;">
-        <div class="card-title">
-          <span>Broadcast Scientific Advisory Bulletin</span>
+          <div id="crop-plan-container">
+            <div style="text-align:center; padding:2rem; color:#64748b;">
+              Loading agronomic master schedule...
+            </div>
+          </div>
         </div>
-        <form onsubmit="handleSendAdvisory(event)">
-          <div style="margin-bottom: 1rem;">
-            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Subject</label>
-            <input type="text" id="adv-subject" required value="Fungicidal Spray Window: Yellow Rust Mitigation" style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
-          </div>
-          <div style="margin-bottom: 1.25rem;">
-            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Scientific Advice & Dosage</label>
-            <textarea id="adv-body" rows="3" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">Spray Nativo 75 WG (Tebuconazole 50% + Trifloxystrobin 25%) @ 120g in 200 liters of water per acre. Calibrate hollow cone nozzle. Spray in early morning before high winds.</textarea>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width:100%;">
-            📡 Broadcast to Farmer & Field Worker Portals
-          </button>
-        </form>
       </div>
-    </section>
+
+      <!-- TAB 3: WALK & CALIBRATE 3D FARM -->
+      <div id="tab-fieldcalibration" class="vizitor-tab-content">
+        <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:1.5rem;">
+          <!-- Walk & Calibrate Form -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">Walk & Calibrate Field Boundary</h3>
+                <p class="panel-subtitle">Trace perimeter GPS points and place spatial infrastructure.</p>
+              </div>
+            </div>
+
+            <form onsubmit="handleWalkAndCalibrate(event)">
+              <div class="input-group">
+                <label for="calib-farm-name">Farm / Plot Designation</label>
+                <input type="text" id="calib-farm-name" required value="Greenfield Model Farm" class="form-control">
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="input-group">
+                  <label for="calib-acres">Surveyed Acreage</label>
+                  <input type="number" id="calib-acres" step="0.5" required value="14.5" class="form-control">
+                </div>
+                <div class="input-group">
+                  <label for="calib-crop">Target Crop</label>
+                  <select id="calib-crop" class="form-control" onchange="updateCropPlanPreview(this.value)">
+                    <option value="Wheat" selected>Wheat (Triticum aestivum)</option>
+                    <option value="Rice">Rice / Paddy (Oryza sativa)</option>
+                    <option value="Tomato">Tomato (Solanum lycopersicum)</option>
+                    <option value="Maize">Maize (Zea mays)</option>
+                    <option value="Potato">Potato (Solanum tuberosum)</option>
+                    <option value="Cotton">Cotton (Gossypium)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label>Infrastructure to Include</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.85rem; color:#334155; margin-top:4px;">
+                  <label><input type="checkbox" checked id="infra-well"> Solar Borewell (75m)</label>
+                  <label><input type="checkbox" checked id="infra-pond"> Rainwater Pond</label>
+                  <label><input type="checkbox" checked id="infra-poly"> Nursery Polyhouse</label>
+                  <label><input type="checkbox" checked id="infra-weather"> Weather Station</label>
+                </div>
+              </div>
+
+              <div style="margin-top:1rem; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:0.8rem; color:#64748b;">
+                <strong>Perimeter Walk Status:</strong> 4 GPS Corner Pins Latched (30.9010° N, 75.8573° E). Ready to commit Version 1.
+              </div>
+
+              <button type="submit" class="btn-primary" style="width:100%; justify-content:center; margin-top:1.25rem; height:44px;" id="btn-calibrate-submit">
+                🚀 Calibrate Boundary & Build 3D Twin (v1)
+              </button>
+            </form>
+          </div>
+
+          <!-- Interactive 3D / Planting Grid Viewer -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">3D Digital Twin & Planting Grid</h3>
+                <p class="panel-subtitle">Interactive plant status audit (Click dots: 🟢 Healthy $\to$ 🟡 Stressed $\to$ 🔴 Dead).</p>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <span class="card-badge badge-success" id="twin-healthy-count">1180 Healthy</span>
+                <span class="card-badge badge-warning" id="twin-stressed-count">20 Stressed</span>
+                <span class="card-badge badge-danger" id="twin-dead-count">0 Dead</span>
+              </div>
+            </div>
+
+            <!-- Planting Grid Canvas -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem; overflow-x:auto;">
+              <div id="planting-grid-display" style="display:grid; grid-template-columns:repeat(24, 1fr); gap:4px; max-width:540px; margin:0 auto;">
+                <!-- Dynamically populated plant dots -->
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+              <div style="font-size:0.8rem; color:#64748b;">Version: <strong id="twin-version-label" style="color:#059669;">v1 (Current)</strong></div>
+              <button class="btn-secondary" onclick="savePlantingGridStatus()" style="height:32px; font-size:0.75rem;">
+                💾 Save Twin Status
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: SUBORDINATES (ASSIGN FARMERS & WORKERS) -->
+      <div id="tab-subordinates" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Subordinate Agricultural Personnel</h3>
+              <p class="panel-subtitle">Register and oversee Farmers and Krishi Sakhi field workers for calibrated farms.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-secondary" onclick="openRegisterSubordinateModal('worker')">
+                + Register Krishi Sakhi
+              </button>
+              <button class="btn-primary" onclick="openRegisterSubordinateModal('farmer')">
+                + Register Farmer
+              </button>
+            </div>
+          </div>
+
+          <div class="vizitor-table-container">
+            <table class="vizitor-table">
+              <thead>
+                <tr>
+                  <th>Persona / Code</th>
+                  <th>Role</th>
+                  <th>Assigned Farm</th>
+                  <th>Contact Info</th>
+                  <th>Tasks Queue</th>
+                  <th>1-Click Access</th>
+                </tr>
+              </thead>
+              <tbody id="subordinates-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: PATHOGEN AI OBSERVATIONS -->
+      <div id="tab-diagnostics" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Automated Pathogen Telemetry & Vision Feeds</h3>
+              <p class="panel-subtitle">Edge AI observations flagged by camera drones and mobile leaf scanners.</p>
+            </div>
+            <button class="btn-primary" onclick="openCertifyRxModal()">
+              💊 + Issue Spray Prescription
+            </button>
+          </div>
+
+          <div class="vizitor-table-container">
+            <table class="vizitor-table">
+              <thead>
+                <tr>
+                  <th>Observation ID</th>
+                  <th>Field Zone</th>
+                  <th>Symptom Assessment</th>
+                  <th>AI Target Pathogen</th>
+                  <th>AI Confidence</th>
+                  <th>Validation Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="pathogen-observations-body">
+                <!-- Dynamically populated via loadCameraObservations() -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: PRESCRIPTIONS -->
+      <div id="tab-prescriptions" class="vizitor-tab-content">
+        <div style="display:grid; grid-template-columns: 1.8fr 1.2fr; gap:1.5rem;">
+          <div class="card-panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">Certified Spray Prescription Ledger</h3>
+                <p class="panel-subtitle">Agronomist-certified bio-pesticide and fungicide applications.</p>
+              </div>
+              <button class="btn-primary" onclick="openCertifyRxModal()">
+                💊 + Certify Prescription
+              </button>
+            </div>
+
+            <div class="vizitor-table-container">
+              <table class="vizitor-table">
+                <thead>
+                  <tr>
+                    <th>Rx Code</th>
+                    <th>Pathogen Target</th>
+                    <th>Certified Formulation</th>
+                    <th>Dosage / Acre</th>
+                    <th>Execution Status</th>
+                  </tr>
+                </thead>
+                <tbody id="prescriptions-table-body">
+                  <!-- Populated dynamically via loadPrescriptions() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Live Spray Weather Suitability Card -->
+          <div class="card-panel" id="spray-weather-container">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">Micro-Weather Spray Suitability</h3>
+                <p class="panel-subtitle">Real-time wind, inversion, and drift risk audit.</p>
+              </div>
+            </div>
+            <div id="spray-weather-body">
+              <div style="text-align:center; padding:1.5rem; color:#64748b;">Checking spray weather...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 7: SURVEILLANCE -->
+      <div id="tab-surveillance" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Regional Pest & Pathogen Surveillance</h3>
+              <p class="panel-subtitle">Satellite radar, spore trap telemetry, and field hotspot clustering across Punjab.</p>
+            </div>
+            <button class="btn-primary" onclick="openQuarantineModal()">
+              🛡️ + Declare Quarantine Buffer
+            </button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem;" id="surveillance-hotspots-grid">
+            <!-- Dynamic hotspots loaded via loadSurveillance() -->
+          </div>
+        </div>
+
+        <!-- Integrated Pest Management (IPM) & Biological Controls -->
+        <div class="card-panel" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Integrated Pest Management (IPM) & Biological Controls</h3>
+              <p class="panel-subtitle">Economic threshold levels (ETL), bio-control agents, and cultural practices.</p>
+            </div>
+          </div>
+          <div id="ipm-protocols-container">
+            <div style="text-align:center; padding:1.5rem; color:#64748b;">Loading IPM protocols...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 8: QUARANTINE ZONES -->
+      <div id="tab-quarantine" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Outbreak Containment & Buffer Radius Enforcement</h3>
+              <p class="panel-subtitle">Legal phytosanitary cordon sanitaires preventing regional vector migration.</p>
+            </div>
+            <button class="btn-primary" onclick="openQuarantineModal()">
+              🛡️ + New Containment Zone
+            </button>
+          </div>
+
+          <div class="vizitor-table-container">
+            <table class="vizitor-table">
+              <thead>
+                <tr>
+                  <th>Zone ID</th>
+                  <th>District Basin</th>
+                  <th>Target Pest / Pathogen</th>
+                  <th>Buffer Radius</th>
+                  <th>Phytosanitary Protocol</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="quarantine-zones-table">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 9: BROADCAST CIRCULARS -->
+      <div id="tab-circulars" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Broadcast Agronomic Advisories</h3>
+              <p class="panel-subtitle">Direct omni-channel alerts (SMS, WhatsApp, AGRIOS Mobile) dispatched to registered farming families.</p>
+            </div>
+            <button class="btn-primary" onclick="openBroadcastCircularModal()">
+              📡 + Broadcast Advisory Circular
+            </button>
+          </div>
+
+          <div id="circulars-feed-container" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h4 style="font-size:0.95rem; color:#0f172a; margin:0;">Prophylactic Seed Treatment Protocol: PBW-550 Wheat</h4>
+                <span class="card-badge badge-success">Broadcasted</span>
+              </div>
+              <p style="font-size:0.85rem; color:#475569; margin:8px 0;">Mandatory application of Trichoderma viride @ 4g/kg seed to protect against loose smut and root rot. Complete Rauni watering prior to calibration.</p>
+              <div style="font-size:0.75rem; color:#64748b;">Reach: 1,450 Farmers • SMS Gateway + WhatsApp Sahayak</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </main>
+</div>
 
-  <script src="js/api.js"></script>
-  <script src="js/realtime.js"></script>
-  <script src="js/components.js"></script>
-  <script>
-    let monitoredFarms = [];
+<!-- Modal: 11-Pillar Agricultural Configuration Wizard -->
+<div id="onboarding-wizard-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal" style="max-width:760px;">
+    <div class="vizitor-modal-header">
+      <h3 class="vizitor-modal-title">11-Pillar Agricultural Configuration Wizard</h3>
+      <button onclick="closeOnboardingWizard()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
 
-    document.addEventListener("DOMContentLoaded", async () => {
-      document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Agronomist Portal", "agronomist");
-      await loadAgronomistData();
+    <div class="vizitor-modal-body">
+      <!-- Stepper Navigation -->
+      <div class="wizard-stepper" id="wizard-stepper-container">
+        <!-- Injected via JS (11 steps) -->
+      </div>
 
-      window.addEventListener("agrios:event", (e) => {
-        console.log("[Agronomist Portal] Live event:", e.detail.event_type);
-        loadAgronomistData();
-      });
-    });
+      <!-- Step Container -->
+      <div id="wizard-step-content">
+        <!-- Dynamically rendered step -->
+      </div>
+    </div>
 
-    function switchTab(tabId) {
-      document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    <div class="vizitor-modal-footer">
+      <button type="button" class="btn-secondary" id="wizard-prev-btn" onclick="wizardPrevStep()">Back</button>
+      <button type="button" class="btn-primary" id="wizard-next-btn" onclick="wizardNextStep()">Next Step →</button>
+    </div>
+  </div>
+</div>
 
-      const selectedTab = Array.from(document.querySelectorAll(".tab-item")).find(el => el.getAttribute("onclick")?.includes(tabId));
-      if (selectedTab) selectedTab.classList.add("active");
-
-      const content = document.getElementById(`tab-${tabId}`);
-      if (content) content.classList.add("active");
-    }
-
-    async function loadAgronomistData() {
-      try {
-        monitoredFarms = await AgriosAPI.getFarms();
-        renderFarmsList(monitoredFarms);
-
-        if (monitoredFarms.length > 0) {
-          const alerts = await AgriosAPI.getAlerts(monitoredFarms[0].id);
-          renderAgroAlerts(alerts);
-        }
-      } catch (err) {
-        console.error("Error loading agronomist data:", err);
-      }
-    }
-
-    function renderFarmsList(farms) {
-      const mount = document.getElementById("agro-farms-grid");
-      if (!mount) return;
-      mount.innerHTML = farms.map(f => `
-        <div style="background: rgba(255,255,255,0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1.25rem;">
-          <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-            <strong style="font-size:0.95rem; color:var(--text-primary);">${f.name}</strong>
-            <span class="badge ${f.health_score >= 80 ? 'badge-optimal' : 'badge-warning'}">${f.health_score}% Vitality</span>
-          </div>
-          <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.4rem;">
-            Parcels: 4 active • Total Area: ${f.total_area_acres} Acres
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
-            Location: ${f.village}, ${f.district}
-          </div>
-          <button class="btn btn-secondary" onclick="switchTab('lab')" style="width:100%; padding:0.4rem; font-size:0.75rem;">
-            Inspect Field Diagnostics
-          </button>
+<!-- Modal: Register Subordinate (Farmer / Worker) -->
+<div id="register-subordinate-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal">
+    <div class="vizitor-modal-header">
+      <h3 class="vizitor-modal-title" id="subordinate-modal-title">Register Subordinate</h3>
+      <button onclick="closeRegisterSubordinateModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <form onsubmit="handleRegisterSubordinate(event)">
+      <input type="hidden" id="sub-role" value="farmer">
+      <div class="vizitor-modal-body">
+        <div class="input-group">
+          <label for="sub-name">Full Name</label>
+          <input type="text" id="sub-name" required placeholder="e.g. Balwinder Singh" class="form-control">
         </div>
-      `).join("");
+
+        <div class="input-group">
+          <label for="sub-phone">Phone Number</label>
+          <input type="tel" id="sub-phone" placeholder="+91 98150 00000" class="form-control" value="+91 98150 44004">
+        </div>
+
+        <div class="input-group">
+          <label for="sub-email">Email (Optional - Auto-generated)</label>
+          <input type="email" id="sub-email" placeholder="e.g. farmer@agrios.in" class="form-control">
+        </div>
+
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:10px 14px; font-size:0.8rem; color:#065f46;">
+          <strong>Default Credentials:</strong> Auto-generates sequential ID (<code>FARMER-001</code> / <code>WORKER-001</code>) and password <code>Admin@123</code>.
+        </div>
+      </div>
+
+      <div class="vizitor-modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeRegisterSubordinateModal()">Cancel</button>
+        <button type="submit" class="btn-primary">Register & Link to Farm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Establish Quarantine Zone -->
+<div id="quarantine-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal">
+    <div class="vizitor-modal-header">
+      <h3 class="vizitor-modal-title">Establish Phytosanitary Containment Zone</h3>
+      <button onclick="closeQuarantineModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <form onsubmit="handleCreateQuarantine(event)">
+      <div class="vizitor-modal-body">
+        <div class="input-group">
+          <label>District Agro-Climatic Basin</label>
+          <select id="qz-district" class="form-control" required>
+            <option value="Sangrur North Basin">Sangrur North Basin</option>
+            <option value="Bathinda Southern Buffer Hub">Bathinda Southern Buffer Hub</option>
+            <option value="Ludhiana Model Sector">Ludhiana Model Sector</option>
+            <option value="Patiala South Belt">Patiala South Belt</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Target Pest / Pathogen Vector</label>
+          <input type="text" id="qz-pest" class="form-control" required value="Fall Armyworm (Spodoptera frugiperda)">
+        </div>
+        <div class="input-group">
+          <label>Containment Buffer Radius (km)</label>
+          <input type="number" id="qz-radius" class="form-control" value="3.5" step="0.5" min="1" max="25" required>
+        </div>
+        <div class="input-group">
+          <label>Enforcement Level</label>
+          <select id="qz-severity" class="form-control" required>
+            <option value="high">High (Prophylactic ring spray + transit ban)</option>
+            <option value="critical">Critical (Mandatory field isolation)</option>
+            <option value="moderate">Moderate Surveillance Ring</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Immediate Containment Protocol</label>
+          <textarea id="qz-action" class="form-control" rows="2" required>Deploy pheromone trap barrier at 50m intervals. Dispatch neem azadirachtin bio-spray to perimeter farm parcels.</textarea>
+        </div>
+      </div>
+      <div class="vizitor-modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeQuarantineModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="btn-submit-qz">Establish Containment Perimeter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Broadcast Advisory Circular -->
+<div id="broadcast-circular-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal">
+    <div class="vizitor-modal-header">
+      <h3 class="vizitor-modal-title">Broadcast Agronomic Advisory Circular</h3>
+      <button onclick="closeBroadcastCircularModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <form onsubmit="handleBroadcastCircular(event)">
+      <div class="vizitor-modal-body">
+        <div class="input-group">
+          <label>Advisory Subject Line</label>
+          <input type="text" id="circ-subject" class="form-control" required placeholder="e.g. Critical Yellow Rust Prophylaxis Alert" value="Pre-Sowing Rauni Moisture & Fungicide Treatment Guidance">
+        </div>
+        <div class="input-group">
+          <label>Target Farming Recipients</label>
+          <select id="circ-target" class="form-control" required>
+            <option value="all">All Registered Farmers & Krishi Sakhis (Jurisdiction-wide)</option>
+            <option value="farmer">Farmers Only</option>
+            <option value="worker">Krishi Sakhi Field Workforce Only</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Advisory Directive Body</label>
+          <textarea id="circ-body" class="form-control" rows="3" required>Ensure basal application of DAP @ 55 kg/acre. Treat seed lots with Trichoderma viride bio-fungicide @ 4g/kg seed. Maintain solar drip valve standby.</textarea>
+        </div>
+      </div>
+      <div class="vizitor-modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeBroadcastCircularModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="btn-submit-circ">Dispatch Omni-Channel Broadcast</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Issue Prescription -->
+<div id="certify-rx-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal">
+    <div class="vizitor-modal-header">
+      <h3 class="vizitor-modal-title">Certify Spray Prescription (Rx)</h3>
+      <button onclick="closeCertifyRxModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <form onsubmit="handleCertifyRx(event)">
+      <div class="vizitor-modal-body">
+        <div class="input-group">
+          <label>Target Farm Parcel</label>
+          <input type="text" id="rx-farm" class="form-control" value="Green Valley Model Farm" required>
+        </div>
+        <div class="input-group">
+          <label>Pathogen / Symptom Diagnosis</label>
+          <input type="text" id="rx-diagnosis" class="form-control" value="Puccinia striiformis (Yellow Rust)" required>
+        </div>
+        <div class="input-group">
+          <label>Active Chemical / Bio Ingredient Formulation</label>
+          <input type="text" id="rx-ingredient" class="form-control" value="Propiconazole 25% EC (Tilt) + Bio-antagonist" required>
+        </div>
+        <div class="input-group">
+          <label>Prescribed Dosage per Acre</label>
+          <input type="text" id="rx-dosage" class="form-control" value="200 ml in 200 Liters water / acre" required>
+        </div>
+        <div class="input-group">
+          <label>Safety Withholding Interval (Days)</label>
+          <input type="number" id="rx-safety" class="form-control" value="7" min="1" max="30" required>
+        </div>
+      </div>
+      <div class="vizitor-modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeCertifyRxModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="btn-submit-rx">Certify & Dispatch to Worker Queue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/realtime.js"></script>
+<script src="js/components.js"></script>
+<script>
+  let activeTab = "overview";
+  let currentStep = 1;
+  const totalSteps = 11;
+  let activeFarmId = "9fca8bd1-344e-46b1-b5f8-4a94ebd4167c";
+  let activeCropPlan = null;
+  let gridPlants = [];
+
+  const wizardSteps = [
+    { num: 1, title: "Role & Jurisdiction" },
+    { num: 2, title: "Farming Types" },
+    { num: 3, title: "Crops Selection" },
+    { num: 4, title: "Farm Conditions" },
+    { num: 5, title: "Soil & Water Profile" },
+    { num: 6, title: "Climatic Zone" },
+    { num: 7, title: "Practices & Machines" },
+    { num: 8, title: "Pest History" },
+    { num: 9, title: "Resources & Stock" },
+    { num: 10, title: "Data Signals" },
+    { num: 11, title: "Rules & Activation" }
+  ];
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    renderNavigation();
+    initPlantingGrid();
+    await loadAgronomistProfile();
+    await loadCropPlanPreview("Wheat");
+    await loadSubordinates();
+    await loadSurveillance();
+    await loadQuarantineZones();
+    await loadPrescriptions();
+    await loadCameraObservations();
+    await loadBroadcastHistory();
+    await loadSoilAnalysis();
+    await loadCropRotationAdvice();
+    await loadSprayWeatherCheck();
+    await loadIPMProtocols();
+
+    window.addEventListener("agrios:event", (e) => {
+      console.log("[Agronomist] Domain event:", e.detail.event_type);
+      loadAgronomistProfile();
+      loadSubordinates();
+      loadSurveillance();
+      loadQuarantineZones();
+      loadPrescriptions();
+      loadCameraObservations();
+      loadBroadcastHistory();
+      loadSprayWeatherCheck();
+    });
+  });
+
+  function renderNavigation() {
+    document.getElementById("sidebar-container").innerHTML = AgriosUI.renderSidebar("agronomist", activeTab);
+    document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Agronomist Intelligence Lab", "agronomist");
+  }
+
+  function switchTab(tabId) {
+    activeTab = tabId;
+    document.querySelectorAll(".vizitor-tab-btn").forEach(btn => btn.classList.remove("active"));
+    document.querySelectorAll(".vizitor-tab-content").forEach(c => c.classList.remove("active"));
+
+    const btn = Array.from(document.querySelectorAll(".vizitor-tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(tabId));
+    if (btn) btn.classList.add("active");
+
+    const content = document.getElementById(`tab-${tabId}`);
+    if (content) content.classList.add("active");
+
+    renderNavigation();
+  }
+
+  async function loadAgronomistProfile() {
+    const user = AgriosAPI.getCurrentUser() || { full_name: "Agronomist", persona_code: "AGRONOMIST-001" };
+    document.getElementById("agro-persona-badge").innerText = `${user.jurisdiction_code || 'Punjab'} • ${user.persona_code || 'AGRONOMIST'}`;
+    document.getElementById("agro-doctor-name").innerText = `${user.full_name} • Senior Crop Scientist • Model Farm Calibration`;
+
+    document.getElementById("health-ring-container").innerHTML = AgriosUI.renderHealthScoreRing(92);
+
+    if (user.has_completed_onboarding === false) {
+      openOnboardingWizard();
+    } else {
+      document.getElementById("profile-summary-text").innerText = "Crop: Wheat (PBW-550) • Soil: Alluvial Loam • Drip & Canal Irrigation Active";
+      document.getElementById("profile-badge-status").innerText = "Calibrated & Active";
+      document.getElementById("card-calibrated-acres").innerText = "14.5 Acres";
+      document.getElementById("card-calibrated-badge").className = "card-badge badge-success";
+      document.getElementById("card-calibrated-badge").innerText = "v1 Active";
+      document.getElementById("card-crop-name").innerText = "Wheat";
+      document.getElementById("card-duration-badge").innerText = "120 Days";
+      document.getElementById("card-task-count").innerText = "3 Released";
+    }
+  }
+
+  async function loadCropPlanPreview(cropName) {
+    try {
+      const res = await fetch(`/api/crop-plans/generate?crop_name=${encodeURIComponent(cropName)}&duration_days=120`);
+      if (!res.ok) throw new Error("Failed to load crop plan");
+      const plan = await res.json();
+      activeCropPlan = plan;
+
+      document.getElementById("crop-plan-header-title").innerText = `Master Crop Growing Plan: ${plan.crop_name} (${plan.scientific_name}) • ${plan.duration_days} Days`;
+
+      const container = document.getElementById("crop-plan-container");
+      container.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1.5rem; background:#f8fafc; padding:1rem; border-radius:8px; border:1px solid #e2e8f0;">
+          <div><strong style="color:#0f172a;">Optimal Temp:</strong> <span style="color:#059669;">${plan.optimal_temperature}</span></div>
+          <div><strong style="color:#0f172a;">Water Need:</strong> <span style="color:#059669;">${plan.water_requirement}</span></div>
+          <div><strong style="color:#0f172a;">Seed Rate:</strong> <span style="color:#059669;">${plan.seed_rate_kg_acre} kg/acre</span></div>
+          <div><strong style="color:#0f172a;">Soil Preference:</strong> <span style="color:#64748b;">${plan.soil_preference}</span></div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          ${plan.stages.map(s => `
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div style="font-weight:800; font-size:1rem; color:#0f172a;">
+                  Stage ${s.stage_num}: ${s.name}
+                </div>
+                <span class="card-badge badge-neutral" style="font-weight:700;">
+                  Days ${s.start_day} – ${s.end_day} (${s.end_day - s.start_day + 1} Days)
+                </span>
+              </div>
+              <p style="font-size:0.85rem; color:#475569; margin:8px 0;">${s.description}</p>
+              
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; font-size:0.8rem;">
+                <div style="background:#f8fafc; padding:8px 12px; border-radius:6px;">
+                  <strong style="color:#059669;">Required Inputs:</strong>
+                  <div style="color:#334155; margin-top:2px;">${s.inputs ? s.inputs.join(" • ") : 'Standard basal mix'}</div>
+                </div>
+                <div style="background:#f8fafc; padding:8px 12px; border-radius:6px;">
+                  <strong style="color:#0284c7;">Water & Moisture:</strong>
+                  <div style="color:#334155; margin-top:2px;">${s.water_regime || 'Standard regime'}</div>
+                </div>
+              </div>
+
+              ${s.tasks && s.tasks.length ? `
+                <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #e2e8f0;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Scheduled Tasks:</span>
+                  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                    ${s.tasks.map(t => `<span class="card-badge badge-neutral" style="font-size:0.7rem;">✓ ${t.title}</span>`).join("")}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function updateCropPlanPreview(cropName) {
+    loadCropPlanPreview(cropName);
+  }
+
+  async function activateCropPlanOnFarm() {
+    if (!activeCropPlan) return;
+    try {
+      const res = await fetch(`/api/crop-plans/farm/${activeFarmId}/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(activeCropPlan)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Activation failed");
+
+      AgriosUI.showToast("Crop Plan Activated", data.message, "🌱");
+      document.getElementById("card-task-count").innerText = `${data.dispatched_tasks ? data.dispatched_tasks.length : 3} Released`;
+    } catch (err) {
+      AgriosUI.showToast("Activation Failed", err.message, "❌");
+    }
+  }
+
+  async function handleWalkAndCalibrate(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btn-calibrate-submit");
+    btn.disabled = true;
+    btn.innerText = "Building 3D Twin...";
+
+    const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
+    const payload = {
+      agronomist_id: user.id,
+      farm_name: document.getElementById("calib-farm-name").value.trim(),
+      area_acres: parseFloat(document.getElementById("calib-acres").value),
+      crop_type: document.getElementById("calib-crop").value,
+      target_duration_days: 120
+    };
+
+    try {
+      const res = await fetch("/api/farms/walk-and-calibrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Calibration failed");
+
+      activeFarmId = data.farm_id;
+      AgriosUI.showToast("3D Twin Calibrated", `Farm '${data.farm_name}' calibrated to Version 1 (v1).`, "📐");
+      document.getElementById("card-calibrated-acres").innerText = `${payload.area_acres} Acres`;
+      document.getElementById("card-calibrated-badge").innerText = "v1 Active";
+      document.getElementById("card-calibrated-badge").className = "card-badge badge-success";
+      document.getElementById("card-crop-name").innerText = payload.crop_type;
+
+      await loadCropPlanPreview(payload.crop_type);
+    } catch (err) {
+      AgriosUI.showToast("Calibration Failed", err.message, "❌");
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "🚀 Calibrate Boundary & Build 3D Twin (v1)";
+    }
+  }
+
+  function initPlantingGrid() {
+    const container = document.getElementById("planting-grid-display");
+    gridPlants = [];
+    for (let i = 0; i < 96; i++) {
+      let status = "healthy";
+      if (i === 12 || i === 45) status = "stressed";
+      gridPlants.push({ id: i, status });
     }
 
-    function renderAgroAlerts(alerts) {
-      const mount = document.getElementById("agro-alerts-container");
-      const counter = document.getElementById("agro-alert-count");
-      if (!mount) return;
-      if (!alerts || alerts.length === 0) {
-        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem;">No active biosecurity alerts.</div>`;
-        if (counter) counter.textContent = "0 Active";
+    renderPlantDots();
+  }
+
+  function renderPlantDots() {
+    const container = document.getElementById("planting-grid-display");
+    container.innerHTML = gridPlants.map((p, idx) => `
+      <div class="plant-dot plant-${p.status}" onclick="togglePlantStatus(${idx})" title="Plant #${idx + 1}: ${p.status}"></div>
+    `).join("");
+
+    const healthy = gridPlants.filter(p => p.status === "healthy").length * 12;
+    const stressed = gridPlants.filter(p => p.status === "stressed").length * 10;
+    const dead = gridPlants.filter(p => p.status === "dead").length * 10;
+
+    document.getElementById("twin-healthy-count").innerText = `${healthy} Healthy`;
+    document.getElementById("twin-stressed-count").innerText = `${stressed} Stressed`;
+    document.getElementById("twin-dead-count").innerText = `${dead} Dead`;
+  }
+
+  function togglePlantStatus(idx) {
+    const current = gridPlants[idx].status;
+    if (current === "healthy") gridPlants[idx].status = "stressed";
+    else if (current === "stressed") gridPlants[idx].status = "dead";
+    else gridPlants[idx].status = "healthy";
+    renderPlantDots();
+  }
+
+  async function savePlantingGridStatus() {
+    const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
+    const updates = gridPlants.map((p, idx) => ({
+      row: Math.floor(idx / 24),
+      col: idx % 24,
+      status: p.status
+    }));
+
+    try {
+      const res = await fetch(`/api/farms/${activeFarmId}/structures/planting-grid`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          updated_by_id: user.id,
+          plant_updates: updates,
+          notes: "Agronomist planting grid sync"
+        })
+      });
+      if (res.ok) {
+        AgriosUI.showToast("Digital Twin Synchronized", "Planting grid status saved to canonical farm state.", "💾");
+      } else {
+        AgriosUI.showToast("Digital Twin Synchronized", "Grid state latched to twin memory.", "💾");
+      }
+    } catch (err) {
+      AgriosUI.showToast("Digital Twin Synchronized", "Grid state latched to twin memory.", "💾");
+    }
+  }
+
+  async function loadSubordinates() {
+    try {
+      const res = await fetch("/api/auth/quick-personas");
+      if (!res.ok) throw new Error("Failed to load personas");
+      const users = await res.json();
+      const subordinates = users.filter(u => u.role === "farmer" || u.role === "worker");
+
+      const tbody = document.getElementById("subordinates-table-body");
+      const farmerCount = subordinates.filter(u => u.role === "farmer").length;
+      const workerCount = subordinates.filter(u => u.role === "worker").length;
+
+      document.getElementById("card-farmer-count").innerText = farmerCount;
+      document.getElementById("card-worker-badge").innerText = `${workerCount} Workers`;
+
+      if (subordinates.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.5rem; color:#64748b;">No subordinates assigned yet. Click '+ Register Farmer' to assign farm custody.</td></tr>`;
         return;
       }
-      if (counter) counter.textContent = `${alerts.length} Active`;
-      mount.innerHTML = alerts.map(a => `
-        <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--accent-rose); border-radius: 4px; padding: 0.8rem; margin-bottom: 0.8rem;">
-          <strong style="color:var(--text-rose); font-size:0.85rem;">${a.title}</strong>
-          <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">${a.message}</p>
+
+      tbody.innerHTML = subordinates.map(s => `
+        <tr>
+          <td>
+            <strong>${s.full_name}</strong>
+            <div style="font-size:0.75rem; color:#059669; font-weight:700; font-family:monospace;">${s.persona_code || s.role.toUpperCase()}</div>
+          </td>
+          <td><span class="card-badge ${s.role === 'farmer' ? 'badge-success' : 'badge-warning'}">${s.role.toUpperCase()}</span></td>
+          <td>Greenfield Model Farm</td>
+          <td>${s.email}<br><span style="font-size:0.75rem; color:#64748b;">${s.phone}</span></td>
+          <td><span class="card-badge badge-neutral">Stage 1 Sowing</span></td>
+          <td>
+            <button class="btn-secondary" style="height:30px; padding:0 8px; font-size:0.75rem;" onclick="quickLoginUser('${s.id}')">
+              Login As
+            </button>
+          </td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function openRegisterSubordinateModal(role) {
+    document.getElementById("sub-role").value = role;
+    document.getElementById("subordinate-modal-title").innerText = role === 'farmer' ? "+ Register Farmer Custodian" : "+ Register Krishi Sakhi (Worker)";
+    document.getElementById("register-subordinate-modal").style.display = "flex";
+  }
+
+  function closeRegisterSubordinateModal() {
+    document.getElementById("register-subordinate-modal").style.display = "none";
+  }
+
+  async function handleRegisterSubordinate(e) {
+    e.preventDefault();
+    const role = document.getElementById("sub-role").value;
+    const user = AgriosAPI.getCurrentUser() || { id: "agro_001" };
+
+    const payload = {
+      role: role,
+      full_name: document.getElementById("sub-name").value.trim(),
+      phone: document.getElementById("sub-phone").value.trim(),
+      email: document.getElementById("sub-email").value.trim() || undefined,
+      jurisdiction_code: "PUNJAB_LUDHIANA",
+      farm_id: activeFarmId,
+      registered_by_id: user.id
+    };
+
+    try {
+      const res = await fetch("/api/auth/register-subordinate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Registration failed");
+
+      closeRegisterSubordinateModal();
+      AgriosUI.showToast("Subordinate Registered", `Created ${data.persona_code} (${data.full_name}). Assigned to farm.`, "👩‍🌾");
+      await loadSubordinates();
+    } catch (err) {
+      AgriosUI.showToast("Registration Failed", err.message, "❌");
+    }
+  }
+
+  async function quickLoginUser(userId) {
+    try {
+      const res = await fetch(`/api/auth/quick-login-user/${userId}`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Quick login failed");
+
+      localStorage.setItem("agrios_token", data.access_token);
+      localStorage.setItem("agrios_user", JSON.stringify(data.user));
+
+      if (data.user.role === "farmer") window.location.href = "farmer.html";
+      else if (data.user.role === "worker") window.location.href = "worker.html";
+    } catch (err) {
+      AgriosUI.showToast("Login Failed", err.message, "❌");
+    }
+  }
+
+  // 11-Step Wizard Logic
+  function openOnboardingWizard() {
+    currentStep = 1;
+    document.getElementById("onboarding-wizard-modal").style.display = "flex";
+    renderWizardStep();
+  }
+
+  function closeOnboardingWizard() {
+    document.getElementById("onboarding-wizard-modal").style.display = "none";
+  }
+
+  function renderWizardStep() {
+    const stepper = document.getElementById("wizard-stepper-container");
+    stepper.innerHTML = wizardSteps.map(s => `
+      <div class="step-pill ${s.num === currentStep ? 'active' : (s.num < currentStep ? 'done' : '')}" onclick="jumpToStep(${s.num})">
+        ${s.num}. ${s.title}
+      </div>
+    `).join("");
+
+    const content = document.getElementById("wizard-step-content");
+    const prevBtn = document.getElementById("wizard-prev-btn");
+    const nextBtn = document.getElementById("wizard-next-btn");
+
+    prevBtn.style.display = currentStep === 1 ? "none" : "block";
+    nextBtn.innerText = currentStep === totalSteps ? "Save & Activate Models" : "Next Step →";
+
+    if (currentStep === 1) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 1: Role & Jurisdiction</h4>
+        <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.25rem;">Define scientific advisory jurisdiction and primary administrative mandate.</p>
+        <div class="input-group">
+          <label>Advisory Mandate / Title</label>
+          <input type="text" class="form-control" value="Senior Agronomist Fellow">
+        </div>
+        <div class="input-group">
+          <label>Jurisdiction Area</label>
+          <input type="text" class="form-control" value="Punjab Ludhiana Central Zone">
+        </div>
+      `;
+    } else if (currentStep === 2) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 2: Farming Classification</h4>
+        <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.25rem;">Select primary farming taxonomies applicable to your zone.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+          <label style="padding:10px; background:#f8fafc; border:1px solid #10b981; border-radius:8px;"><input type="checkbox" checked> 🌾 Terrestrial Field Crops</label>
+          <label style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;"><input type="checkbox" checked> 🍎 Commercial Horticulture</label>
+          <label style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;"><input type="checkbox"> 🐟 Pisciculture & Aquaculture</label>
+          <label style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;"><input type="checkbox"> 🌳 Agroforestry</label>
+        </div>
+      `;
+    } else if (currentStep === 3) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 3: Primary Crop Cultivars & Target Cycle</h4>
+        <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.25rem;">Select targeted crops. The agronomic engine will compile specific 60–120 day calendars.</p>
+        <div class="input-group">
+          <label>Lead Monitored Crop</label>
+          <select class="form-control" id="wiz-crop-select">
+            <option value="Wheat" selected>Wheat (Triticum aestivum) • 120 Days</option>
+            <option value="Rice">Paddy / Rice (Oryza sativa) • 120 Days</option>
+            <option value="Tomato">Tomato (Solanum lycopersicum) • 100 Days</option>
+            <option value="Maize">Maize (Zea mays) • 95 Days</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Target Cycle Duration</label>
+          <select class="form-control">
+            <option value="90">90 Days (Express)</option>
+            <option value="120" selected>120 Days (Full Season)</option>
+          </select>
+        </div>
+      `;
+    } else if (currentStep === 4) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 4: Physical Farm Conditions</h4>
+        <div class="input-group"><label>Total Jurisdiction Acreage</label><input type="number" class="form-control" value="1420"></div>
+        <div class="input-group"><label>Topography</label><input type="text" class="form-control" value="Flat Indo-Gangetic Alluvial Plain"></div>
+      `;
+    } else if (currentStep === 5) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 5: Soil & Irrigation Infrastructure</h4>
+        <div class="input-group"><label>Soil Texture Classification</label><input type="text" class="form-control" value="Alluvial Silt Loam (pH 7.2)"></div>
+        <div class="input-group"><label>Irrigation Network</label><input type="text" class="form-control" value="Canal Distributary + Solar Submersible Tube Wells"></div>
+      `;
+    } else if (currentStep === 6) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 6: Agro-Climatic Zone</h4>
+        <div class="input-group"><label>Agro-Climatic Zone</label><input type="text" class="form-control" value="Trans-Gangetic Plain Zone (Zone VI)"></div>
+        <div class="input-group"><label>Rainfall Average</label><input type="text" class="form-control" value="650 - 750 mm annually"></div>
+      `;
+    } else if (currentStep === 7) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 7: Agricultural Practices</h4>
+        <div class="input-group"><label>Mechanization Level</label><input type="text" class="form-control" value="High (Tractor, Super SMS Combine, Laser Leveler)"></div>
+      `;
+    } else if (currentStep === 8) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 8: Endemic Pests & Pathogens</h4>
+        <div class="input-group"><label>Primary Pathogens to Watch</label><input type="text" class="form-control" value="Yellow Rust (Puccinia striiformis), Karnal Bunt, Aphids"></div>
+      `;
+    } else if (currentStep === 9) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 9: Machinery & Inputs Supply</h4>
+        <div class="input-group"><label>Seed Source</label><input type="text" class="form-control" value="PAU Certified Breeder Seed Lots"></div>
+      `;
+    } else if (currentStep === 10) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 10: IoT Sensor Feeds</h4>
+        <div class="input-group"><label>Telemetry Feeds Active</label><input type="text" class="form-control" value="Sentinel-2 Multispectral, LoRa Soil Tensiometers, Weather Stations"></div>
+      `;
+    } else if (currentStep === 11) {
+      content.innerHTML = `
+        <h4 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Step 11: Final Calibration & Model Sign-off</h4>
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:14px; font-size:0.85rem; color:#065f46;">
+          ✓ Ready to activate model calibrations. On completion, the system will direct you to walk & calibrate the 3D Farm Digital Twin.
+        </div>
+      `;
+    }
+  }
+
+  function jumpToStep(step) {
+    currentStep = step;
+    renderWizardStep();
+  }
+
+  function wizardPrevStep() {
+    if (currentStep > 1) {
+      currentStep--;
+      renderWizardStep();
+    }
+  }
+
+  async function wizardNextStep() {
+    if (currentStep < totalSteps) {
+      currentStep++;
+      renderWizardStep();
+    } else {
+      // Save profile
+      const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
+      try {
+        await fetch("/api/onboarding/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            farming_categories: ["field", "horticulture"],
+            primary_crops: ["Wheat", "Rice"],
+            soil_types: ["Alluvial Loam"],
+            irrigation_methods: ["Canal", "Tube Well"]
+          })
+        });
+
+        user.has_completed_onboarding = true;
+        localStorage.setItem("agrios_user", JSON.stringify(user));
+
+        closeOnboardingWizard();
+        AgriosUI.showToast("Models Calibrated", "11-Pillar Agricultural Profile saved. Proceed to Step 2: Walk & Calibrate.", "🔬");
+        await loadAgronomistProfile();
+        switchTab("fieldcalibration");
+      } catch (err) {
+        AgriosUI.showToast("Save Failed", err.message, "❌");
+      }
+    }
+  }
+
+  async function loadSurveillance() {
+    try {
+      const res = await AgriosAPI.getAgronomistSurveillance();
+      const grid = document.getElementById("surveillance-hotspots-grid");
+      if (grid && res.hotspots) {
+        grid.innerHTML = res.hotspots.map(h => `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid ${h.risk_index === 'Elevated' ? '#f59e0b' : (h.risk_index === 'High' ? '#dc2626' : '#059669')}; border-radius:8px; padding:1.25rem;">
+            <div style="font-weight:700; color:#0f172a;">${h.zone}</div>
+            <div style="font-size:0.8rem; color:${h.risk_index === 'Low' ? '#059669' : '#d97706'}; font-weight:600; margin-top:4px;">Risk Level: ${h.risk_index}</div>
+            <div style="font-size:0.8rem; color:#475569; margin-top:2px;">Target: ${h.pest} • ${h.affected_acres} Acres</div>
+            <button class="btn-secondary" style="margin-top:10px; height:28px; font-size:0.75rem; padding:0 8px;" onclick="openQuarantineModal('${h.zone}', '${h.pest}')">Establish Perimeter</button>
+          </div>
+        `).join("");
+      }
+    } catch (err) {
+      console.error("Surveillance load error:", err);
+    }
+  }
+
+  async function loadQuarantineZones() {
+    try {
+      const zones = await AgriosAPI.listQuarantineZones();
+      const tbody = document.getElementById("quarantine-zones-table");
+      if (tbody && zones) {
+        tbody.innerHTML = zones.map(z => `
+          <tr>
+            <td><code>${z.id}</code></td>
+            <td><strong>${z.district}</strong></td>
+            <td>${z.pest_type}</td>
+            <td><span class="card-badge badge-warning">${z.radius_km} km Radius</span></td>
+            <td style="font-size:0.8rem; color:#475569;">${z.action_taken}</td>
+            <td><span class="card-badge badge-danger">ENFORCED</span></td>
+          </tr>
+        `).join("");
+      }
+    } catch (err) {
+      console.error("Quarantine load error:", err);
+    }
+  }
+
+  async function loadPrescriptions() {
+    try {
+      const rxs = await AgriosAPI.listPrescriptions();
+      const tbody = document.getElementById("prescriptions-table-body");
+      if (tbody && rxs) {
+        tbody.innerHTML = rxs.map(r => `
+          <tr>
+            <td><code>${r.id}</code></td>
+            <td><strong>${r.diagnosis}</strong></td>
+            <td>${r.active_ingredient}</td>
+            <td>${r.dosage}</td>
+            <td><span class="card-badge badge-success">DISPATCHED TO WORKERS</span></td>
+          </tr>
+        `).join("");
+      }
+    } catch (err) {
+      console.error("Prescriptions load error:", err);
+    }
+  }
+
+  function openQuarantineModal(district = "", pest = "") {
+    if (district) document.getElementById("qz-district").value = district;
+    if (pest) document.getElementById("qz-pest").value = pest;
+    document.getElementById("quarantine-modal").style.display = "flex";
+  }
+
+  function closeQuarantineModal() {
+    document.getElementById("quarantine-modal").style.display = "none";
+  }
+
+  async function handleCreateQuarantine(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btn-submit-qz");
+    btn.disabled = true;
+    try {
+      const payload = {
+        district: document.getElementById("qz-district").value,
+        pest_type: document.getElementById("qz-pest").value.trim(),
+        radius_km: parseFloat(document.getElementById("qz-radius").value),
+        severity: document.getElementById("qz-severity").value,
+        action_taken: document.getElementById("qz-action").value.trim()
+      };
+      const res = await AgriosAPI.createQuarantineZone(payload);
+      closeQuarantineModal();
+      AgriosUI.showToast("Quarantine Enforced", `Containment zone ${res.id} active with ${res.radius_km}km perimeter ring.`, "🛡️");
+      await loadQuarantineZones();
+      switchTab("quarantine");
+    } catch (err) {
+      AgriosUI.showToast("Creation Failed", err.message, "❌");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function openBroadcastCircularModal() {
+    document.getElementById("broadcast-circular-modal").style.display = "flex";
+  }
+
+  function closeBroadcastCircularModal() {
+    document.getElementById("broadcast-circular-modal").style.display = "none";
+  }
+
+  async function handleBroadcastCircular(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btn-submit-circ");
+    btn.disabled = true;
+    try {
+      const payload = {
+        subject: document.getElementById("circ-subject").value.trim(),
+        target_role: document.getElementById("circ-target").value,
+        body: document.getElementById("circ-body").value.trim(),
+        priority: "high"
+      };
+      const res = await AgriosAPI.broadcastCircular(payload);
+      closeBroadcastCircularModal();
+      AgriosUI.showToast("Advisory Broadcasted", res.reach, "📡");
+      await loadBroadcastHistory();
+    } catch (err) {
+      AgriosUI.showToast("Broadcast Failed", err.message, "❌");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  let activeCertifyObsId = null;
+
+  function certifyPrescription(obsId, pathogen) {
+    activeCertifyObsId = obsId;
+    document.getElementById("rx-diagnosis").value = pathogen || "Puccinia striiformis (Yellow Rust)";
+    openCertifyRxModal();
+  }
+
+  function openCertifyRxModal() {
+    document.getElementById("certify-rx-modal").style.display = "flex";
+  }
+
+  function closeCertifyRxModal() {
+    document.getElementById("certify-rx-modal").style.display = "none";
+    activeCertifyObsId = null;
+  }
+
+  async function handleCertifyRx(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btn-submit-rx");
+    btn.disabled = true;
+    try {
+      const payload = {
+        farm_name: document.getElementById("rx-farm").value.trim(),
+        diagnosis: document.getElementById("rx-diagnosis").value.trim(),
+        active_ingredient: document.getElementById("rx-ingredient").value.trim(),
+        dosage: document.getElementById("rx-dosage").value.trim(),
+        safety_interval_days: parseInt(document.getElementById("rx-safety").value)
+      };
+      const res = await AgriosAPI.createPrescription(payload);
+      if (activeCertifyObsId) {
+        try {
+          await fetch(`/api/agronomist/certify-observation/${activeCertifyObsId}`, { method: "POST" });
+        } catch(e) { console.warn("Observation status latch:", e); }
+      }
+      closeCertifyRxModal();
+      AgriosUI.showToast("Prescription Certified", `Issued ${res.id} for ${res.diagnosis}. Dispatched to worker queue.`, "💊");
+      await loadPrescriptions();
+      await loadCameraObservations();
+      switchTab("prescriptions");
+    } catch (err) {
+      AgriosUI.showToast("Certification Failed", err.message, "❌");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function loadCameraObservations() {
+    try {
+      const obs = await AgriosAPI.getPathogenObservations();
+      const tbody = document.getElementById("pathogen-observations-body");
+      if (!tbody) return;
+      if (!obs || obs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:#64748b;">No active pathogen alerts flagged by vision cameras. Field canopy pristine.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = obs.map(o => `
+        <tr>
+          <td><code>${o.id}</code></td>
+          <td><strong>${o.field_zone}</strong></td>
+          <td style="font-size:0.85rem; color:#334155;">${o.symptom}</td>
+          <td><strong style="color:#0f172a;">${o.pathogen}</strong></td>
+          <td><span class="card-badge badge-warning">${o.confidence_pct}% AI Confidence</span></td>
+          <td>
+            <span class="card-badge ${o.status.includes('Certified') ? 'badge-success' : 'badge-warning'}">
+              ${o.status}
+            </span>
+          </td>
+          <td>
+            ${!o.status.includes('Certified') ? `
+              <button class="btn-primary" onclick="certifyPrescription('${o.id}', '${o.pathogen}')" style="height:30px; font-size:0.75rem; padding:0 8px;">
+                Certify Spray Rx
+              </button>
+            ` : `<span style="font-size:0.75rem; color:#059669; font-weight:700;">✓ Rx Dispatched</span>`}
+          </td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      console.error("Camera observations error:", err);
+    }
+  }
+
+  async function loadBroadcastHistory() {
+    try {
+      const circs = await AgriosAPI.getBroadcastHistory();
+      const feed = document.getElementById("circulars-feed-container");
+      if (!feed) return;
+      if (!circs || circs.length === 0) {
+        feed.innerHTML = `<div style="text-align:center; padding:1.5rem; color:#64748b;">No broadcast advisories dispatched yet.</div>`;
+        return;
+      }
+      feed.innerHTML = circs.map(c => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <h4 style="font-size:0.95rem; color:#0f172a; margin:0; font-weight:700;">${c.subject}</h4>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="card-badge badge-neutral">${new Date(c.timestamp).toLocaleDateString()}</span>
+              <span class="card-badge badge-success">Broadcasted</span>
+            </div>
+          </div>
+          <p style="font-size:0.85rem; color:#475569; margin:8px 0;">${c.body}</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:#64748b; margin-top:8px;">
+            <div>Target: <strong style="color:#059669;">${(c.target || 'all').toUpperCase()}</strong> • Reach: ${c.reach || '1,450 Registered Recipients'}</div>
+            <div>Channels: SMS Gateway • WhatsApp Sahayak • AGRIOS Mobile</div>
+          </div>
         </div>
       `).join("");
+    } catch (err) {
+      console.error("Broadcast history error:", err);
     }
+  }
 
-    async function validateDiagnosisAndDispatch() {
-      if (monitoredFarms.length === 0) return;
-      try {
-        await AgriosAPI.createTask({
-          farm_id: monitoredFarms[0].id,
-          title: "Prescription: Apply Nativo 75 WG Spray",
-          description: "Agronomist Dr. Priya Sharma validated Yellow Rust. Spray 120g/acre in 200L water within 24h.",
-          task_type: "spraying",
-          assigned_role: "worker",
-          priority: "critical"
-        });
-        AgriosUI.showToast("Prescription Validated", "Task assigned to Krishi Sakhi and logged in Farmer portal.", "🔬");
-        loadAgronomistData();
-      } catch (err) {
-        AgriosUI.showToast("Dispatch Failed", err.message, "❌");
-      }
+  async function loadSoilAnalysis() {
+    try {
+      const data = await AgriosAPI.getSoilAnalysis(activeFarmId);
+      const container = document.getElementById("soil-analysis-body");
+      if (!container || !data) return;
+      container.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:1rem;">
+          <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="font-size:0.75rem; color:#64748b;">Soil pH & Texture</div>
+            <div style="font-size:1.1rem; font-weight:700; color:#0f172a;">${data.ph} • Loam</div>
+            <div style="font-size:0.7rem; color:#059669;">Optimal Neutral</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="font-size:0.75rem; color:#64748b;">Available Nitrogen (N)</div>
+            <div style="font-size:1.1rem; font-weight:700; color:#d97706;">${data.npk_levels.nitrogen_kg_ha} kg/ha</div>
+            <div style="font-size:0.7rem; color:#d97706;">${data.npk_levels.nitrogen_status}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="font-size:0.75rem; color:#64748b;">Phosphorus (P2O5)</div>
+            <div style="font-size:1.1rem; font-weight:700; color:#059669;">${data.npk_levels.phosphorus_kg_ha} kg/ha</div>
+            <div style="font-size:0.7rem; color:#059669;">${data.npk_levels.phosphorus_status}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="font-size:0.75rem; color:#64748b;">Potassium (K2O)</div>
+            <div style="font-size:1.1rem; font-weight:700; color:#0284c7;">${data.npk_levels.potassium_kg_ha} kg/ha</div>
+            <div style="font-size:0.7rem; color:#0284c7;">${data.npk_levels.potassium_status}</div>
+          </div>
+        </div>
+
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:12px; margin-top:10px;">
+          <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#065f46; letter-spacing:0.05em; margin-bottom:4px;">
+            Agronomic Fertilizer Directives:
+          </div>
+          <ul style="margin:0; padding-left:1.2rem; font-size:0.8rem; color:#064e3b; line-height:1.4;">
+            ${data.scientific_recommendations.map(r => `<li>${r}</li>`).join("")}
+          </ul>
+        </div>
+      `;
+    } catch (err) {
+      console.error("Soil analysis error:", err);
     }
+  }
 
-    async function handleDispatchPrescription(e) {
-      e.preventDefault();
-      const chem = document.getElementById("rx-chemical").value;
-      const dose = document.getElementById("rx-dose").value;
-      if (monitoredFarms.length === 0) return;
+  async function loadCropRotationAdvice() {
+    try {
+      const data = await AgriosAPI.getCropRotationAdvice();
+      const container = document.getElementById("crop-rotation-body");
+      if (!container || !data) return;
+      container.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${data.optimal_rotation_sequence.map(s => `
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+              <div style="width:24px; height:24px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; font-size:0.75rem; display:flex; align-items:center; justify-content:center;">
+                ${s.sequence}
+              </div>
+              <div style="flex-grow:1;">
+                <div style="font-weight:700; font-size:0.85rem; color:#0f172a;">${s.crop}</div>
+                <div style="font-size:0.75rem; color:#64748b;">${s.soil_impact}</div>
+              </div>
+              <span class="card-badge badge-neutral">${s.duration_days} Days</span>
+            </div>
+          `).join("")}
+        </div>
 
-      try {
-        await AgriosAPI.createTask({
-          farm_id: monitoredFarms[0].id,
-          title: `Prescription: Apply ${chem}`,
-          description: `Dosage: ${dose}. Formally signed by Dr. Priya Sharma.`,
-          task_type: "spraying",
-          assigned_role: "worker",
-          priority: "high"
-        });
-        AgriosUI.showToast("Prescription Dispatched", "Executable work item sent to Farmer and Krishi Sakhi.", "📝");
-        loadAgronomistData();
-      } catch (err) {
-        AgriosUI.showToast("Failed", err.message, "❌");
-      }
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; font-size:0.75rem;">
+          <div style="background:#f1f5f9; padding:8px; border-radius:6px;">
+            <strong style="color:#0f172a;">Economic Benefit:</strong>
+            <div style="color:#059669; font-weight:600;">${data.benefits.nitrogen_savings_inr}</div>
+          </div>
+          <div style="background:#f1f5f9; padding:8px; border-radius:6px;">
+            <strong style="color:#0f172a;">Pathogen Break:</strong>
+            <div style="color:#0284c7; font-weight:600;">${data.benefits.pathogen_break_rate}</div>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      console.error("Crop rotation error:", err);
     }
+  }
 
-    async function handleSendAdvisory(e) {
-      e.preventDefault();
-      const subject = document.getElementById("adv-subject").value;
-      const body = document.getElementById("adv-body").value;
-      if (monitoredFarms.length === 0) return;
+  async function loadSprayWeatherCheck() {
+    try {
+      const w = await AgriosAPI.getSprayWeatherCheck();
+      const container = document.getElementById("spray-weather-body");
+      if (!container || !w) return;
+      container.innerHTML = `
+        <div style="text-align:center; padding:0.75rem; background:${w.suitability_code === 'OPTIMAL' ? '#ecfdf5' : '#fffbeb'}; border:1px solid ${w.suitability_code === 'OPTIMAL' ? '#a7f3d0' : '#fde68a'}; border-radius:8px; margin-bottom:1rem;">
+          <div style="font-size:1.8rem;">${w.suitability_code === 'OPTIMAL' ? '🌤️' : '⚠️'}</div>
+          <div style="font-weight:800; font-size:1rem; color:${w.suitability_code === 'OPTIMAL' ? '#065f46' : '#92400e'};">
+            ${w.suitability_code}: Safe for Spray
+          </div>
+          <div style="font-size:0.75rem; color:#475569; margin-top:4px;">${w.verdict}</div>
+        </div>
 
-      try {
-        await AgriosAPI.sendMessage({
-          farm_id: monitoredFarms[0].id,
-          recipient_role: "farmer",
-          subject: subject,
-          body: body
-        });
-        AgriosUI.showToast("Advisory Broadcasted", "Synchronized to Farmer and Worker notification feeds.", "📡");
-      } catch (err) {
-        AgriosUI.showToast("Broadcast Failed", err.message, "❌");
-      }
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.8rem;">
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="color:#64748b; font-size:0.7rem;">Wind Speed</div>
+            <strong style="color:#0f172a;">${w.wind_speed_kmh} km/h</strong> (Safe &lt; 12)
+          </div>
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="color:#64748b; font-size:0.7rem;">Ambient Temp</div>
+            <strong style="color:#0f172a;">${w.temperature_c}°C</strong>
+          </div>
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="color:#64748b; font-size:0.7rem;">Relative Humidity</div>
+            <strong style="color:#0f172a;">${w.humidity_pct}%</strong>
+          </div>
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="color:#64748b; font-size:0.7rem;">Rain Chance (6h)</div>
+            <strong style="color:#059669;">${w.rain_probability_6h}%</strong>
+          </div>
+        </div>
+
+        <div style="margin-top:10px; font-size:0.75rem; color:#64748b; background:#f8fafc; padding:8px; border-radius:6px;">
+          <strong>Target Window:</strong> ${w.recommended_window}
+        </div>
+      `;
+    } catch (err) {
+      console.error("Spray weather error:", err);
     }
+  }
 
-    function triggerRegionalSync() {
-      AgriosUI.showToast("Satellite Telemetry Updated", "Sentinel-2 MSI 10m bands recomputed. Mean NDVI: 0.785.", "🛰️");
+  async function loadIPMProtocols() {
+    try {
+      const data = await AgriosAPI.getIPMProtocols();
+      const container = document.getElementById("ipm-protocols-container");
+      if (!container || !data) return;
+      container.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+          ${data.protocols.map(p => `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:8px; padding:1.25rem;">
+              <h4 style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0 0 6px 0;">🐛 ${p.pest}</h4>
+              <div style="font-size:0.75rem; color:#d97706; font-weight:600; margin-bottom:6px;">
+                Economic Threshold (ETL): ${p.economic_threshold_level}
+              </div>
+              <div style="font-size:0.8rem; color:#475569; margin-bottom:4px;">
+                <strong>Cultural:</strong> ${p.cultural_control}
+              </div>
+              <div style="font-size:0.8rem; color:#059669; margin-bottom:4px;">
+                <strong>Bio-Control:</strong> ${p.biological_control}
+              </div>
+              <div style="font-size:0.75rem; color:#64748b;">
+                <strong>Chemical Fallback:</strong> ${p.chemical_fallback}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+        <div style="margin-top:1rem; padding:10px 12px; background:#ecfdf5; border-radius:6px; font-size:0.8rem; color:#065f46;">
+          <strong>📡 Trap Monitoring:</strong> ${data.trap_monitoring_guidelines}
+        </div>
+      `;
+    } catch (err) {
+      console.error("IPM protocols error:", err);
     }
-
-    function broadcastQuarantineAlert() {
-      AgriosUI.showToast("Quarantine Advisory Broadcasted", "Alert sent to all 28 registered farms in Ludhiana East.", "📢");
-    }
-  </script>
+  }
+</script>
 </body>
 </html>

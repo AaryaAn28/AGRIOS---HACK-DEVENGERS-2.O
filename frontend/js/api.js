@@ -24,9 +24,14 @@ const AgriosAPI = {
   },
 
   logout() {
-    localStorage.removeItem("agrios_token");
-    localStorage.removeItem("agrios_user");
-    window.location.href = "index.html";
+    try {
+      localStorage.removeItem("agrios_token");
+      localStorage.removeItem("agrios_user");
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn("Storage cleanup failed:", e);
+    }
+    window.location.href = "/";
   },
 
   async request(endpoint, options = {}) {
@@ -282,5 +287,244 @@ const AgriosAPI = {
       method: "POST",
       body: JSON.stringify(approvalData)
     });
+  },
+
+  // Dynamic Personas & Subordinate Registration
+  async getQuickPersonas() {
+    return await this.request("/api/auth/quick-personas");
+  },
+
+  async quickLoginUser(userId) {
+    const res = await this.request(`/api/auth/quick-login-user/${userId}`, {
+      method: "POST"
+    });
+    this.setToken(res.access_token);
+    this.setCurrentUser(res.user);
+    return res;
+  },
+
+  async registerSubordinate(data) {
+    return await this.request("/api/auth/register-subordinate", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  // 11-Step Agricultural Onboarding Wizard
+  async getTaxonomy() {
+    return await this.request("/api/onboarding/taxonomy");
+  },
+
+  async getOnboardingProfile(userId) {
+    return await this.request(`/api/onboarding/profile/${userId}`);
+  },
+
+  async saveOnboardingProfile(data) {
+    const res = await this.request("/api/onboarding/profile", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+    if (res.user) {
+      this.setCurrentUser(res.user);
+    }
+    return res;
+  },
+
+  // Digital Twin Farm Structures & Version History
+  async getFarmStructures(farmId) {
+    return await this.request(`/api/farms/${farmId}/structures`);
+  },
+
+  async createStructureVersion(farmId, data) {
+    return await this.request(`/api/farms/${farmId}/structures`, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updatePlantingGrid(farmId, data) {
+    return await this.request(`/api/farms/${farmId}/structures/planting-grid`, {
+      method: "PATCH",
+      body: JSON.stringify(data)
+    });
+  },
+
+  // Simulator Undo & Telemetry
+  async getSimulationStatus() {
+    return await this.request("/api/simulator/status");
+  },
+
+  async undoSimulation() {
+    return await this.request("/api/simulator/undo", {
+      method: "POST"
+    });
+  },
+
+  // Walk & Calibrate and Master Crop Plan
+  async walkAndCalibrateFarm(data) {
+    return await this.request("/api/farms/walk-and-calibrate", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getCropPlan(cropName, durationDays = null) {
+    const q = `/api/crop-plans/generate?crop_name=${encodeURIComponent(cropName)}${durationDays ? '&duration_days=' + durationDays : ''}`;
+    return await this.request(q);
+  },
+
+  async activateCropPlan(farmId, planData) {
+    return await this.request(`/api/crop-plans/farm/${farmId}/activate`, {
+      method: "POST",
+      body: JSON.stringify(planData)
+    });
+  },
+
+  // Ecosystem Interconnected API methods
+  async getBufferReserves() {
+    return await this.request("/api/government/buffer-reserves");
+  },
+
+  async dispatchLogisticsRake(data) {
+    return await this.request("/api/government/logistics-rebalance", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async batchDisburseSubsidies() {
+    return await this.request("/api/schemes/batch-disburse", {
+      method: "POST"
+    });
+  },
+
+  async getStateTelemetry() {
+    return await this.request("/api/government/state-telemetry");
+  },
+
+  async listDisasterDirectives() {
+    return await this.request("/api/government/disaster-directives");
+  },
+
+  async issueDisasterDirective(data) {
+    return await this.request("/api/government/disaster-directives", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getAgronomistSurveillance() {
+    return await this.request("/api/agronomist/surveillance");
+  },
+
+  async listQuarantineZones() {
+    return await this.request("/api/agronomist/quarantine-zones");
+  },
+
+  async createQuarantineZone(data) {
+    return await this.request("/api/agronomist/quarantine-zones", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async listPrescriptions() {
+    return await this.request("/api/agronomist/prescriptions");
+  },
+
+  async createPrescription(data) {
+    return await this.request("/api/agronomist/prescriptions", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async broadcastCircular(data) {
+    return await this.request("/api/communications/broadcast", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async diagnoseLeaf(data) {
+    return await this.request("/api/agronomist/diagnose-leaf", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async toggleIrrigation(farmId) {
+    return await this.request(`/api/farms/${farmId || 'default'}/irrigation-toggle`, {
+      method: "POST"
+    });
+  },
+
+  async reorderResource(data) {
+    return await this.request("/api/resources/reorder", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getHarvestForecast(farmId) {
+    return await this.request(`/api/crops/farm/${farmId || 'default'}/harvest-forecast`);
+  },
+
+  async listGroundTruth() {
+    return await this.request("/api/workforce/ground-truth");
+  },
+
+  async submitGroundTruth(data) {
+    return await this.request("/api/workforce/ground-truth", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getWorkerEquipmentKit() {
+    return await this.request("/api/workforce/equipment-kit");
+  },
+
+  async reportEquipmentDamage(data) {
+    return await this.request("/api/workforce/equipment-kit/report-damage", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async completeTask(taskId, data = {}) {
+    return await this.request(`/api/tasks/${taskId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status: "completed", ...data })
+    });
+  },
+
+  async getSoilAnalysis(farmId) {
+    return await this.request(`/api/agronomist/soil-analysis/${farmId || 'default'}`);
+  },
+
+  async getCropRotationAdvice() {
+    return await this.request("/api/agronomist/crop-rotation-advice");
+  },
+
+  async getSprayWeatherCheck() {
+    return await this.request("/api/agronomist/spray-weather-check");
+  },
+
+  async getIPMProtocols() {
+    return await this.request("/api/agronomist/ipm-protocols");
+  },
+
+  async getPathogenObservations() {
+    return await this.request("/api/agronomist/pathogen-observations");
+  },
+
+  async getBroadcastHistory() {
+    return await this.request("/api/communications/broadcasts");
   }
+};
+
+window.AgriosAPI = AgriosAPI;
+window.logout = function() {
+  AgriosAPI.logout();
 };
