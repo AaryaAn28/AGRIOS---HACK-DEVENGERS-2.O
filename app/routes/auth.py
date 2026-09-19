@@ -133,6 +133,17 @@ def register_subordinate(
     db.commit()
     db.refresh(new_user)
 
+    if role == "worker":
+        from app.models.workforce import WorkerProfile
+        wp = WorkerProfile(
+            user_id=new_user.id,
+            status="AVAILABLE",
+            active_tasks_count=0,
+            hours_worked_this_week=0.0
+        )
+        db.add(wp)
+        db.commit()
+
     # Emit domain event
     EventBus.publish(DomainEvent(
         event_type="auth.subordinate_registered",
@@ -234,6 +245,19 @@ def signup(data: SignUpRequest, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    if role == "worker":
+        from app.models.workforce import WorkerProfile
+        existing_wp = db.query(WorkerProfile).filter(WorkerProfile.user_id == new_user.id).first()
+        if not existing_wp:
+            wp = WorkerProfile(
+                user_id=new_user.id,
+                status="AVAILABLE",
+                active_tasks_count=0,
+                hours_worked_this_week=0.0
+            )
+            db.add(wp)
+            db.commit()
 
     token = create_access_token({"sub": new_user.id, "role": new_user.role, "email": new_user.email})
     return {

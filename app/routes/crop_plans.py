@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 import json
@@ -10,6 +11,7 @@ from app.models.farm import Farm
 from app.models.agricultural_profile import AgriculturalProfile
 from app.core.events import EventBus, DomainEvent
 from app.models.user import User
+from app.models.communication import AdvisoryMessage
 
 router = APIRouter(prefix="/api/crop-plans", tags=["Crop Growing Plans"])
 
@@ -36,6 +38,46 @@ def generate_and_calibrate_precision_engine(survey_data: Dict[str, Any], db: Ses
     # Store calibrated plan
     farm_id = survey_data.get("farm_id") or "default-farm"
     _FARM_CROP_PLANS[farm_id] = calibrated_plan
+
+    # Persist any survey workers/farmers to DB if not already present
+    from app.models.workforce import WorkerProfile
+    from app.utils.security import hash_password
+    import uuid as uid
+
+    for w_entry in (survey_data.get("workers", []) + survey_data.get("farmers", [])):
+        w_name = w_entry.get("name") if isinstance(w_entry, dict) else str(w_entry)
+        if not w_name:
+            continue
+        clean_name = w_name.split("(")[0].strip()
+        role = w_entry.get("role", "worker") if isinstance(w_entry, dict) else "worker"
+        existing = db.query(User).filter(User.full_name == clean_name).first()
+        if not existing:
+            count = db.query(User).filter(User.role == role).count()
+            p_code = f"{role.upper()}-{count + 1:03d}"
+            new_u = User(
+                id=str(uid.uuid4()),
+                full_name=clean_name,
+                email=f"{clean_name.lower().replace(' ', '.')}@agrios.in",
+                phone="+91 98000 00" + f"{count + 1:03d}",
+                hashed_password=hash_password("Admin@123"),
+                role=role,
+                persona_code=p_code,
+                jurisdiction_code=survey_data.get("state", "Punjab"),
+                farm_id=farm_id if farm_id != "default-farm" else None,
+                has_completed_onboarding=True
+            )
+            db.add(new_u)
+            db.commit()
+            db.refresh(new_u)
+            if role == "worker":
+                wp = WorkerProfile(
+                    user_id=new_u.id,
+                    status="AVAILABLE",
+                    active_tasks_count=0,
+                    hours_worked_this_week=0.0
+                )
+                db.add(wp)
+                db.commit()
 
     # Emit domain event
     EventBus.publish(DomainEvent(
@@ -169,4 +211,129 @@ def activate_crop_plan(farm_id: str, plan_data: Dict[str, Any], db: Session = De
         "message": f"Master Crop Plan for {plan_data.get('crop_name')} activated. Stage 1 tasks released across workforce.",
         "dispatched_tasks": dispatched_tasks
     }
+
+
+class DispatchDayTasksRequest(BaseModel):
+    farm_id: str
+    day_number: int
+    crop_name: Optional[str] = "Wheat"
+
+@router.post("/dispatch-day-tasks")
+def dispatch_day_tasks(req: DispatchDayTasksRequest, db: Session = Depends(get_db)):
+    """
+    Executes and circulates tasks for the specified growth day across the workforce cadre.
+    Creates tasks in `farm_tasks` table and emits real-time WebSocket domain events.
+    """
+    farm = db.query(Farm).filter(Farm.id == req.farm_id).first()
+    if not farm:
+        farm = db.query(Farm).first()
+    actual_farm_id = farm.id if farm else req.farm_id
+
+    crop = req.crop_name or (getattr(farm, 'crop_type', None) if farm else "Wheat") or "Wheat"
+    day_ctx = CropPlanService.get_day_context(actual_farm_id, req.day_number, crop)
+    tasks_to_create = day_ctx.get("tasks", [])
+
+    users = db.query(User).all()
+    user_map = {u.full_name: u.id for u in users}
+
+    created_tasks = []
+    for t in tasks_to_create:
+        assigned_user_id = user_map.get(t.get("assigned_to"))
+        new_task = FarmTask(
+            farm_id=actual_farm_id,
+            title=t.get("title"),
+            description=f"Day {req.day_number} [{day_ctx.get('stage_name')}]: {t.get('description', '')} Assigned: {t.get('assigned_to')}",
+            task_type=t.get("category", "operations"),
+            priority=t.get("priority", "high"),
+            status="pending",
+            assigned_to_user_id=assigned_user_id,
+            assigned_role=t.get("assigned_role", "worker")
+        )
+        db.add(new_task)
+        created_tasks.append(t.get("title"))
+
+    db.commit()
+
+    # Record broadcast notification in advisory_messages table
+    admin_user = db.query(User).filter(User.role == "agronomist").first()
+    sender_id = admin_user.id if admin_user else "agronomist_system"
+    sender_name = admin_user.full_name if admin_user else "Lead Agronomist"
+
+    advisory_notif = AdvisoryMessage(
+        sender_id=sender_id,
+        sender_name=sender_name,
+        sender_role="agronomist",
+        farm_id=actual_farm_id,
+        subject=f"Day {req.day_number} Directives Dispatched ({crop})",
+        body=f"Agronomist has dispatched {len(created_tasks)} tasks for {crop} (Day {req.day_number}, Stage: {day_ctx.get('stage_name', 'Field Operations')}). Field workers have been assigned.",
+        advisory_type="task_dispatch",
+        priority="high"
+    )
+    db.add(advisory_notif)
+    db.commit()
+
+    # Emit task created event for WebSocket broadcast
+    EventBus.publish(DomainEvent(
+        event_type="TASK_CREATED",
+        aggregate_type="FarmTask",
+        aggregate_id=actual_farm_id,
+        payload={
+            "farm_id": actual_farm_id,
+            "day_number": req.day_number,
+            "crop_name": crop,
+            "stage_name": day_ctx.get("stage_name"),
+            "dispatched_count": len(created_tasks),
+            "tasks": created_tasks
+        },
+        producer="Agronomist_3D_Calibrator"
+    ))
+
+    # Emit notification received event
+    EventBus.publish(DomainEvent(
+        event_type="NOTIFICATION_RECEIVED",
+        aggregate_type="AdvisoryMessage",
+        aggregate_id=advisory_notif.id,
+        payload=advisory_notif.to_dict(),
+        producer="Agronomist_3D_Calibrator"
+    ))
+
+    # If Day 30 outbreak active, publish pest outbreak domain event
+    if day_ctx.get("pest_outbreak_active"):
+        outbreak = day_ctx.get("outbreak_details", {})
+        EventBus.publish(DomainEvent(
+            event_type="RISK_ALERT_TRIGGERED",
+            aggregate_type="RiskAlert",
+            aggregate_id=actual_farm_id,
+            payload={
+                "farm_id": actual_farm_id,
+                "sector": outbreak.get("sector", "North Sector (Field A)"),
+                "alert_title": f"Active Pathogen: {outbreak.get('pathogen')}",
+                "severity": outbreak.get("severity", "ELEVATED_CRITICAL"),
+                "prescription": outbreak.get("recommended_prescription"),
+                "confidence": outbreak.get("confidence_pct", 89.2)
+            },
+            producer="Pathogen_AI_Lab"
+        ))
+
+    return {
+        "status": "SUCCESS",
+        "day_number": req.day_number,
+        "stage_name": day_ctx.get("stage_name"),
+        "theme": day_ctx.get("theme"),
+        "pest_outbreak_active": day_ctx.get("pest_outbreak_active", False),
+        "outbreak_details": day_ctx.get("outbreak_details"),
+        "dispatched_count": len(created_tasks),
+        "dispatched_tasks": created_tasks,
+        "message": f"Day {req.day_number} tasks successfully circulated across cadre. Farmer and Worker portals notified."
+    }
+
+@router.get("/day-context/{farm_id}/{day_number}")
+def get_day_context(farm_id: str, day_number: int, crop_name: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    """Returns the contextual stage, theme, 4 tasks, and outbreak indicators for day_number."""
+    farm = db.query(Farm).filter(Farm.id == farm_id).first()
+    if not farm:
+        farm = db.query(Farm).first()
+    actual_crop = crop_name or (getattr(farm, 'crop_type', None) if farm else "Wheat") or "Wheat"
+    return CropPlanService.get_day_context(farm_id, day_number, actual_crop)
+
 

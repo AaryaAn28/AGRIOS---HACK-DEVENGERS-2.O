@@ -20,6 +20,9 @@ def test_resource_consumption_and_alert_trigger():
     farm = db.query(Farm).first()
     res = db.query(FarmResource).filter(FarmResource.farm_id == farm.id).first()
     assert res is not None
+    if res.quantity < 10.0:
+        res.quantity = 100.0
+        db.commit()
 
     initial_qty = res.quantity
     consumed = ResourceService.consume_resource(

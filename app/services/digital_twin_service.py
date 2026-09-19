@@ -85,7 +85,7 @@ class DigitalTwinService:
         workers = []
         try:
             from app.models.farm import Farm
-            from app.models.workforce import WorkforceProfile
+            from app.models.workforce import WorkerProfile
             from app.models.user import User
             from app.models.task import Task
             
@@ -94,7 +94,7 @@ class DigitalTwinService:
                 farm = db.query(Farm).first()
             actual_farm_id = farm.id if farm else farm_id
 
-            profiles = db.query(WorkforceProfile).filter(WorkforceProfile.farm_id == actual_farm_id).all()
+            profiles = db.query(WorkerProfile).all()
             user_ids_added = set()
 
             for i, p in enumerate(profiles):
@@ -248,8 +248,13 @@ class DigitalTwinService:
         crop_plan = None
         try:
             from app.services.crop_plan_service import CropPlanService
-            crop_type = getattr(farm, 'crop_type', None) or "Wheat"
-            crop_plan = CropPlanService.generate_master_plan(crop_type, 120)
+            crop_type = None
+            if planting_grid and isinstance(planting_grid, dict) and planting_grid.get("crop"):
+                crop_type = planting_grid.get("crop")
+            if not crop_type:
+                crop_type = getattr(farm, 'crop_type', None) or "Wheat"
+            duration = 195 if "pisciculture" in str(crop_type).lower() else 120
+            crop_plan = CropPlanService.generate_master_plan(crop_type, duration)
         except Exception as e:
             print(f"[DigitalTwinService] Crop plan warning: {e}")
 

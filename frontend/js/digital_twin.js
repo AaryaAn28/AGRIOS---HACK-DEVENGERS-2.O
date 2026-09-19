@@ -195,6 +195,30 @@ class AgriosDigitalTwinAdapter {
         this._rebuildScene();
       };
 
+      this.engine.onEditStateChange = (state) => {
+        if (typeof window._on3DEditStateChange === 'function') {
+          window._on3DEditStateChange(state);
+        }
+      };
+
+      this.engine.onAreaMeasure = (measure) => {
+        if (typeof window._on3DAreaMeasure === 'function') {
+          window._on3DAreaMeasure(measure);
+        }
+      };
+
+      this.engine.onFieldConfigurePlants = (fieldData) => {
+        if (typeof window._on3DConfigurePlants === 'function') {
+          window._on3DConfigurePlants(fieldData);
+        }
+      };
+
+      this.engine.onDayStateChange = (state) => {
+        if (typeof window._on3DDayStateChange === 'function') {
+          window._on3DDayStateChange(state);
+        }
+      };
+
       // Start the animation loop
       this.engine.startAnimationLoop();
 
@@ -331,10 +355,178 @@ class AgriosDigitalTwinAdapter {
   }
 
   /**
+   * Toggle 3D North Sector pest outbreak warning beacon
+   */
+  setOutbreakBeacon(active, sector) {
+    if (this.engine && typeof this.engine.setOutbreakBeacon === 'function') {
+      this.engine.setOutbreakBeacon(active, sector);
+    }
+  }
+
+  /**
+   * Run simulated GPS boundary walk with surveyor avatar
+   */
+  simulateWalkCalibration(onProgress, onComplete) {
+    if (this.engine && typeof this.engine.simulateWalkCalibration === 'function') {
+      this.engine.simulateWalkCalibration(onProgress, onComplete);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }
+
+  /**
+   * Set active crop type and update 3D botanical plant models
+   * @param {string} cropName - 'Rice', 'Wheat', 'Tomato', 'Maize', 'Potato', 'Cotton'
+   */
+  setCrop(cropName) {
+    this.cropName = cropName;
+    if (this.engine && typeof this.engine.setCrop === 'function') {
+      this.engine.setCrop(cropName);
+    }
+  }
+
+  /**
+   * Set active Master Crop Plan
+   * @param {object} cropPlan
+   */
+  setCropPlan(cropPlan) {
+    this.cropPlan = cropPlan;
+    if (this.engine) {
+      if (this.engine.sceneData) {
+        this.engine.sceneData.crop_plan = cropPlan;
+      }
+      if (cropPlan?.crop_name && typeof this.engine.setCrop === 'function') {
+        this.engine.setCrop(cropPlan.crop_name);
+      }
+      if (cropPlan?.duration_days && typeof this.engine.setPlanDuration === 'function') {
+        this.engine.setPlanDuration(cropPlan.duration_days);
+      }
+    }
+  }
+
+  /**
    * Register callback for user interactions
    */
   onUserInteraction(callback) {
     this._interactionCallback = callback;
+  }
+
+  /**
+   * Toggle CAD-lite Edit Farm mode
+   * @param {boolean} enabled
+   */
+  setEditMode(enabled) {
+    if (!this.engine) return;
+    if (enabled) {
+      this.engine.enterEditMode();
+    } else {
+      this.engine.exitEditMode();
+    }
+  }
+
+  /**
+   * Set active CAD editor tool
+   * @param {'select'|'road'|'field'|'irrigation'|'building'|'plants'} toolName
+   */
+  setEditorTool(toolName) {
+    if (this.engine && typeof this.engine.setEditorTool === 'function') {
+      this.engine.setEditorTool(toolName);
+    }
+  }
+
+  /**
+   * Set building palette type for CAD placement
+   * @param {'shed'|'office'|'polyhouse'|'silo'|'coldstorage'} buildingType
+   */
+  setBuildingType(buildingType) {
+    if (this.engine && typeof this.engine.setBuildingType === 'function') {
+      this.engine.setBuildingType(buildingType);
+    }
+  }
+
+  /**
+   * Undo last CAD edit action
+   */
+  undoEdit() {
+    if (this.engine && typeof this.engine.undoEdit === 'function') {
+      return this.engine.undoEdit();
+    }
+    return null;
+  }
+
+  /**
+   * Redo last CAD edit action
+   */
+  redoEdit() {
+    if (this.engine && typeof this.engine.redoEdit === 'function') {
+      return this.engine.redoEdit();
+    }
+    return null;
+  }
+
+  /**
+   * Finalize current CAD drawing tool (Road/Field/Irrigation)
+   */
+  finishCADTool() {
+    if (this.engine && typeof this.engine.finishCurrentTool === 'function') {
+      return this.engine.finishCurrentTool();
+    }
+    return false;
+  }
+
+  /**
+   * Clear current CAD drawing points
+   */
+  clearCADTool() {
+    if (this.engine && typeof this.engine.clearCurrentTool === 'function') {
+      this.engine.clearCurrentTool();
+    }
+  }
+
+  /**
+   * Randomize disease schedule for demonstration
+   */
+  randomizeDiseases() {
+    if (this.engine && typeof this.engine.randomizeDiseaseSchedule === 'function') {
+      return this.engine.randomizeDiseaseSchedule();
+    }
+    return null;
+  }
+
+  /**
+   * Calibrate maximum duration days for crop plan
+   * @param {number} maxDays
+   */
+  setPlanDuration(maxDays) {
+    if (this.engine && typeof this.engine.setPlanDuration === 'function') {
+      this.engine.setPlanDuration(maxDays);
+    }
+  }
+
+  /**
+   * Save Farm CAD Layout to backend database
+   * @param {string} changeSummary
+   */
+  async saveFarmDraft(changeSummary = 'CAD Layout Updated via 3D Digital Twin Editor') {
+    if (this.engine && typeof this.engine.saveFarmLayout === 'function') {
+      const result = await this.engine.saveFarmLayout(this.farmId, changeSummary);
+      const versionLabel = document.getElementById('twin-version-label');
+      if (versionLabel && result && result.structure) {
+        versionLabel.textContent = `v${result.structure.version_number} (Current)`;
+      }
+      return result;
+    }
+    return null;
+  }
+
+  /**
+   * Sync workforce roster dynamically in the live 3D scene
+   * @param {Array} workers
+   */
+  syncWorkersRoster(workers) {
+    if (this.engine && typeof this.engine.syncWorkforce === 'function') {
+      this.engine.syncWorkforce(workers);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────

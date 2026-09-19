@@ -146,8 +146,8 @@
 .dt3d-camera-panel {
   position: absolute;
   right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 65px;
+  transform: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -157,6 +157,19 @@
   padding: 8px;
   border-radius: 10px;
   border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Flip camera panel tooltips towards the left to prevent clipping off-screen */
+.dt3d-camera-panel .dt3d-toolbar-btn[title]::after {
+  left: auto;
+  right: calc(100% + 8px);
+}
+
+/* --- Non-Interactive 3D Floating Labels --- */
+.dt3d-label {
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: opacity 0.2s ease;
 }
 
 /* --- Bottom Inspector Panel --- */
@@ -396,6 +409,279 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   CAD-LITE "EDIT FARM" MODE STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* --- Edit Farm Toggle Button --- */
+.dt3d-edit-toggle-btn {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #10b981;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.dt3d-edit-toggle-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+}
+
+.dt3d-edit-toggle-btn.active {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+}
+
+/* --- Floating CAD Editor Dock --- */
+.dt3d-editor-dock {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 14px;
+  padding: 6px 12px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  z-index: 25;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.dt3d-editor-dock.visible {
+  display: flex;
+}
+
+.dt3d-cad-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.dt3d-cad-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.dt3d-cad-btn.active {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.dt3d-cad-finish-btn {
+  background: #059669 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #10b981 !important;
+  animation: pulseCadFinish 1.8s infinite;
+}
+
+.dt3d-cad-finish-btn:hover {
+  background: #10b981 !important;
+}
+
+.dt3d-cad-clear-btn {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.dt3d-cad-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.3) !important;
+}
+
+@keyframes pulseCadFinish {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.dt3d-cad-btn-icon {
+  font-size: 1rem;
+}
+
+.dt3d-cad-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(148, 163, 184, 0.25);
+  margin: 0 4px;
+}
+
+/* --- Floating Building Palette Dropdown --- */
+.dt3d-building-palette {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 6px 8px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  z-index: 25;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dt3d-building-palette.visible {
+  display: flex;
+}
+
+.dt3d-palette-item {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.dt3d-palette-item:hover {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+.dt3d-palette-item.active {
+  background: rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+/* --- Live CAD Measurement HUD --- */
+.dt3d-cad-measure-hud {
+  position: absolute;
+  top: 104px;
+  right: 14px;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.dt3d-cad-measure-hud.visible {
+  display: flex;
+}
+
+.dt3d-cad-measure-hud strong {
+  color: #34d399;
+}
+
+/* --- Modal CAD Configuration Dialog --- */
+.dt3d-cad-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.dt3d-cad-modal {
+  background: #0f172a;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 440px;
+  padding: 20px 24px;
+  color: #f8fafc;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.dt3d-cad-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #34d399;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dt3d-cad-modal-field {
+  margin-bottom: 12px;
+}
+
+.dt3d-cad-modal-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dt3d-cad-modal-field input,
+.dt3d-cad-modal-field select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dt3d-cad-modal-field input:focus,
+.dt3d-cad-modal-field select:focus {
+  border-color: #10b981;
+}
+
+.dt3d-cad-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 /* --- Responsive --- */
 @media (max-width: 768px) {
   .dt3d-canvas-container {
@@ -410,4 +696,11 @@
   .dt3d-time-slider {
     width: 120px;
   }
+
+  .dt3d-editor-dock {
+    width: 95%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
 }
+

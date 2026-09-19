@@ -83,6 +83,11 @@ class AgriosRealtimeClient {
       // Show contextual toast notification
       this.showEventToast(eventData);
 
+      // Refresh notifications feed and unread badges across active tabs
+      if (window.AgriosNotifications && typeof window.AgriosNotifications.loadNotifications === "function") {
+        window.AgriosNotifications.loadNotifications();
+      }
+
       // Dispatch custom DOM event so individual dashboard widgets can reload selectively
       const customEvent = new CustomEvent("agrios:event", { detail: eventData });
       window.dispatchEvent(customEvent);
@@ -96,9 +101,22 @@ class AgriosRealtimeClient {
     let icon = "🌱";
 
     if (type === "TASK_CREATED") {
-      title = "New Farm Task Assigned";
-      desc = eventData.payload.title || "Task created in workflow";
-      icon = "📋";
+      title = "🚀 Field Tasks Dispatched";
+      const payload = eventData.payload || {};
+      const dayNum = payload.day_number !== undefined ? `Day ${payload.day_number}: ` : "";
+      desc = payload.title ? `${dayNum}${payload.title}` : (payload.message || "Field tasks dispatched to workforce");
+      icon = "🚀";
+    } else if (type === "TASK_COMPLETED") {
+      title = "✅ Task Completed";
+      const payload = eventData.payload || {};
+      const workerInfo = payload.worker_id ? `Worker #${payload.worker_id}` : "Worker";
+      desc = payload.title ? `${workerInfo} completed: ${payload.title}` : (payload.message || "Task completed in field");
+      icon = "✅";
+    } else if (type === "NOTIFICATION_RECEIVED" || type === "ADVISORY_MESSAGE") {
+      const payload = eventData.payload || {};
+      title = payload.subject || "🔔 Notification Received";
+      desc = payload.body || payload.message || "New advisory notification";
+      icon = payload.priority === "high" || payload.priority === "urgent" ? "🚨" : "🔔";
     } else if (type === "TASK_STATUS_UPDATED") {
       title = `Task Status: ${eventData.payload.status?.toUpperCase()}`;
       desc = eventData.payload.title || "Task was updated";
@@ -132,6 +150,28 @@ class AgriosRealtimeClient {
 }
 
 window.agriosRealtime = new AgriosRealtimeClient();
+
+// Cross-tab broadcast listener (for multi-tab / role-switching workflows)
+window.addEventListener("storage", (e) => {
+  if (e.key === "agrios_broadcast_event" && e.newValue) {
+    try {
+      const ev = JSON.parse(e.newValue);
+      if (window.agriosRealtime) {
+        window.agriosRealtime.showEventToast(ev);
+      }
+      window.dispatchEvent(new CustomEvent("agrios:event", { detail: ev }));
+      if (window.AgriosNotifications && typeof window.AgriosNotifications.loadNotifications === "function") {
+        window.AgriosNotifications.loadNotifications();
+      }
+      if (typeof window.loadWorkerTasks === "function") {
+        window.loadWorkerTasks();
+      }
+    } catch (err) {
+      console.warn("[Realtime] Failed to parse cross-tab event:", err);
+    }
+  }
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   window.agriosRealtime.connect();
 });

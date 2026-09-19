@@ -6,8 +6,10 @@ from typing import List, Optional, Dict, Any
 
 from app.models.task import FarmTask, WorkLog
 from app.models.farm import Farm
+from app.models.user import User
+from app.models.communication import AdvisoryMessage
 from app.models.audit import DomainEventLog
-from app.core.events import DomainEvent, event_bus
+from app.core.events import DomainEvent, EventBus, event_bus
 
 class TaskService:
     @staticmethod
@@ -114,10 +116,13 @@ class TaskService:
             raise ValueError(f"Task {task_id} not found")
 
         old_status = task.status
+        is_completed = (new_status or "").lower() == "completed"
         task.status = new_status
         if notes:
             task.notes = notes
-        if new_status == "completed":
+        
+        completion_notif = None
+        if is_completed:
             task.completed_at = datetime.now(timezone.utc)
             # Mark all checklist items done
             try:
@@ -133,12 +138,31 @@ class TaskService:
             if farm and farm.health_score < 96.0:
                 farm.health_score = min(100.0, farm.health_score + 2.5)
 
+            # Create notification for assigner / agronomist
+            agronomist_user = db.query(User).filter(User.role == "agronomist").first()
+            receiver_id = agronomist_user.id if agronomist_user else None
+            actor_user = db.query(User).filter(User.id == actor_id).first()
+            actor_name = actor_user.full_name if actor_user else f"{actor_role.capitalize()} Field Cadre"
+
+            completion_notif = AdvisoryMessage(
+                sender_id=actor_id,
+                sender_name=actor_name,
+                sender_role=actor_role or "worker",
+                receiver_id=receiver_id,
+                farm_id=task.farm_id,
+                subject=f"Task Completed: {task.title}",
+                body=f"Field cadre {actor_name} has verified and logged completion for task '{task.title}'. Farm biological vitality adjusted (+2.5%). GPS verified.",
+                advisory_type="task_completion",
+                priority="normal"
+            )
+            db.add(completion_notif)
+
         # Add WorkLog
         work_log = WorkLog(
             task_id=task.id,
             worker_id=actor_id,
             hours_logged=hours_logged,
-            ground_truth_notes=notes or f"Updated status to {new_status}",
+            ground_truth_notes=notes or f"Updated status to {task.status}",
             gps_lat=gps_lat,
             gps_lon=gps_lon
         )
@@ -151,7 +175,7 @@ class TaskService:
             actor_role=actor_role,
             entity_name="FarmTask",
             entity_id=task.id,
-            payload_json=json.dumps({"old_status": old_status, "new_status": new_status, "notes": notes})
+            payload_json=json.dumps({"old_status": old_status, "new_status": task.status, "notes": notes})
         )
         db.add(audit)
         db.commit()
@@ -159,19 +183,24 @@ class TaskService:
 
         # Emit domain event
         event = DomainEvent(
-            event_type="TASK_STATUS_UPDATED",
+            event_type="TASK_COMPLETED" if is_completed else "TASK_STATUS_UPDATED",
             actor_id=actor_id,
             actor_role=actor_role,
             entity_name="FarmTask",
             entity_id=task.id,
             payload=task.to_dict()
         )
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.create_task(event_bus.emit(event))
-        except Exception:
-            pass
+        EventBus.publish(event)
+
+        # Emit notification received event if completion notification was created
+        if completion_notif:
+            EventBus.publish(DomainEvent(
+                event_type="NOTIFICATION_RECEIVED",
+                aggregate_type="AdvisoryMessage",
+                aggregate_id=completion_notif.id,
+                payload=completion_notif.to_dict(),
+                producer=actor_role or "worker"
+            ))
 
         return task
 

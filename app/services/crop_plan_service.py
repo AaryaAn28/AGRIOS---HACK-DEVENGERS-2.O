@@ -910,6 +910,170 @@ def get_generic_crop_plan(crop_name: str, duration_days: int = 90) -> Dict[str, 
 
 class CropPlanService:
     @staticmethod
+    def _generate_daily_schedule_for_stage(
+        stage: Dict[str, Any],
+        clean_crop: str,
+        farming_class: str,
+        workers_list: list,
+        farmers_list: list
+    ) -> list:
+        start_d = stage.get("start_day", 1)
+        end_d = stage.get("end_day", 10)
+        st_num = stage.get("stage_num", 1)
+        stage_name = stage.get("name", "Field Operations")
+
+        w1_name = workers_list[0].get("name", "Sunita Devi (Krishi Sakhi)") if len(workers_list) > 0 else "Sunita Devi (Krishi Sakhi)"
+        w2_name = workers_list[1].get("name", "Mamata Behera (Field Assistant)") if len(workers_list) > 1 else (workers_list[0].get("name", "Mamata Behera (Field Assistant)") if len(workers_list) > 0 else "Mamata Behera (Field Assistant)")
+        farmer_name = farmers_list[0].get("name", "Balwinder Singh (Farmer)") if len(farmers_list) > 0 else "Balwinder Singh (Farmer)"
+        agro_name = "Dr. Priya Sharma (Agronomist)"
+
+        is_pisc = "pisc" in clean_crop.lower() or "aqua" in farming_class.lower() or "fish" in clean_crop.lower()
+        is_poly = "poly" in farming_class.lower() or "protect" in farming_class.lower()
+
+        daily_schedule = []
+        for day in range(start_d, end_d + 1):
+            day_offset = day - start_d + 1
+
+            # Day 30 Special Event: Pathogen / Pest Outbreak on North Sector
+            if day == 30:
+                sec_name = "North Nursery Pond A" if is_pisc else "North Sector (Field A)"
+                pathogen = "Argulus (Fish Louse) & Fin-Rot Lesions" if is_pisc else "Puccinia striiformis (Yellow Rust & Aphid Flush)"
+                presc = "Potassium Permanganate (2 ppm dip) + Bio-Neem Extract" if is_pisc else "Propiconazole 25% EC (200 ml/acre) + Bio-Neem Extract (500 ml/acre)"
+
+                daily_schedule.append({
+                    "day": day,
+                    "theme": f"🚨 CRITICAL OUTBREAK: {sec_name}",
+                    "focus": f"Elevated outbreak of {pathogen} detected in {sec_name}. Immediate containment buffer and spray required.",
+                    "pest_outbreak_active": True,
+                    "outbreak_details": {
+                        "sector": sec_name,
+                        "pathogen": pathogen,
+                        "severity": "ELEVATED_CRITICAL",
+                        "confidence_pct": 89.2,
+                        "recommended_prescription": presc
+                    },
+                    "tasks": [
+                        {
+                            "task_id": f"TSK-D{day}-01",
+                            "title": f"Emergency Spray Containment on {sec_name}",
+                            "description": f"Apply {presc} directly targeting infected foliage/water margins.",
+                            "assigned_to": w1_name,
+                            "assigned_role": "worker",
+                            "category": "protection",
+                            "priority": "urgent",
+                            "status": "pending",
+                            "estimated_hours": 3.5
+                        },
+                        {
+                            "task_id": f"TSK-D{day}-02",
+                            "title": f"Establish 50m Protective Containment Buffer Zone around {sec_name}",
+                            "description": "Stake physical quarantine perimeter and inspect neighboring parcels for spore drift.",
+                            "assigned_to": w2_name,
+                            "assigned_role": "worker",
+                            "category": "protection",
+                            "priority": "high",
+                            "status": "pending",
+                            "estimated_hours": 3.0
+                        },
+                        {
+                            "task_id": f"TSK-D{day}-03",
+                            "title": "Irrigation/Hydrology Sluice Isolation to Prevent Effluent Cross-Contamination",
+                            "description": "Close sluice gates connecting North Sector to the central farm canal.",
+                            "assigned_to": farmer_name,
+                            "assigned_role": "farmer",
+                            "category": "irrigation",
+                            "priority": "high",
+                            "status": "pending",
+                            "estimated_hours": 2.5
+                        },
+                        {
+                            "task_id": f"TSK-D{day}-04",
+                            "title": "Pathogen AI Lab Telemetry Verification & State Biosecurity Advisory Broadcast",
+                            "description": "Log high-resolution microscopic image analysis and broadcast circular to state registry.",
+                            "assigned_to": agro_name,
+                            "assigned_role": "agronomist",
+                            "category": "scouting",
+                            "priority": "urgent",
+                            "status": "pending",
+                            "estimated_hours": 2.0
+                        }
+                    ]
+                })
+                continue
+
+            # Standard daily plans
+            if is_pisc:
+                t1_title = f"Pond Water Inflow Sluice Check & Dissolved Oxygen Assay" if day_offset % 2 == 1 else "Floating Pellet Feed Rationing & Automated Blower Calibration"
+                t2_title = f"Nursery Fingerling Netting & Biomass Weight Check" if day_offset % 2 == 1 else "Paddlewheel Aerator Blade Maintenance & Sludge Gauge"
+                t3_title = "Water Pump Solar Inverter Voltage Check & Pond Embankment Walk"
+                t4_title = "Lab Water Quality Spectrometry (Ammonia, Nitrite, pH 7.8)"
+            elif is_poly:
+                t1_title = f"Drip Fertigation EC/pH Calibration & Nutrient Tank Fill" if day_offset % 2 == 1 else "Trellis Wire Clip Support & Canopy Pruning Pass"
+                t2_title = f"High-Pressure Fogger Nozzle Inspection & Humidity Logging" if day_offset % 2 == 1 else "Biological Beneficial Predator Release (Encarsia/Orius)"
+                t3_title = "Motorized Thermal Shade Screen & Ridge Vent Motor Test"
+                t4_title = "PAR Light Level & Canopy Microclimate Sensor Telemetry Audit"
+            else:
+                t1_title = f"Field Parcel Row Weeding & Fertigation Gate Calibration" if day_offset % 2 == 1 else f"{clean_crop} Canopy Foliar Health & Moisture Probe Audit"
+                t2_title = f"Basal Fertilizer Top-Dressing & Sub-Canopy Soil Loosening" if day_offset % 2 == 1 else "Sentinel Drone Photographic Sweep for Pathogen Spots"
+                t3_title = "Solar Tube Well Pump Flow Rate & Canal Gate Operational Check"
+                t4_title = f"Precision Agronomy {clean_crop} Physiological Stage Evaluation"
+
+            daily_schedule.append({
+                "day": day,
+                "theme": f"Day {day}: {stage_name} (Pass #{day_offset})",
+                "focus": f"{clean_crop} operational maintenance, irrigation control, and workforce task balancing.",
+                "pest_outbreak_active": False,
+                "tasks": [
+                    {
+                        "task_id": f"TSK-D{day}-01",
+                        "title": t1_title,
+                        "description": f"Standard operational protocol for {clean_crop} Stage {st_num}.",
+                        "assigned_to": w1_name,
+                        "assigned_role": "worker",
+                        "category": "nutrition" if day_offset % 2 == 0 else "operations",
+                        "priority": "high",
+                        "status": "pending",
+                        "estimated_hours": 3.0
+                    },
+                    {
+                        "task_id": f"TSK-D{day}-02",
+                        "title": t2_title,
+                        "description": f"Secondary field pass under supervision.",
+                        "assigned_to": w2_name,
+                        "assigned_role": "worker",
+                        "category": "scouting" if day_offset % 2 == 0 else "protection",
+                        "priority": "medium",
+                        "status": "pending",
+                        "estimated_hours": 2.5
+                    },
+                    {
+                        "task_id": f"TSK-D{day}-03",
+                        "title": t3_title,
+                        "description": "Infrastructure, conveyance and mechanization validation.",
+                        "assigned_to": farmer_name,
+                        "assigned_role": "farmer",
+                        "category": "equipment",
+                        "priority": "high",
+                        "status": "pending",
+                        "estimated_hours": 2.5
+                    },
+                    {
+                        "task_id": f"TSK-D{day}-04",
+                        "title": t4_title,
+                        "description": "Scientific verification and God-database calibration.",
+                        "assigned_to": agro_name,
+                        "assigned_role": "agronomist",
+                        "category": "telemetry",
+                        "priority": "medium",
+                        "status": "pending",
+                        "estimated_hours": 1.5
+                    }
+                ]
+            })
+
+        return daily_schedule
+
+    @staticmethod
     def generate_master_plan(crop_name: str, target_duration_days: Optional[int] = None) -> Dict[str, Any]:
         """
         Generates a full 60–120 day master crop growing plan for the specified crop.
@@ -928,16 +1092,41 @@ class CropPlanService:
 
         duration = target_duration_days or matched_profile.get("standard_duration_days", 100)
         
+        stages_raw = matched_profile.get("stages", [])
+        stages_out = []
+        cur_day = 1
+        default_workers = [
+            {"name": "Sunita Devi (Krishi Sakhi)", "role": "worker"},
+            {"name": "Mamata Behera (Field Assistant)", "role": "worker"}
+        ]
+        default_farmers = [{"name": "Balwinder Singh (Farmer)", "role": "farmer"}]
+        farming_cls = "Pisciculture & Aquaculture" if "pisc" in clean_crop.lower() else "Terrestrial Field Crops"
+
+        for s in stages_raw:
+            st = dict(s)
+            st_len = max(10, (st.get("end_day", cur_day + 9) - st.get("start_day", cur_day) + 1))
+            st["start_day"] = cur_day
+            st["end_day"] = cur_day + st_len - 1
+            cur_day = st["end_day"] + 1
+            st["daily_schedule"] = CropPlanService._generate_daily_schedule_for_stage(
+                stage=st,
+                clean_crop=clean_crop,
+                farming_class=farming_cls,
+                workers_list=default_workers,
+                farmers_list=default_farmers
+            )
+            stages_out.append(st)
+
         plan = {
             "crop_name": clean_crop,
             "scientific_name": matched_profile.get("scientific_name"),
             "family": matched_profile.get("family"),
-            "duration_days": duration,
+            "duration_days": cur_day - 1,
             "water_requirement": matched_profile.get("water_requirement_mm"),
             "optimal_temperature": matched_profile.get("optimal_temp_c"),
             "seed_rate_kg_acre": matched_profile.get("seed_rate_kg_acre"),
             "soil_preference": matched_profile.get("soil_preference"),
-            "stages": matched_profile.get("stages", []),
+            "stages": stages_out,
             "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "status": "APPROVED_BY_AGRONOMIST"
         }
@@ -1037,6 +1226,21 @@ class CropPlanService:
             stage_copy["tasks"] = tasks_copy
             stages_out.append(stage_copy)
 
+        # Enforce minimum 10 days for each stage and generate daily_schedule with 4 assigned personnel
+        cur_day = 1
+        for s in stages_out:
+            st_len = max(10, (s.get("end_day", cur_day + 9) - s.get("start_day", cur_day) + 1))
+            s["start_day"] = cur_day
+            s["end_day"] = cur_day + st_len - 1
+            cur_day = s["end_day"] + 1
+            s["daily_schedule"] = CropPlanService._generate_daily_schedule_for_stage(
+                stage=s,
+                clean_crop=clean_crop,
+                farming_class=farming_class,
+                workers_list=workers_list,
+                farmers_list=farmers_list
+            )
+
         # Calculate worker fatigue matrix for Stage 1
         stage1_duration = raw_stages[0].get("end_day", 10) if raw_stages else 10
         fatigue_matrix = []
@@ -1110,4 +1314,42 @@ class CropPlanService:
             "status": "CALIBRATED_ACTIVE",
             "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }
+
+    @staticmethod
+    def get_day_context(farm_id: str, day_number: int, crop_name: Optional[str] = None) -> Dict[str, Any]:
+        """Returns the specific day's stage, theme, 4 tasks, and outbreak status."""
+        plan = CropPlanService.generate_master_plan(crop_name or "Wheat", 120)
+        stages = plan.get("stages", [])
+        
+        target_stage = None
+        target_day_entry = None
+        for s in stages:
+            if s.get("start_day", 1) <= day_number <= s.get("end_day", 999):
+                target_stage = s
+                for d in s.get("daily_schedule", []):
+                    if d.get("day") == day_number:
+                        target_day_entry = d
+                        break
+                break
+
+        if not target_day_entry and stages:
+            target_stage = stages[0]
+            if target_stage.get("daily_schedule"):
+                target_day_entry = target_stage["daily_schedule"][0]
+
+        outbreak = target_day_entry.get("outbreak_details", None) if target_day_entry else None
+        return {
+            "day": day_number,
+            "day_number": day_number,
+            "stage_num": target_stage.get("stage_num", 1) if target_stage else 1,
+            "stage_name": target_stage.get("name", "Field Operations") if target_stage else "Field Operations",
+            "theme": target_day_entry.get("theme", f"Day {day_number} Execution") if target_day_entry else f"Day {day_number} Plan",
+            "focus": target_day_entry.get("focus", "Field operations") if target_day_entry else "Standard care",
+            "pest_outbreak_active": target_day_entry.get("pest_outbreak_active", False) if target_day_entry else False,
+            "outbreak_sector": outbreak.get("sector") if outbreak else None,
+            "prescription": outbreak.get("recommended_prescription") if outbreak else None,
+            "outbreak_details": outbreak,
+            "tasks": target_day_entry.get("tasks", []) if target_day_entry else []
+        }
+
 

@@ -132,6 +132,11 @@
         </div>
       </div>
 
+      <!-- TAB: NOTIFICATIONS -->
+      <div id="tab-notifications" class="vizitor-tab-content">
+        <div id="notifications-tab-container"></div>
+      </div>
+
       <!-- TAB 2: MOBILE LEAF SCANNER & VISION -->
       <div id="tab-scanner" class="vizitor-tab-content">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
@@ -486,6 +491,7 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     renderNavigation();
+    if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     await loadWorkerProfile();
     await loadWorkerTasks();
     await loadGroundTruth();
@@ -504,6 +510,7 @@
       loadWorkerKit();
       loadAttendanceHistory();
       loadPerformanceMetrics();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     });
   });
 
@@ -530,6 +537,10 @@
     if (tabId === "overview") {
       loadWorkerProfile();
       loadWorkerTasks();
+    } else if (tabId === "notifications") {
+      const c = document.getElementById("notifications-tab-container");
+      if (c) c.innerHTML = AgriosUI.renderNotificationsTab();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     } else if (tabId === "scanner") {
       // scanner ready
     } else if (tabId === "logbook") {
@@ -557,22 +568,28 @@
 
   async function loadWorkerTasks() {
     try {
-      const tasks = await AgriosAPI.getTasks({ farm_id: currentFarmId });
+      const activeFarm = localStorage.getItem("agrios_active_farm_id") || currentFarmId;
+      let tasks = await AgriosAPI.getTasks({ farm_id: activeFarm });
+      if (!tasks || tasks.length === 0) {
+        tasks = await AgriosAPI.getTasks();
+      }
+
       const mount = document.getElementById("worker-task-list");
       if (!tasks || tasks.length === 0) {
         mount.innerHTML = `<div style="text-align:center; padding:1.5rem; color:#64748b;">No pending tasks in queue. All caught up!</div>`;
         document.getElementById("worker-pending-count").innerText = "0";
+        document.getElementById("worker-completed-count").innerText = "0";
         return;
       }
 
-      const pending = tasks.filter(t => t.status !== "COMPLETED");
-      const done = tasks.filter(t => t.status === "COMPLETED");
+      const pending = tasks.filter(t => (t.status || "").toUpperCase() !== "COMPLETED");
+      const done = tasks.filter(t => (t.status || "").toUpperCase() === "COMPLETED");
 
       document.getElementById("worker-pending-count").innerText = pending.length;
       document.getElementById("worker-completed-count").innerText = done.length;
 
       mount.innerHTML = tasks.map(t => {
-        const isDone = t.status === "COMPLETED";
+        const isDone = (t.status || "").toUpperCase() === "COMPLETED";
         return `
           <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid ${isDone ? '#10b981' : '#f59e0b'}; border-radius:8px; padding:1.25rem;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -599,12 +616,23 @@
       console.error(err);
     }
   }
+  window.loadWorkerTasks = loadWorkerTasks;
 
   async function completeTask(taskId) {
     try {
-      await AgriosAPI.updateTaskStatus(taskId, "COMPLETED");
-      AgriosUI.showToast("Task Verified & Logged", "GPS coordinates lathched. Work log recorded in database.", "✓");
+      const res = await AgriosAPI.updateTaskStatus(taskId, "COMPLETED");
+      AgriosUI.showToast("Task Verified & Logged", "GPS coordinates latched. Work log recorded in database.", "✓");
+
+      // Broadcast across tabs so Agronomist portal receives immediate live completion notification
+      try {
+        localStorage.setItem("agrios_broadcast_event", JSON.stringify({
+          event_type: "TASK_COMPLETED",
+          payload: { id: taskId, title: res ? res.title : "Field Task", worker_id: "Sunita Devi (WORKER-001)" }
+        }));
+      } catch(e) {}
+
       await loadWorkerTasks();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     } catch (err) {
       AgriosUI.showToast("Verification Failed", err.message, "❌");
     }

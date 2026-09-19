@@ -327,17 +327,21 @@
             <div style="display:flex; gap:6px; align-items:center;">
               <input type="text" id="calib-farm-name" value="Greenfield Model Farm" class="form-control" style="width:180px; height:34px; font-size:0.8rem;">
               <input type="number" id="calib-acres" step="0.5" value="14.5" class="form-control" style="width:80px; height:34px; font-size:0.8rem;" placeholder="Acres">
-              <select id="calib-crop" class="form-control" style="width:140px; height:34px; font-size:0.8rem;">
+              <select id="calib-crop" class="form-control" onchange="window._dt3dChangeCrop(this.value)" style="width:140px; height:34px; font-size:0.8rem;">
                 <option value="Wheat" selected>Wheat</option>
                 <option value="Rice">Rice / Paddy</option>
                 <option value="Tomato">Tomato</option>
                 <option value="Maize">Maize</option>
                 <option value="Potato">Potato</option>
                 <option value="Cotton">Cotton</option>
+                <option value="Pisciculture">Pisciculture (Aquaculture)</option>
               </select>
             </div>
             <button class="btn-primary" id="btn-calibrate-submit" onclick="handleWalkAndCalibrate(event)" style="height:34px; font-size:0.8rem; white-space:nowrap;">
               🚀 Calibrate & Build 3D Twin
+            </button>
+            <button class="dt3d-edit-toggle-btn" id="btn-edit-farm-toggle" onclick="window._dt3dToggleEditMode()" title="Toggle CAD World Editor" style="height:34px;">
+              <span>📐</span> EDIT FARM
             </button>
             <div style="font-size:0.72rem; color:#64748b;">
               <span class="card-badge badge-success" id="twin-healthy-count" style="font-size:0.68rem;">1180 Healthy</span>
@@ -353,8 +357,68 @@
           <!-- 3D Canvas Container -->
           <div class="dt3d-canvas-container" id="dt3d-canvas-container">
 
+            <!-- Floating CAD Editor Dock (Top Center) -->
+            <div class="dt3d-editor-dock" id="dt3d-editor-dock" onclick="event.stopPropagation()">
+              <button class="dt3d-cad-btn active" data-tool="select" onclick="window._dt3dSelectTool('select', this)" title="Select & Move (Drag objects, 'R' to rotate, Del to delete)">
+                <span class="dt3d-cad-btn-icon">↖</span> Select
+              </button>
+              <button class="dt3d-cad-btn" data-tool="road" onclick="window._dt3dSelectTool('road', this)" title="Draw Road Ribbon (Click points, click Complete or Enter to finish)">
+                <span class="dt3d-cad-btn-icon">🛤️</span> Road
+              </button>
+              <button class="dt3d-cad-btn" data-tool="field" onclick="window._dt3dSelectTool('field', this)" title="Draw Field Parcel (Click vertices, click Complete or Enter to finish)">
+                <span class="dt3d-cad-btn-icon">🌾</span> Field
+              </button>
+              <button class="dt3d-cad-btn" data-tool="irrigation" onclick="window._dt3dSelectTool('irrigation', this)" title="Route Irrigation Pipeline">
+                <span class="dt3d-cad-btn-icon">💧</span> Irrigation
+              </button>
+              <button class="dt3d-cad-btn" data-tool="building" onclick="window._dt3dSelectTool('building', this)" title="Place Agricultural Buildings">
+                <span class="dt3d-cad-btn-icon">🏗️</span> Building
+              </button>
+              <button class="dt3d-cad-btn" data-tool="plants" onclick="window._dt3dSelectTool('plants', this)" title="Configure Plant Spacing & Density">
+                <span class="dt3d-cad-btn-icon">🌱</span> Plants
+              </button>
+              <div class="dt3d-cad-divider"></div>
+              <!-- Contextual Action Buttons for Active Tool (Enter/Esc) -->
+              <button class="dt3d-cad-btn dt3d-cad-finish-btn" id="btn-cad-finish" onclick="event.stopPropagation(); window._dt3dFinishCADTool()" title="Complete Road/Field (Enter)" style="display:none;">
+                <span class="dt3d-cad-btn-icon">✓</span> <span id="lbl-cad-finish">Complete</span>
+              </button>
+              <button class="dt3d-cad-btn dt3d-cad-clear-btn" id="btn-cad-clear" onclick="event.stopPropagation(); window._dt3dClearCADTool()" title="Clear Points (Esc)" style="display:none;">
+                <span class="dt3d-cad-btn-icon">✕</span> Clear
+              </button>
+              <div class="dt3d-cad-divider"></div>
+              <button class="dt3d-cad-btn" onclick="window._dt3dUndo()" title="Undo Last CAD Action (Ctrl+Z)">
+                <span class="dt3d-cad-btn-icon">↩</span> Undo
+              </button>
+              <button class="dt3d-cad-btn" onclick="window._dt3dRedo()" title="Redo CAD Action (Ctrl+Shift+Z)">
+                <span class="dt3d-cad-btn-icon">↪</span> Redo
+              </button>
+              <div class="dt3d-cad-divider"></div>
+              <button class="dt3d-cad-btn" onclick="window._dt3dSaveLayout()" style="background:#059669; color:#fff;" title="Save 3D Farm Layout to God Database">
+                <span class="dt3d-cad-btn-icon">💾</span> Save Layout
+              </button>
+              <button class="dt3d-cad-btn" onclick="window._dt3dToggleEditMode()" style="color:#ef4444;" title="Exit Edit Mode">
+                ✕
+              </button>
+            </div>
+
+            <!-- Sub-Palette for Building Placement -->
+            <div class="dt3d-building-palette" id="dt3d-building-palette" onclick="event.stopPropagation()">
+              <button class="dt3d-palette-item active" data-bldg="shed" onclick="window._dt3dSelectBuilding('shed', this)">🏭 Machinery Shed</button>
+              <button class="dt3d-palette-item" data-bldg="office" onclick="window._dt3dSelectBuilding('office', this)">🏢 Farm Office</button>
+              <button class="dt3d-palette-item" data-bldg="polyhouse" onclick="window._dt3dSelectBuilding('polyhouse', this)">🌿 Polyhouse</button>
+              <button class="dt3d-palette-item" data-bldg="silo" onclick="window._dt3dSelectBuilding('silo', this)">🌾 Grain Silo</button>
+              <button class="dt3d-palette-item" data-bldg="coldstorage" onclick="window._dt3dSelectBuilding('coldstorage', this)">❄️ Cold Storage</button>
+            </div>
+
+            <!-- Live CAD Area Measurement HUD -->
+            <div class="dt3d-cad-measure-hud" id="dt3d-cad-measure-hud">
+              <span>📐 Parcel Measurement:</span>
+              <strong id="dt3d-measure-acres">0.00 Acres</strong>
+              <span style="color:#94a3b8;">(<span id="dt3d-measure-sqm">0</span> m²)</span>
+            </div>
+
             <!-- HUD Overlay (top) -->
-            <div class="dt3d-hud" id="dt3d-hud">
+            <div class="dt3d-hud" id="dt3d-hud" onclick="event.stopPropagation()">
               <div class="dt3d-hud-pill"><span class="hud-icon">🛰️</span> LAI: <strong>3.8</strong></div>
               <div class="dt3d-hud-pill"><span class="hud-icon">🌱</span> Canopy: <strong>72.5%</strong></div>
               <div class="dt3d-hud-pill"><span class="hud-icon">📊</span> NDVI: <strong>0.78</strong></div>
@@ -362,12 +426,12 @@
             </div>
 
             <!-- Weather Badge (top-right) -->
-            <div class="dt3d-weather-badge" id="dt3d-weather-badge">
+            <div class="dt3d-weather-badge" id="dt3d-weather-badge" onclick="event.stopPropagation()">
               <span>☀️</span> <span>Clear Sky</span> <span style="color:#94a3b8">|</span> <span>28°C</span>
             </div>
 
             <!-- Left Toolbar: Layer Toggles -->
-            <div class="dt3d-toolbar" id="dt3d-layer-toolbar">
+            <div class="dt3d-toolbar" id="dt3d-layer-toolbar" onclick="event.stopPropagation()">
               <button class="dt3d-toolbar-btn active" data-layer="fields" title="Fields" onclick="window._dt3dToggleLayer('fields', this)">🌾</button>
               <button class="dt3d-toolbar-btn active" data-layer="crops" title="Crops" onclick="window._dt3dToggleLayer('crops', this)">🌱</button>
               <button class="dt3d-toolbar-btn active" data-layer="workers" title="Workers" onclick="window._dt3dToggleLayer('workers', this)">👷</button>
@@ -379,7 +443,7 @@
             </div>
 
             <!-- Right Panel: Camera Presets -->
-            <div class="dt3d-camera-panel" id="dt3d-camera-panel">
+            <div class="dt3d-camera-panel" id="dt3d-camera-panel" onclick="event.stopPropagation()">
               <button class="dt3d-toolbar-btn active" data-camera="overview" title="Bird's Eye" onclick="window._dt3dSetCamera('overview', this)">🦅</button>
               <button class="dt3d-toolbar-btn" data-camera="field_focus" title="Field Close-up" onclick="window._dt3dSetCamera('field_focus', this)">🔍</button>
               <button class="dt3d-toolbar-btn" data-camera="worker_focus" title="Worker View" onclick="window._dt3dSetCamera('worker_focus', this)">👤</button>
@@ -387,23 +451,29 @@
             </div>
 
             <!-- Time Simulation Slider (bottom-center) -->
-            <div class="dt3d-time-control" id="dt3d-time-control">
+            <div class="dt3d-time-control" id="dt3d-time-control" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:8px;">
               <span class="dt3d-time-label">Growth Day:</span>
               <input type="range" class="dt3d-time-slider" id="dt3d-time-slider" min="1" max="120" value="30" oninput="window._dt3dSetDay(this.value)">
-              <span class="dt3d-time-day" id="dt3d-day-label">Day 30</span>
+              <span class="dt3d-time-day" id="dt3d-day-label" style="min-width:55px;">Day 30</span>
+              <button type="button" class="btn-primary" id="btn-dispatch-current-day" onclick="window._dt3dDispatchCurrentDayTasks()" style="height:28px; font-size:0.75rem; padding:0 10px; background:#059669; border-radius:14px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; border:none; color:white; cursor:pointer;">
+                <span>🚀</span> Execute & Dispatch Day <span id="dt3d-dispatch-day-num">30</span> Tasks
+              </button>
+              <button type="button" class="btn-secondary" id="btn-randomize-outbreak" onclick="window._dt3dRandomizeDiseases()" style="height:28px; font-size:0.74rem; padding:0 9px; border-radius:14px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; border:1px solid #cbd5e1; background:#ffffff; color:#334155; cursor:pointer;" title="Randomize disease outbreaks schedule for live demonstration">
+                <span>🎲</span> Randomize Outbreaks
+              </button>
             </div>
 
             <!-- Minimap (bottom-right, offset above time control) -->
-            <div class="dt3d-minimap" id="dt3d-minimap" style="bottom: 60px;">
+            <div class="dt3d-minimap" id="dt3d-minimap" onclick="event.stopPropagation()" style="bottom: 60px;">
               <span class="dt3d-minimap-label">MINIMAP</span>
               <canvas id="dt3d-minimap-canvas" width="160" height="120"></canvas>
             </div>
 
             <!-- Inspector Panel (bottom, hidden by default) -->
-            <div class="dt3d-inspector" id="dt3d-inspector">
+            <div class="dt3d-inspector" id="dt3d-inspector" onclick="event.stopPropagation()">
               <div class="dt3d-inspector-header">
                 <span class="dt3d-inspector-title">📍 Select an object</span>
-                <button class="dt3d-inspector-close" onclick="document.getElementById('dt3d-inspector').classList.remove('visible')">✕</button>
+                <button class="dt3d-inspector-close" onclick="event.stopPropagation(); document.getElementById('dt3d-inspector').classList.remove('visible')">✕</button>
               </div>
               <div class="dt3d-inspector-grid">
                 <div class="dt3d-inspector-stat"><label>Type</label><span class="val">—</span></div>
@@ -419,6 +489,42 @@
           </div><!-- /dt3d-canvas-container -->
 
         </div><!-- /dt3d-viewport-wrapper -->
+
+        <!-- Modal CAD Dialog (Field & Plant Spacing Configuration) -->
+        <div class="dt3d-cad-modal-overlay" id="dt3d-cad-modal-overlay">
+          <div class="dt3d-cad-modal">
+            <div class="dt3d-cad-modal-title" id="dt3d-cad-modal-title">🌱 Configure Field Parcel & Planting Grid</div>
+            <div class="dt3d-cad-modal-field">
+              <label>Field Name</label>
+              <input type="text" id="cad-field-name" value="Field E (North-Central)">
+            </div>
+            <div class="dt3d-cad-modal-field">
+              <label>Crop / Variety</label>
+              <select id="cad-field-crop">
+                <option value="Wheat">Wheat (PBW 550 / HD 2967)</option>
+                <option value="Rice">Rice / Paddy (PR 126)</option>
+                <option value="Tomato">Tomato (Himsona Protected)</option>
+                <option value="Cotton">Cotton (Bt RCH 659)</option>
+                <option value="Potato">Potato (Kufri Pukhraj)</option>
+                <option value="Pisciculture">Pisciculture (Carp / Tilapia)</option>
+              </select>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              <div class="dt3d-cad-modal-field">
+                <label>Total Plant Count</label>
+                <input type="number" id="cad-plant-count" value="1200" step="100">
+              </div>
+              <div class="dt3d-cad-modal-field">
+                <label>Row Spacing (m)</label>
+                <input type="number" id="cad-row-spacing" value="0.8" step="0.1">
+              </div>
+            </div>
+            <div class="dt3d-cad-modal-actions">
+              <button type="button" class="btn-secondary" onclick="window._dt3dCloseCadModal()">Cancel</button>
+              <button type="button" class="btn-primary" onclick="window._dt3dSubmitPlantConfig()">Apply & Re-Plant</button>
+            </div>
+          </div>
+        </div>
 
         <!-- Version & Save Row -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
@@ -549,72 +655,12 @@
         </div>
       </div>
 
-      <!-- TAB 7: SURVEILLANCE -->
-      <div id="tab-surveillance" class="vizitor-tab-content">
-        <div class="card-panel">
-          <div class="panel-header">
-            <div>
-              <h3 class="panel-title">Regional Pest & Pathogen Surveillance</h3>
-              <p class="panel-subtitle">Satellite radar, spore trap telemetry, and field hotspot clustering across Punjab.</p>
-            </div>
-            <button class="btn-primary" onclick="openQuarantineModal()">
-              🛡️ + Declare Quarantine Buffer
-            </button>
-          </div>
-
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem;" id="surveillance-hotspots-grid">
-            <!-- Dynamic hotspots loaded via loadSurveillance() -->
-          </div>
-        </div>
-
-        <!-- Integrated Pest Management (IPM) & Biological Controls -->
-        <div class="card-panel" style="margin-top:1.5rem;">
-          <div class="panel-header">
-            <div>
-              <h3 class="panel-title">Integrated Pest Management (IPM) & Biological Controls</h3>
-              <p class="panel-subtitle">Economic threshold levels (ETL), bio-control agents, and cultural practices.</p>
-            </div>
-          </div>
-          <div id="ipm-protocols-container">
-            <div style="text-align:center; padding:1.5rem; color:#64748b;">Loading IPM protocols...</div>
-          </div>
-        </div>
+      <!-- TAB: NOTIFICATIONS -->
+      <div id="tab-notifications" class="vizitor-tab-content">
+        <div id="notifications-tab-container"></div>
       </div>
 
-      <!-- TAB 8: QUARANTINE ZONES -->
-      <div id="tab-quarantine" class="vizitor-tab-content">
-        <div class="card-panel">
-          <div class="panel-header">
-            <div>
-              <h3 class="panel-title">Outbreak Containment & Buffer Radius Enforcement</h3>
-              <p class="panel-subtitle">Legal phytosanitary cordon sanitaires preventing regional vector migration.</p>
-            </div>
-            <button class="btn-primary" onclick="openQuarantineModal()">
-              🛡️ + New Containment Zone
-            </button>
-          </div>
-
-          <div class="vizitor-table-container">
-            <table class="vizitor-table">
-              <thead>
-                <tr>
-                  <th>Zone ID</th>
-                  <th>District Basin</th>
-                  <th>Target Pest / Pathogen</th>
-                  <th>Buffer Radius</th>
-                  <th>Phytosanitary Protocol</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="quarantine-zones-table">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 9: BROADCAST CIRCULARS -->
+      <!-- TAB: BROADCAST CIRCULARS -->
       <div id="tab-circulars" class="vizitor-tab-content">
         <div class="card-panel">
           <div class="panel-header">
@@ -973,10 +1019,230 @@
     "Rice": { scientific: "Oryza sativa", duration: 135, yield: 28.0, family: "Poaceae" },
     "Potato": { scientific: "Solanum tuberosum", duration: 85, yield: 120.0, family: "Solanaceae" },
     "Pisciculture": { scientific: "Labeo rohita / Catla catla", duration: 195, yield: 38.0, family: "Cyprinidae" },
+    "Rohu": { scientific: "Labeo rohita", duration: 195, yield: 35.0, family: "Cyprinidae" },
+    "Catla": { scientific: "Catla catla", duration: 180, yield: 42.0, family: "Cyprinidae" },
+    "Mrigal": { scientific: "Cirrhinus mrigala", duration: 210, yield: 32.0, family: "Cyprinidae" },
+    "Freshwater Scampi": { scientific: "Macrobrachium rosenbergii", duration: 180, yield: 18.5, family: "Palaemonidae" },
+    "Pangasius / Tilapia": { scientific: "Pangasianodon hypophthalmus", duration: 150, yield: 55.0, family: "Pangasiidae" },
     "Tomato": { scientific: "Solanum lycopersicum", duration: 105, yield: 180.0, family: "Solanaceae" },
+    "Capsicum": { scientific: "Capsicum annuum", duration: 120, yield: 160.0, family: "Solanaceae" },
+    "Cucumber": { scientific: "Cucumis sativus", duration: 60, yield: 180.0, family: "Cucurbitaceae" },
+    "Floriculture Rose": { scientific: "Rosa hybrida", duration: 110, yield: 95.0, family: "Rosaceae" },
+    "Hydroponic Lettuce": { scientific: "Lactuca sativa", duration: 45, yield: 110.0, family: "Asteraceae" },
+    "Mango": { scientific: "Mangifera indica", duration: 240, yield: 75.0, family: "Anacardiaceae" },
+    "Guava": { scientific: "Psidium guajava", duration: 180, yield: 90.0, family: "Myrtaceae" },
+    "Pomegranate": { scientific: "Punica granatum", duration: 160, yield: 65.0, family: "Lythraceae" },
+    "Citrus": { scientific: "Citrus reticulata", duration: 210, yield: 85.0, family: "Rutaceae" },
+    "Banana": { scientific: "Musa acuminata", duration: 330, yield: 320.0, family: "Musaceae" },
+    "Rajmash": { scientific: "Phaseolus vulgaris", duration: 105, yield: 14.0, family: "Fabaceae" },
+    "Buckwheat": { scientific: "Fagopyrum esculentum", duration: 75, yield: 11.0, family: "Polygonaceae" },
+    "Ginger": { scientific: "Zingiber officinale", duration: 220, yield: 95.0, family: "Zingiberaceae" },
+    "Finger Millet": { scientific: "Eleusine coracana", duration: 115, yield: 16.5, family: "Poaceae" },
+    "Hill Cabbage": { scientific: "Brassica oleracea var. capitata", duration: 80, yield: 140.0, family: "Brassicaceae" },
     "Mustard": { scientific: "Brassica juncea", duration: 105, yield: 8.5, family: "Brassicaceae" },
     "Moong": { scientific: "Vigna radiata", duration: 65, yield: 6.0, family: "Fabaceae" },
     "Cotton": { scientific: "Gossypium hirsutum", duration: 155, yield: 12.0, family: "Malvaceae" }
+  };
+
+  const TAXONOMY_CONFIGS = {
+    "Terrestrial Field Crops": {
+      defaultCrop: "Wheat",
+      crops: [
+        { name: "Wheat", label: "Wheat (Triticum aestivum / PBW-550) • 120 Days", duration: 120, yield: 24.5 },
+        { name: "Rice", label: "Paddy / Rice (Oryza sativa / Swarna Sub-1) • 135 Days", duration: 135, yield: 28.0 },
+        { name: "Potato", label: "Potato (Solanum tuberosum / Kufri Pukhraj) • 85 Days", duration: 85, yield: 120.0 },
+        { name: "Mustard", label: "Mustard (Brassica juncea / Pusa Bold) • 105 Days", duration: 105, yield: 8.5 },
+        { name: "Moong", label: "Summer Moong (Vigna radiata / SML-668) • 65 Days", duration: 65, yield: 6.0 },
+        { name: "Cotton", label: "Cotton (Gossypium hirsutum / Bt Cotton) • 155 Days", duration: 155, yield: 12.0 }
+      ],
+      soils: [
+        "Alluvial Silt Loam (Indo-Gangetic / Mahanadi Basin)",
+        "Red & Laterite Soil (Odisha Highlands / Plateau)",
+        "Black Cotton Soil (Vertisol / Deccan)",
+        "Sandy Loam (Sub-Arid / Coastal Dunes)",
+        "Clay Loam (Lowland Paddy / Wetland)"
+      ],
+      defaultSoil: "Alluvial Silt Loam (Indo-Gangetic / Mahanadi Basin)",
+      defaultPh: 6.8,
+      waterSources: [
+        "Canal Distributary Sluice + Solar Drip",
+        "Hirakud Gravity Canal Command (Odisha)",
+        "Solar Submersible Tube Well (75m Depth)",
+        "River Lift Irrigation Network",
+        "Perennial Farm Pond Rainwater Harvesting"
+      ],
+      defaultWaterSource: "Canal Distributary Sluice + Solar Drip",
+      irrigationMethods: [
+        "Automated Drip Lines (Water-Efficient)",
+        "Micro-Sprinkler Overhead Network",
+        "Controlled Laser-Leveled Furrow Flooding"
+      ],
+      defaultIrrigationMethod: "Automated Drip Lines (Water-Efficient)",
+      defaultSeason: "Rabi",
+      mechanization: [
+        { id: "Tractor & Multi-Row Seed Drill", icon: "🚜", label: "Tractor & Multi-Row Zero-Till Seed Drill" },
+        { id: "Laser Land Leveler", icon: "📐", label: "Laser Land Leveler & Precision Grader" },
+        { id: "Solar Drip Fertigation Automation", icon: "💧", label: "Solar Drip Fertigation Automated Manifold" },
+        { id: "Drone & Knapsack Battery Sprayers", icon: "🚁", label: "Drone & Battery-Assisted Knapsack Sprayers" },
+        { id: "Combine Harvester & Straw Baler", icon: "🌾", label: "Combine Harvester with Super SMS Straw Baler" }
+      ]
+    },
+    "Pisciculture & Aquaculture": {
+      defaultCrop: "Pisciculture",
+      crops: [
+        { name: "Pisciculture", label: "Composite Carp Polyculture (Rohu + Catla + Mrigal) • 195 Days", duration: 195, yield: 38.0 },
+        { name: "Rohu", label: "Rohu Intensive Monoculture (Labeo rohita) • 195 Days", duration: 195, yield: 35.0 },
+        { name: "Catla", label: "Catla Surface Feeder (Catla catla) • 180 Days", duration: 180, yield: 42.0 },
+        { name: "Mrigal", label: "Mrigal Bottom Feeder (Cirrhinus mrigala) • 210 Days", duration: 210, yield: 32.0 },
+        { name: "Freshwater Scampi", label: "Freshwater Giant Prawn / Scampi (Macrobrachium) • 180 Days", duration: 180, yield: 18.5 },
+        { name: "Pangasius / Tilapia", label: "Pangasius & GIFT Tilapia Intensive Culture • 150 Days", duration: 150, yield: 55.0 }
+      ],
+      soils: [
+        "Clay-Loam Water-Retentive Pond Bed Bottom (Optimal)",
+        "Impermeable Heavy Clay Silt Core with Bentonite Seal",
+        "Alluvial Lowland Pond Embankment Soil",
+        "Biofloc Lined Poly-Pond Tank Bottom"
+      ],
+      defaultSoil: "Clay-Loam Water-Retentive Pond Bed Bottom (Optimal)",
+      defaultPh: 7.5,
+      waterSources: [
+        "Perennial Canal Sluice & Deep Borewell Feed",
+        "Hirakud / Mahanadi River Gravity Channel Inflow",
+        "Rainwater Harvesting Reservoir & Watershed Inflow",
+        "Groundwater Solar Tube Well (Continuous 1.8m Depth)"
+      ],
+      defaultWaterSource: "Perennial Canal Sluice & Deep Borewell Feed",
+      irrigationMethods: [
+        "Paddlewheel Surface Aeration & Sluice Circulation",
+        "Venturi Sub-Surface Air Injectors & Spillway Control",
+        "Gravity Inflow Sluice with Mesh Predator Barriers",
+        "Biofloc Aeration Blower Manifold System"
+      ],
+      defaultIrrigationMethod: "Paddlewheel Surface Aeration & Sluice Circulation",
+      defaultSeason: "Perennial",
+      mechanization: [
+        { id: "Paddle Aerators & O2 Probes", icon: "🌀", label: "Electric Paddlewheel Aerators & Digital DO Probes" },
+        { id: "Automated Demand Pellet Feeders", icon: "📦", label: "Solar-Powered Automated Demand Feed Dispensers" },
+        { id: "Cast Net & Drag Seining Gear", icon: "🕸️", label: "Multi-Mesh Drag Seining Nets & Fingerling Cradles" },
+        { id: "Water Chemistry Testing Kit", icon: "🧪", label: "Digital Refractometer, Ammonia & pH Photometer Kit" },
+        { id: "Submersible Sludge Siphon Pump", icon: "⛽", label: "Centrifugal Dewatering & Pond Bottom Sludge Siphon" },
+        { id: "Live Fish Transport Tank", icon: "🚚", label: "Aerated Live Fish Transportation Tank with O2 Cylinders" }
+      ]
+    },
+    "Polyhouse & Protected Cultivation": {
+      defaultCrop: "Capsicum",
+      crops: [
+        { name: "Capsicum", label: "Colored Bell Pepper / Capsicum (Capsicum annuum) • 120 Days", duration: 120, yield: 160.0 },
+        { name: "Tomato", label: "Indeterminate Cherry Tomato (Solanum lycopersicum) • 90 Days", duration: 90, yield: 220.0 },
+        { name: "Cucumber", label: "Parthenocarpic English Cucumber (Cucumis sativus) • 60 Days", duration: 60, yield: 180.0 },
+        { name: "Floriculture Rose", label: "Dutch Cut Rose / Floriculture (Rosa hybrida) • 110 Days", duration: 110, yield: 95.0 },
+        { name: "Hydroponic Lettuce", label: "Hydroponic Butterhead & Romaine Lettuce • 45 Days", duration: 45, yield: 110.0 }
+      ],
+      soils: [
+        "Sterilized Cocopeat + Perlite Soilless Medium (pH 5.8-6.2)",
+        "Rockwool Hydroponic Slab Substrate",
+        "Expanded Clay Aggregate & Vermiculite Blend",
+        "Solarized Loamy Sand with 30% Vermicompost"
+      ],
+      defaultSoil: "Sterilized Cocopeat + Perlite Soilless Medium (pH 5.8-6.2)",
+      defaultPh: 6.2,
+      waterSources: [
+        "RO Purified Water Storage with Automated Recirculation",
+        "Rainwater Catchment Cistern with UV Sterilization",
+        "Solar Borewell with Sand & Disc Micron Filters"
+      ],
+      defaultWaterSource: "RO Purified Water Storage with Automated Recirculation",
+      irrigationMethods: [
+        "Automated Compensated Micro-Drip with Venturi Fertigation",
+        "High-Pressure Overhead Fogging & Humidity Misters",
+        "NFT (Nutrient Film Technique) Closed Loop",
+        "Ebb and Flow Recirculating Hydroponic Benches"
+      ],
+      defaultIrrigationMethod: "Automated Compensated Micro-Drip with Venturi Fertigation",
+      defaultSeason: "Perennial",
+      mechanization: [
+        { id: "Climate Control HVAC & Pad-Fan Cooling System", icon: "❄️", label: "Evaporative Pad & Exhaust Fan Climate Cooling System" },
+        { id: "Automated Fertigation Venturi Dosing Rig", icon: "💧", label: "PLC Automated Dual-Venturi EC/pH Fertigation Dosing Rig" },
+        { id: "Overhead Motorized Thermal Shade Screens", icon: "🛡️", label: "Aluminet Motorized Overhead Thermal Radiation Shade Screens" },
+        { id: "CO2 Enrichment Gas Injectors", icon: "💨", label: "CO2 Enrichment Generator & Ambient Sensors" },
+        { id: "Digital EC / pH Nutrient Sensors", icon: "📊", label: "Inline Continuous EC/pH Soil-Water Spectrometric Probes" }
+      ]
+    },
+    "Commercial Horticulture & Orchards": {
+      defaultCrop: "Mango",
+      crops: [
+        { name: "Mango", label: "Mango (Amrapali / Mallika Ultra High Density) • 240 Days", duration: 240, yield: 75.0 },
+        { name: "Guava", label: "Guava (Taiwan Pink / VNR Bihi High-Density) • 180 Days", duration: 180, yield: 90.0 },
+        { name: "Pomegranate", label: "Pomegranate (Bhagwa Super-Red) • 160 Days", duration: 160, yield: 65.0 },
+        { name: "Citrus", label: "Kinnow Mandarin / Sweet Orange (Citrus reticulata) • 210 Days", duration: 210, yield: 85.0 },
+        { name: "Banana", label: "Banana (Grand Naine Tissue-Culture) • 330 Days", duration: 330, yield: 320.0 }
+      ],
+      soils: [
+        "Deep Well-Drained Red Sandy Loam (High Organic Matter)",
+        "Alluvial Riverine Soil with Gravel Drainage Sub-stratum",
+        "Deccan Black Loam with Deep Soil Bed (>1.5m)",
+        "Laterite Hill Slope with Vermicompost Basal Beds"
+      ],
+      defaultSoil: "Deep Well-Drained Red Sandy Loam (High Organic Matter)",
+      defaultPh: 6.5,
+      waterSources: [
+        "Deep Borewell with Solar Submersible Pump",
+        "Canal Sluice Command with Pressurized Pipe Network",
+        "Perennial Check-Dam / Farm Reservoir Feed"
+      ],
+      defaultWaterSource: "Deep Borewell with Solar Submersible Pump",
+      irrigationMethods: [
+        "Sub-Surface Pressure Compensating Double-Ring Drip",
+        "Micro-Jet Under-Canopy Mini-Sprinklers",
+        "Basin Flooding with Mulch Ring Safeguards"
+      ],
+      defaultIrrigationMethod: "Sub-Surface Pressure Compensating Double-Ring Drip",
+      defaultSeason: "Perennial",
+      mechanization: [
+        { id: "Tractor-Mounted Orchard Mist Blower Sprayer", icon: "🚜", label: "Tractor-Mounted PTO Air-Blast Orchard Mist Sprayer" },
+        { id: "Hydraulic Tree Pruner & Lopping Boom", icon: "✂️", label: "Pneumatic / Hydraulic Canopy Pruning & Lopping Boom" },
+        { id: "Soil Moisture Tensiometer Array", icon: "📡", label: "Multi-Depth Wireless Soil Moisture Tensiometer Array" },
+        { id: "Post-Harvest Fruit Sorting Conveyor", icon: "🍎", label: "Rotary Roller Grading & Electronic Weight Sizing Conveyor" },
+        { id: "Solar Drip Fertigation Automation", icon: "💧", label: "Solar Drip Fertigation Automated Manifold" }
+      ]
+    },
+    "Terrace & Hill Agriculture": {
+      defaultCrop: "Rajmash",
+      crops: [
+        { name: "Rajmash", label: "High-Altitude Kidney Bean / Rajmash • 105 Days", duration: 105, yield: 14.0 },
+        { name: "Buckwheat", label: "Himalayan Buckwheat / Kuttu • 75 Days", duration: 75, yield: 11.0 },
+        { name: "Ginger", label: "Organic Hill Ginger & Turmeric Rhizome • 220 Days", duration: 220, yield: 95.0 },
+        { name: "Finger Millet", label: "Mountain Finger Millet / Mandua • 115 Days", duration: 115, yield: 16.5 },
+        { name: "Hill Cabbage", label: "Off-Season Mountain Cabbage & Cauliflower • 80 Days", duration: 80, yield: 140.0 }
+      ],
+      soils: [
+        "Gravelly Mountain Brown Soil with High Humus",
+        "Terraced Silt Loam with Rock Retention Bunds",
+        "Acidic Alpine Loam (pH 5.5 - 6.2 with Dolomite Lime Buffer)",
+        "High-Altitude Colluvial Soil"
+      ],
+      defaultSoil: "Gravelly Mountain Brown Soil with High Humus",
+      defaultPh: 6.0,
+      waterSources: [
+        "Gravity Runoff Kuhl Stream Channel Diversion",
+        "Mountain Spring Water (Naula/Dhara) Storage Tank",
+        "Step-Terrace Rainwater Harvesting Bunds"
+      ],
+      defaultWaterSource: "Gravity Runoff Kuhl Stream Channel Diversion",
+      irrigationMethods: [
+        "Contour Gravity Furrow with Stone Sluice Gates",
+        "Low-Pressure Gravity Drip Tubes",
+        "Terrace Micro-Sprinkler Lines"
+      ],
+      defaultIrrigationMethod: "Contour Gravity Furrow with Stone Sluice Gates",
+      defaultSeason: "Kharif",
+      mechanization: [
+        { id: "Lightweight Power Tiller", icon: "🚜", label: "Lightweight 7HP Compact Mountain Power Tiller / Weeder" },
+        { id: "Gravity-Fed Kuhl Gate Regulators", icon: "🚰", label: "Stone & HDPE Sluice Flow Gate Regulators" },
+        { id: "Manual Back-Pack Knapsack Sprayer", icon: "🎒", label: "Ergonomic Ultra-Lightweight Knapsack Battery Sprayer" },
+        { id: "Contour Bunding & Gabion Wire Netting", icon: "🧱", label: "Galvanized Gabion Soil Retaining Bund Mesh" }
+      ]
+    }
   };
 
   const wizardSteps = [
@@ -993,11 +1259,10 @@
   document.addEventListener("DOMContentLoaded", async () => {
     renderNavigation();
     initPlantingGrid();
+    if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     await loadAgronomistProfile();
     await loadCropPlanPreview("Wheat");
     await loadSubordinates();
-    await loadSurveillance();
-    await loadQuarantineZones();
     await loadPrescriptions();
     await loadCameraObservations();
     await loadBroadcastHistory();
@@ -1010,12 +1275,11 @@
       console.log("[Agronomist] Domain event:", e.detail.event_type);
       loadAgronomistProfile();
       loadSubordinates();
-      loadSurveillance();
-      loadQuarantineZones();
       loadPrescriptions();
       loadCameraObservations();
       loadBroadcastHistory();
       loadSprayWeatherCheck();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     });
   });
 
@@ -1041,6 +1305,10 @@
       loadAgronomistProfile();
       loadSoilAnalysis();
       loadCropRotationAdvice();
+    } else if (tabId === "notifications") {
+      const container = document.getElementById("notifications-tab-container");
+      if (container) container.innerHTML = AgriosUI.renderNotificationsTab();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     } else if (tabId === "cropplan") {
       loadCropPlanPreview(activeCropPlan ? activeCropPlan.crop_name : "Wheat");
     } else if (tabId === "subordinates") {
@@ -1050,10 +1318,6 @@
     } else if (tabId === "prescriptions") {
       loadPrescriptions();
       loadSprayWeatherCheck();
-    } else if (tabId === "surveillance") {
-      loadSurveillance();
-    } else if (tabId === "quarantine") {
-      loadQuarantineZones();
     } else if (tabId === "circulars") {
       loadBroadcastHistory();
     } else if (tabId === "fieldcalibration") {
@@ -1068,6 +1332,15 @@
         await twinAdapter3D.mount("dt3d-canvas-container", activeFarmId || "default", "dt3d-minimap-canvas");
         const statsEl = document.getElementById("dt3d-scene-stats");
         if (statsEl) statsEl.innerText = "3D Agricultural World Active";
+        if (activeCropPlan && activeCropPlan.duration_days) {
+          const slider = document.getElementById("dt3d-time-slider");
+          if (slider) slider.max = activeCropPlan.duration_days;
+          twinAdapter3D.setPlanDuration(activeCropPlan.duration_days);
+        }
+        const savedCrop = localStorage.getItem("agrios_calibrated_crop") || (document.getElementById("calib-crop")?.value) || (activeCropPlan?.crop_name);
+        if (savedCrop && typeof twinAdapter3D.setCrop === "function") {
+          twinAdapter3D.setCrop(savedCrop);
+        }
       } else {
         if (twinAdapter3D.engine && twinAdapter3D.engine.renderer) {
           twinAdapter3D.setCamera("overview");
@@ -1093,8 +1366,81 @@
   };
 
   window._dt3dSetDay = function(day) {
+    const dayNum = parseInt(day, 10);
+    const dayLabel = document.getElementById("dt3d-day-label");
+    if (dayLabel) dayLabel.innerText = `Day ${dayNum}`;
+    const dispatchDayLabel = document.getElementById("dt3d-dispatch-day-num");
+    if (dispatchDayLabel) dispatchDayLabel.innerText = dayNum;
+
+    if (twinAdapter3D) {
+      twinAdapter3D.setTimeDay(dayNum);
+    }
+  };
+
+  window._on3DDayStateChange = function(state) {
+    if (!state) return;
+    const day = state.day;
+    const dayLabel = document.getElementById("dt3d-day-label");
+    if (dayLabel) dayLabel.innerText = `Day ${day}`;
+    const dispatchDayLabel = document.getElementById("dt3d-dispatch-day-num");
+    if (dispatchDayLabel) dispatchDayLabel.innerText = day;
+    const slider = document.getElementById("dt3d-time-slider");
+    if (slider && parseInt(slider.value, 10) !== day) {
+      slider.value = day;
+    }
+
+    if (state.plantCounts) {
+      const hEl = document.getElementById("twin-healthy-count");
+      const sEl = document.getElementById("twin-stressed-count");
+      const dEl = document.getElementById("twin-dead-count");
+      if (hEl) hEl.innerText = `${state.plantCounts.healthy.toLocaleString()} Healthy`;
+      if (sEl) sEl.innerText = `${state.plantCounts.stressed.toLocaleString()} Stressed`;
+      if (dEl) dEl.innerText = `${state.plantCounts.dead.toLocaleString()} Dead`;
+    }
+
+    syncOutbreakToAgronomistUI(state.disease);
+  };
+
+  window._dt3dRandomizeDiseases = function() {
     if (!twinAdapter3D) return;
-    twinAdapter3D.setTimeDay(parseInt(day, 10));
+    const newSchedule = twinAdapter3D.randomizeDiseases();
+    if (newSchedule) {
+      const days = Object.keys(newSchedule).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).join(", ");
+      AgriosUI.showToast("Outbreaks Randomized", `Outbreaks reseeded for demo on Days: ${days}`, "🎲");
+      const slider = document.getElementById("dt3d-time-slider");
+      const currentDay = slider ? parseInt(slider.value, 10) : 30;
+      twinAdapter3D.setTimeDay(currentDay);
+    }
+  };
+
+  window._dt3dDispatchCurrentDayTasks = function() {
+    const slider = document.getElementById("dt3d-time-slider");
+    const currentDay = slider ? parseInt(slider.value, 10) : 30;
+    dispatchDayTasks(currentDay);
+  };
+
+  window._dt3dChangeCrop = function(cropName) {
+    if (!cropName) return;
+    localStorage.setItem("agrios_calibrated_crop", cropName);
+    
+    // Sync to surveyState if present
+    if (typeof surveyState !== 'undefined') {
+      surveyState.crop_name = cropName;
+    }
+    
+    // Sync to calib-crop select if different
+    const calibSelect = document.getElementById("calib-crop");
+    if (calibSelect && calibSelect.value !== cropName) {
+      calibSelect.value = cropName;
+    }
+
+    const cropEl = document.getElementById("card-crop-name");
+    if (cropEl) cropEl.innerText = cropName;
+
+    if (twinAdapter3D && typeof twinAdapter3D.setCrop === "function") {
+      twinAdapter3D.setCrop(cropName);
+      AgriosUI.showToast("Botanical Model Updated", `3D Farm rendered for ${cropName}`, "🌾");
+    }
   };
 
   let weatherModes = ["clear", "cloudy", "rain", "heatwave"];
@@ -1119,28 +1465,223 @@
     }
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // 3D CAD-LITE "EDIT FARM" CONTROLLERS
+  // ─────────────────────────────────────────────────────────────
+  let isEditFarmActive = false;
+
+  window._dt3dToggleEditMode = function() {
+    if (!twinAdapter3D) return;
+    isEditFarmActive = !isEditFarmActive;
+    twinAdapter3D.setEditMode(isEditFarmActive);
+
+    const toggleBtn = document.getElementById("btn-edit-farm-toggle");
+    if (toggleBtn) toggleBtn.classList.toggle("active", isEditFarmActive);
+
+    const dock = document.getElementById("dt3d-editor-dock");
+    if (dock) dock.classList.toggle("visible", isEditFarmActive);
+
+    const palette = document.getElementById("dt3d-building-palette");
+    if (palette && !isEditFarmActive) palette.classList.remove("visible");
+
+    const measureHud = document.getElementById("dt3d-cad-measure-hud");
+    if (measureHud && !isEditFarmActive) measureHud.classList.remove("visible");
+
+    if (isEditFarmActive) {
+      AgriosUI.showToast("Edit Farm Mode Active", "Click terrain to place waypoints, drag spatial objects, or draw road ribbons.", "📐");
+    } else {
+      AgriosUI.showToast("Exited Edit Farm Mode", "Switched back to standard telemetry inspection view.", "🌾");
+    }
+  };
+
+  window._dt3dSelectTool = function(toolName, btn) {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.setEditorTool(toolName);
+
+    document.querySelectorAll(".dt3d-cad-btn[data-tool]").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+
+    const palette = document.getElementById("dt3d-building-palette");
+    if (palette) {
+      palette.classList.toggle("visible", toolName === "building");
+    }
+
+    const measureHud = document.getElementById("dt3d-cad-measure-hud");
+    if (measureHud) {
+      measureHud.classList.toggle("visible", toolName === "field");
+    }
+
+    if (toolName === "plants") {
+      window._on3DConfigurePlants();
+    }
+  };
+
+  window._dt3dSelectBuilding = function(bldgType, btn) {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.setBuildingType(bldgType);
+
+    document.querySelectorAll(".dt3d-palette-item[data-bldg]").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+  };
+
+  window._dt3dUndo = function() {
+    if (!twinAdapter3D) return;
+    const res = twinAdapter3D.undoEdit();
+    if (res) AgriosUI.showToast("Action Undone", res.description || "Reverted last change", "↩");
+  };
+
+  window._dt3dRedo = function() {
+    if (!twinAdapter3D) return;
+    const res = twinAdapter3D.redoEdit();
+    if (res) AgriosUI.showToast("Action Redone", res.description || "Re-applied change", "↪");
+  };
+
+  window._dt3dSaveLayout = async function() {
+    if (!twinAdapter3D) return;
+    try {
+      const summary = prompt("Enter change summary for this layout version:", "Updated farm boundary, access roads & spatial structures") || "Updated farm CAD layout";
+      AgriosUI.showToast("Saving Farm Layout", "Synchronizing spatial geometry with AGRIOS database...", "💾");
+      const res = await twinAdapter3D.saveFarmDraft(summary);
+      AgriosUI.showToast("Layout Version Committed", `Saved as Version ${res?.structure?.version_number || 'v2'} in God Database!`, "✅");
+    } catch (err) {
+      AgriosUI.showToast("Save Layout Failed", err.message, "❌");
+    }
+  };
+
+  window._dt3dFinishCADTool = function() {
+    if (!twinAdapter3D) return;
+    const res = twinAdapter3D.finishCADTool();
+    if (res) {
+      AgriosUI.showToast("Geometry Finalized", "3D element successfully committed to scene.", "✅");
+    } else {
+      AgriosUI.showToast("Cannot Complete Yet", "Add more points first (min 2 for roads/pipes, 3 for fields).", "ℹ️");
+    }
+  };
+
+  window._dt3dClearCADTool = function() {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.clearCADTool();
+    AgriosUI.showToast("Cleared Points", "Current drawing points reset.", "🧹");
+  };
+
+  window._on3DEditStateChange = function(state) {
+    const dock = document.getElementById("dt3d-editor-dock");
+    if (dock) dock.classList.toggle("visible", !!state.isEditMode);
+
+    const finishBtn = document.getElementById("btn-cad-finish");
+    const clearBtn = document.getElementById("btn-cad-clear");
+    const finishLbl = document.getElementById("lbl-cad-finish");
+
+    if (finishBtn && clearBtn) {
+      const pts = state.pointsCount || 0;
+      const tool = state.tool;
+      const isDrawingTool = tool === "road" || tool === "field" || tool === "irrigation";
+
+      if (isDrawingTool && pts > 0) {
+        clearBtn.style.display = "inline-flex";
+        const minPts = (tool === "field") ? 3 : 2;
+        if (pts >= minPts) {
+          finishBtn.style.display = "inline-flex";
+          if (finishLbl) {
+            finishLbl.innerText = tool === "field" ? "Close Field" : (tool === "road" ? "Complete Road" : "Complete Pipe");
+          }
+        } else {
+          finishBtn.style.display = "none";
+        }
+      } else {
+        finishBtn.style.display = "none";
+        clearBtn.style.display = "none";
+      }
+    }
+  };
+
+  window._on3DAreaMeasure = function(measure) {
+    const acresEl = document.getElementById("dt3d-measure-acres");
+    const sqmEl = document.getElementById("dt3d-measure-sqm");
+    if (acresEl) acresEl.innerText = `${measure.acres} Acres`;
+    if (sqmEl) sqmEl.innerText = measure.sqMeters.toLocaleString();
+  };
+
+  window._on3DConfigurePlants = function(fieldData) {
+    const overlay = document.getElementById("dt3d-cad-modal-overlay");
+    if (overlay) {
+      overlay.style.display = "flex";
+      if (fieldData?.name) {
+        const nameInput = document.getElementById("cad-field-name");
+        if (nameInput) nameInput.value = fieldData.name;
+      }
+    }
+  };
+
+  window._dt3dCloseCadModal = function() {
+    const overlay = document.getElementById("dt3d-cad-modal-overlay");
+    if (overlay) overlay.style.display = "none";
+  };
+
+  window._dt3dSubmitPlantConfig = function() {
+    const fieldName = document.getElementById("cad-field-name").value;
+    const cropName = document.getElementById("cad-field-crop").value;
+    const count = parseInt(document.getElementById("cad-plant-count").value, 10) || 1200;
+    const spacing = parseFloat(document.getElementById("cad-row-spacing").value) || 0.8;
+
+    if (twinAdapter3D && twinAdapter3D.engine && twinAdapter3D.engine.sceneData) {
+      twinAdapter3D.engine.sceneData.planting_grid = {
+        field_name: fieldName,
+        crop: cropName,
+        total_plants: count,
+        healthy_plants: Math.round(count * 0.98),
+        stressed_plants: Math.round(count * 0.02),
+        dead_plants: 0,
+        row_spacing_cm: spacing * 100
+      };
+      twinAdapter3D.setTimeDay(twinAdapter3D.engine.currentDay);
+    }
+
+    window._dt3dCloseCadModal();
+    AgriosUI.showToast("Planting Grid Updated", `Configured ${count} plants for ${fieldName} (${cropName})`, "🌱");
+  };
+
   async function loadAgronomistProfile() {
     const user = AgriosAPI.getCurrentUser() || { full_name: "Agronomist", persona_code: "AGRONOMIST-001" };
     surveyState.agronomist_id = user.id;
-    document.getElementById("agro-persona-badge").innerText = `${user.jurisdiction_code || 'Odisha / Punjab'} • ${user.persona_code || 'AGRONOMIST'}`;
-    document.getElementById("agro-doctor-name").innerText = `${user.full_name} • Senior Crop Scientist • Model Farm Calibration`;
+    const personaBadge = document.getElementById("agro-persona-badge");
+    if (personaBadge) personaBadge.innerText = `${user.jurisdiction_code || 'Odisha / Punjab'} • ${user.persona_code || 'AGRONOMIST'}`;
+    const docName = document.getElementById("agro-doctor-name");
+    if (docName) docName.innerText = `${user.full_name} • Senior Crop Scientist • Model Farm Calibration`;
 
-    document.getElementById("health-ring-container").innerHTML = AgriosUI.renderHealthScoreRing(92);
+    const healthRing = document.getElementById("health-ring-container");
+    if (healthRing) healthRing.innerHTML = AgriosUI.renderHealthScoreRing(92);
 
-    if (user.has_completed_onboarding === false || user.has_completed_onboarding === undefined) {
+    const onboardingCompleted = localStorage.getItem("agrios_onboarding_completed") === "true" || user.has_completed_onboarding === true;
+    if (!onboardingCompleted) {
       openOnboardingWizard(true);
     } else {
-      const crop = activeCropPlan ? activeCropPlan.crop_name : surveyState.crop_name;
+      const savedCrop = localStorage.getItem("agrios_calibrated_crop") || (activeCropPlan ? activeCropPlan.crop_name : surveyState.crop_name);
+      const savedAcres = localStorage.getItem("agrios_calibrated_acres") || (activeCropPlan && activeCropPlan.monitored_acres ? activeCropPlan.monitored_acres : "14.5");
       const state = activeCropPlan ? activeCropPlan.state : surveyState.state;
       const basin = activeCropPlan ? activeCropPlan.district_basin : surveyState.district_basin;
-      document.getElementById("profile-summary-text").innerText = `Crop: ${crop} • Region: ${state} (${basin.split(' ')[0]}) • Workforce Armored & Balanced`;
-      document.getElementById("profile-badge-status").innerText = "Calibrated & Active";
-      document.getElementById("card-calibrated-acres").innerText = "14.5 Acres";
-      document.getElementById("card-calibrated-badge").className = "card-badge badge-success";
-      document.getElementById("card-calibrated-badge").innerText = "v1 Active";
-      document.getElementById("card-crop-name").innerText = crop;
-      document.getElementById("card-duration-badge").innerText = `${activeCropPlan ? activeCropPlan.duration_days : surveyState.duration_days} Days`;
-      document.getElementById("card-task-count").innerText = "3 Released";
+      const basinText = basin ? basin.split(' ')[0] : 'Central';
+
+      const profSumm = document.getElementById("profile-summary-text");
+      if (profSumm) profSumm.innerText = `Crop: ${savedCrop} • Region: ${state} (${basinText}) • Workforce Armored & Balanced`;
+      const profBadge = document.getElementById("profile-badge-status");
+      if (profBadge) profBadge.innerText = "Calibrated & Active";
+      
+      const acresEl = document.getElementById("card-calibrated-acres");
+      if (acresEl) acresEl.innerText = `${savedAcres} Acres`;
+      const calibBadge = document.getElementById("card-calibrated-badge");
+      if (calibBadge) {
+        calibBadge.className = "card-badge badge-success";
+        calibBadge.innerText = "v1 Active";
+      }
+      const cropEl = document.getElementById("card-crop-name");
+      if (cropEl) cropEl.innerText = savedCrop;
+      const calibCropEl = document.getElementById("calib-crop");
+      if (calibCropEl && savedCrop) calibCropEl.value = savedCrop;
+      const durBadge = document.getElementById("card-duration-badge");
+      if (durBadge) durBadge.innerText = `${activeCropPlan ? activeCropPlan.duration_days : surveyState.duration_days} Days`;
+      const taskCount = document.getElementById("card-task-count");
+      if (taskCount) taskCount.innerText = `${activeCropPlan?.dispatched_tasks_count || 4} Released`;
     }
   }
 
@@ -1168,6 +1709,16 @@
   function renderCalibratedCropPlan(plan) {
     if (!plan) return;
     activeCropPlan = plan;
+
+    const timeSlider = document.getElementById("dt3d-time-slider");
+    if (timeSlider && plan.duration_days) {
+      timeSlider.max = plan.duration_days;
+    }
+    if (twinAdapter3D && typeof twinAdapter3D.setCropPlan === 'function' && plan) {
+      twinAdapter3D.setCropPlan(plan);
+    } else if (twinAdapter3D && typeof twinAdapter3D.setPlanDuration === 'function' && plan.duration_days) {
+      twinAdapter3D.setPlanDuration(plan.duration_days);
+    }
 
     document.getElementById("crop-plan-header-title").innerHTML = `
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -1354,10 +1905,224 @@
                 </div>
               </div>
             ` : ''}
+
+            <!-- Granular Day-by-Day Schedule Accordion Toggle -->
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0;">
+              <button type="button" class="btn-secondary" onclick="toggleStageDailySchedule(${s.stage_num})" style="height:32px; font-size:0.75rem; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                <span id="daily-icon-${s.stage_num}">➕</span>
+                <span><strong>Granular Day-by-Day Schedule (Days ${s.start_day} – ${s.end_day})</strong> · ${((s.daily_schedule && s.daily_schedule.length) ? s.daily_schedule.length : (s.end_day - s.start_day + 1))} Days Calibrated</span>
+              </button>
+
+              <div id="stage-daily-schedule-${s.stage_num}" style="display:none; margin-top:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#f1f5f9; padding:8px 12px; border-radius:6px; flex-wrap:wrap; gap:8px;">
+                  <span style="font-size:0.8rem; font-weight:700; color:#334155;">
+                    📋 Stage ${s.stage_num} (${s.name}) · Days ${s.start_day} to ${s.end_day}
+                  </span>
+                  <button type="button" class="btn-primary" onclick="dispatchStageDays(${s.stage_num}, ${s.start_day}, ${s.end_day})" style="height:28px; font-size:0.75rem; background:#059669; border:none; border-radius:4px; padding:0 10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                    <span>🚀</span> Dispatch All Stage ${s.stage_num} Tasks
+                  </button>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+                  ${((s.daily_schedule && s.daily_schedule.length) ? s.daily_schedule : Array.from({length: Math.max(10, s.end_day - s.start_day + 1)}, (_, i) => {
+                    const dNum = s.start_day + i;
+                    return {
+                      day_number: dNum,
+                      day: dNum,
+                      title: `Day ${dNum}: Precision Field Operations & Agronomic Directives`,
+                      theme: `Day ${dNum}: Precision Field Operations & Agronomic Directives`,
+                      pest_outbreak_active: dNum === 30,
+                      outbreak_details: dNum === 30 ? { pest: "Spodoptera frugiperda (Fall Armyworm)", sector: "North Sector", affected_acres: 4.2 } : null,
+                      tasks: [
+                        { title: dNum === 30 ? "Emergency Bio-Shield Foliar Mist (North Sector)" : "Root Zone Soil Nutrition & Drip Calibration", assigned_to: "Sunita Devi (Krishi Sakhi)", role: "worker", estimated_hours: 2.5, met_score: 3.5, priority: dNum === 30 ? "urgent" : "high" },
+                        { title: dNum === 30 ? "Physical Perimeter Containment & Pheromone Lure Grid" : "Moisture Sensor Audit & Sluice Gate Flow Check", assigned_to: "Mamata Behera (Field Assistant)", role: "worker", estimated_hours: 2.0, met_score: 3.0, priority: dNum === 30 ? "urgent" : "normal" },
+                        { title: dNum === 30 ? "Quarantine Perimeter Check & Equipment Sterilization" : "Canopy Chlorophyll & Vigour Photographic Audit", assigned_to: "Balwinder Singh (Farmer Custodian)", role: "farmer", estimated_hours: 3.0, met_score: 4.2, priority: dNum === 30 ? "urgent" : "high" },
+                        { title: dNum === 30 ? "Issue Statutory Bio-Security Directive & Lab Specimen" : "Microclimate Telemetry Audit & Growth Index Sign-off", assigned_to: "Dr. Priya Sharma (Agronomist)", role: "agronomist", estimated_hours: 1.5, met_score: 1.8, priority: dNum === 30 ? "urgent" : "normal" }
+                      ]
+                    };
+                  })).map((day, idx) => {
+                    const actualDayNum = (day.day_number !== undefined && day.day_number !== null) ? day.day_number : ((day.day !== undefined && day.day !== null) ? day.day : (s.start_day + idx));
+                    const actualTitle = day.title || day.theme || `Day ${actualDayNum}: Precision Field Operations & Agronomic Directives`;
+                    const dayTasks = day.tasks || [];
+                    return `
+                    <div style="background:${day.pest_outbreak_active ? '#fef2f2' : '#f8fafc'}; border:1px solid ${day.pest_outbreak_active ? '#fca5a5' : '#e2e8f0'}; border-left:4px solid ${day.pest_outbreak_active ? '#dc2626' : '#0284c7'}; border-radius:8px; padding:12px;">
+                      ${day.pest_outbreak_active ? `
+                        <div style="background:#fee2e2; border:1px solid #f87171; border-radius:6px; padding:8px 12px; margin-bottom:8px; font-size:0.8rem; color:#991b1b; display:flex; align-items:center; gap:8px;">
+                          <span style="font-size:1.2rem;">🚨</span>
+                          <div>
+                            <strong>CRITICAL BIO-SECURITY OUTBREAK DETECTED:</strong> ${day.outbreak_details?.pest || 'Spodoptera frugiperda'} in ${day.outbreak_details?.sector || 'North Sector'} (${day.outbreak_details?.affected_acres || 4.2} Acres). Immediate containment dispatched.
+                          </div>
+                        </div>
+                      ` : ''}
+                      
+                      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                        <div>
+                          <span class="card-badge ${day.pest_outbreak_active ? 'badge-danger' : 'badge-neutral'}" style="font-weight:700;">Day ${actualDayNum}</span>
+                          <strong style="margin-left:8px; font-size:0.85rem; color:#0f172a;">${actualTitle}</strong>
+                        </div>
+                        <button type="button" class="btn-primary" onclick="dispatchDayTasks(${actualDayNum})" style="height:26px; font-size:0.72rem; padding:0 10px; background:${day.pest_outbreak_active ? '#dc2626' : '#059669'}; border-radius:4px; display:inline-flex; align-items:center; gap:4px; border:none; color:white; cursor:pointer;">
+                          <span>🚀</span> Dispatch Day ${actualDayNum} Tasks (${dayTasks.length} Personnel)
+                        </button>
+                      </div>
+
+                      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:6px;">
+                        ${dayTasks.map(t => `
+                          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:6px 10px; font-size:0.75rem;">
+                            <div style="font-weight:600; color:#0f172a;">${t.title}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                              <span style="color:${t.role === 'farmer' ? '#d97706' : (t.role === 'agronomist' ? '#2563eb' : '#059669')}; font-weight:700;">👤 ${t.assigned_to}</span>
+                              <span class="card-badge ${t.priority === 'urgent' ? 'badge-danger' : 'badge-neutral'}" style="font-size:0.65rem;">${t.estimated_hours || 2.5}h · MET ${t.met_score || t.met_effort_score || 3.0}</span>
+                            </div>
+                          </div>
+                        `).join("")}
+                      </div>
+                    </div>
+                  `;
+                  }).join("")}
+                </div>
+              </div>
+            </div>
           </div>
         `).join("")}
       </div>
     `;
+  }
+
+  function toggleStageDailySchedule(stageNum) {
+    const el = document.getElementById(`stage-daily-schedule-${stageNum}`);
+    const icon = document.getElementById(`daily-icon-${stageNum}`);
+    if (!el) return;
+    const isHidden = el.style.display === "none";
+    el.style.display = isHidden ? "block" : "none";
+    if (icon) icon.innerText = isHidden ? "➖" : "➕";
+  }
+
+  async function dispatchStageDays(stageNum, startDay, endDay) {
+    try {
+      AgriosUI.showToast("Dispatching Stage Directives", `Releasing Stage ${stageNum} (Day ${startDay}) tasks to workforce...`, "📡");
+      await dispatchDayTasks(startDay);
+      AgriosUI.showToast("Stage Dispatched!", `Directives for Stage ${stageNum} (Days ${startDay}–${endDay}) circulated to workforce queues.`, "🚀");
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function dispatchDayTasks(dayNum) {
+    try {
+      const targetDay = parseInt(dayNum, 10) || 1;
+      AgriosUI.showToast("Dispatching Tasks...", `Transmitting Day ${targetDay} directives to workforce...`, "📡");
+      const res = await fetch("/api/crop-plans/dispatch-day-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          farm_id: activeFarmId,
+          day_number: targetDay,
+          crop_name: activeCropPlan ? activeCropPlan.crop_name : "Wheat"
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to dispatch tasks");
+
+      // Broadcast event across tabs via localStorage
+      try {
+        localStorage.setItem("agrios_broadcast_event", JSON.stringify({
+          event_type: "TASK_CREATED",
+          timestamp: Date.now(),
+          payload: {
+            day_number: targetDay,
+            farm_id: activeFarmId,
+            crop_name: activeCropPlan ? activeCropPlan.crop_name : "Wheat",
+            dispatched_count: data.dispatched_tasks ? data.dispatched_tasks.length : 4,
+            tasks: data.dispatched_tasks || []
+          }
+        }));
+      } catch (err) {}
+
+      AgriosUI.showToast(
+        "Tasks Dispatched!",
+        `Successfully released ${data.dispatched_tasks ? data.dispatched_tasks.length : 4} tasks for Day ${targetDay} to Farmer & Krishi Sakhi queues.`,
+        "🚀"
+      );
+
+      const taskCountEl = document.getElementById("card-task-count");
+      if (taskCountEl) {
+        taskCountEl.innerText = `${data.dispatched_tasks ? data.dispatched_tasks.length : 4} Active`;
+      }
+
+      if (twinAdapter3D && twinAdapter3D.engine && twinAdapter3D.engine.diseaseSchedule) {
+        const dayDisease = twinAdapter3D.engine.diseaseSchedule[targetDay];
+        syncOutbreakToAgronomistUI(dayDisease || null);
+      }
+
+      loadSubordinates();
+      if (window.AgriosNotifications && typeof window.AgriosNotifications.loadNotifications === 'function') {
+        window.AgriosNotifications.loadNotifications(activeFarmId);
+      }
+    } catch (err) {
+      AgriosUI.showToast("Dispatch Failed", err.message, "❌");
+    }
+  }
+
+  function syncOutbreakToAgronomistUI(disease) {
+    const survGrid = document.getElementById("surveillance-hotspots-grid");
+    const rxTbody = document.getElementById("prescriptions-table-body");
+
+    // Clean up any existing outbreak hotspot & prescription row
+    const oldHotspot = document.getElementById("hotspot-active-disease") || document.getElementById("hotspot-north-sector");
+    if (oldHotspot) oldHotspot.remove();
+    const oldRx = document.getElementById("rx-emergency-outbreak");
+    if (oldRx) oldRx.remove();
+
+    if (disease) {
+      if (survGrid) {
+        const item = document.createElement("div");
+        item.id = "hotspot-active-disease";
+        const borderColor = disease.colorHex || "#ef4444";
+        const badgeClass = disease.severity === "critical" ? "badge-danger" : (disease.severity === "warning" ? "badge-warning" : "badge-danger");
+        item.style.cssText = `background:#fef2f2; border:2px solid ${borderColor}; border-left:6px solid ${borderColor}; border-radius:8px; padding:1.25rem;`;
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:1rem; color:#991b1b;">${disease.sector} (Day ${disease.day})</strong>
+            <span class="card-badge ${badgeClass}" style="font-weight:800;">${(disease.severity || 'HIGH').toUpperCase()} RISK</span>
+          </div>
+          <div style="font-size:0.85rem; color:#b91c1c; font-weight:700; margin-top:4px;">${disease.name}</div>
+          <div style="font-size:0.8rem; color:#475569; margin-top:2px;">Pathogen: ${disease.pest} • Crop Stress: ${Math.round(disease.stressedPct * 100)}%</div>
+          <div style="font-size:0.78rem; color:#0369a1; margin-top:2px;">Rx Protocol: ${disease.prescription}</div>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <button class="btn-primary" style="height:28px; font-size:0.75rem; background:#dc2626;" onclick="openQuarantineModal('${disease.sector.replace(/'/g, "\\'")}', '${disease.pest.replace(/'/g, "\\'")}')">Establish Biosecurity Quarantine</button>
+            <button class="btn-secondary" style="height:28px; font-size:0.75rem;" onclick="switchTab('prescriptions')">View Rx Spray Order</button>
+          </div>
+        `;
+        survGrid.prepend(item);
+      }
+
+      if (rxTbody) {
+        const rxRow = document.createElement("tr");
+        rxRow.id = "rx-emergency-outbreak";
+        rxRow.style.background = "#fef2f2";
+        rxRow.innerHTML = `
+          <td><code style="color:#dc2626; font-weight:800;">RX-EMERG-D${disease.day}</code></td>
+          <td><strong style="color:#991b1b;">${disease.name} (${disease.sector})</strong></td>
+          <td>${disease.prescription}</td>
+          <td>Targeted Drone Mist Canopy Drench</td>
+          <td><span class="card-badge badge-danger">EMERGENCY ACTIVE</span></td>
+        `;
+        rxTbody.prepend(rxRow);
+      }
+
+      AgriosUI.showToast(
+        `Day ${disease.day} Outbreak Detected`,
+        `${disease.name} in ${disease.sector}. Beacon lit in 3D twin, Diagnostics & Rx Ledger updated.`,
+        "⚠️"
+      );
+    }
+  }
+
+  function highlightDay30Outbreak(isActive) {
+    if (isActive && twinAdapter3D && twinAdapter3D.engine && twinAdapter3D.engine.diseaseSchedule) {
+      syncOutbreakToAgronomistUI(twinAdapter3D.engine.diseaseSchedule[30] || null);
+    } else {
+      syncOutbreakToAgronomistUI(null);
+    }
   }
 
   function updateCropPlanPreview(cropName) {
@@ -1514,6 +2279,11 @@
 
       activeFarmId = data.farm_id;
       AgriosUI.showToast("3D Twin Calibrated", `Farm '${data.farm_name}' calibrated to Version 1 (v1).`, "📐");
+      
+      // Persist calibrated acreage and crop type so they don't get overwritten
+      localStorage.setItem("agrios_calibrated_acres", payload.area_acres);
+      localStorage.setItem("agrios_calibrated_crop", payload.crop_type);
+
       const acresEl = document.getElementById("card-calibrated-acres");
       if (acresEl) acresEl.innerText = `${payload.area_acres} Acres`;
       const badgeEl = document.getElementById("card-calibrated-badge");
@@ -1527,6 +2297,18 @@
       if (twinAdapter3D) {
         twinAdapter3D.farmId = activeFarmId;
         await twinAdapter3D._rebuildScene();
+        if (typeof twinAdapter3D.setCrop === "function") {
+          twinAdapter3D.setCrop(payload.crop_type);
+        }
+        
+        // Trigger simulated GPS boundary walk with surveyor avatar
+        twinAdapter3D.simulateWalkCalibration((pct) => {
+          btn.innerText = `Surveying Perimeter (${pct}%)...`;
+        }, () => {
+          btn.disabled = false;
+          btn.innerText = "🚀 Calibrate & Build 3D Twin";
+          AgriosUI.showToast("Perimeter Surveyed", `GPS boundary closed for ${payload.area_acres} acres. Peg markers secured. Toggle [📐 EDIT FARM] to fine-tune layout.`, "📍");
+        });
       } else {
         await init3DDigitalTwin();
       }
@@ -1535,7 +2317,7 @@
     } catch (err) {
       AgriosUI.showToast("Calibration Failed", err.message, "❌");
     } finally {
-      if (btn) {
+      if (btn && !twinAdapter3D?.surveyorMesh) {
         btn.disabled = false;
         btn.innerText = "🚀 Calibrate & Build 3D Twin";
       }
@@ -1688,6 +2470,20 @@
       closeRegisterSubordinateModal();
       AgriosUI.showToast("Subordinate Registered", `Created ${data.persona_code} (${data.full_name}). Assigned to farm.`, "👩‍🌾");
       await loadSubordinates();
+
+      // Dynamic Workforce 3D Sync: immediately spawn character in 3D agricultural world
+      if (twinAdapter3D) {
+        try {
+          const wRes = await fetch(`/api/digital-twin/workers/${activeFarmId || 'default'}`);
+          if (wRes.ok) {
+            const updatedWorkers = await wRes.json();
+            twinAdapter3D.syncWorkersRoster(updatedWorkers);
+            AgriosUI.showToast("3D Twin Synced", `${data.full_name} deployed to 3D field parcel.`, "👷");
+          }
+        } catch (we) {
+          console.warn("[3D Twin] Dynamic workforce sync fetch failed:", we);
+        }
+      }
     } catch (err) {
       AgriosUI.showToast("Registration Failed", err.message, "❌");
     }
@@ -1768,6 +2564,23 @@
 
   function selectFarmingClassification(cls) {
     surveyState.farming_classification = cls;
+    const cfg = TAXONOMY_CONFIGS[cls] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+    if (cfg) {
+      if (cfg.crops && cfg.crops.length > 0) {
+        surveyState.crop_name = cfg.defaultCrop || cfg.crops[0].name;
+        const cropObj = cfg.crops.find(c => c.name === surveyState.crop_name) || cfg.crops[0];
+        surveyState.duration_days = cropObj.duration;
+        surveyState.expected_yield = cropObj.yield;
+      }
+      if (cfg.defaultSoil) surveyState.soil_texture = cfg.defaultSoil;
+      if (cfg.defaultPh) surveyState.soil_ph = cfg.defaultPh;
+      if (cfg.defaultWaterSource) surveyState.water_source = cfg.defaultWaterSource;
+      if (cfg.defaultIrrigationMethod) surveyState.irrigation_method = cfg.defaultIrrigationMethod;
+      if (cfg.defaultSeason) surveyState.season = cfg.defaultSeason;
+      if (cfg.mechanization && cfg.mechanization.length > 0) {
+        surveyState.mechanization = cfg.mechanization.slice(0, 3).map(m => m.id);
+      }
+    }
     renderWizardStep();
   }
 
@@ -1778,7 +2591,17 @@
 
   function handleCropSelect(crop) {
     surveyState.crop_name = crop;
-    const kb = cropKnowledgeBase[crop] || { duration: 100, yield: 25.0 };
+    const cfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+    let kb = null;
+    if (cfg && cfg.crops) {
+      kb = cfg.crops.find(c => c.name === crop);
+    }
+    if (!kb && cropKnowledgeBase[crop]) {
+      kb = cropKnowledgeBase[crop];
+    }
+    if (!kb) {
+      kb = { duration: 120, yield: 25.0 };
+    }
     surveyState.duration_days = kb.duration;
     surveyState.expected_yield = kb.yield;
 
@@ -1786,6 +2609,12 @@
     const yldInput = document.getElementById("wiz-crop-yield");
     if (durInput) durInput.value = kb.duration;
     if (yldInput) yldInput.value = kb.yield;
+
+    const calibSelect = document.getElementById("calib-crop");
+    if (calibSelect) calibSelect.value = crop;
+    if (twinAdapter3D && typeof twinAdapter3D.setCrop === "function") {
+      twinAdapter3D.setCrop(crop);
+    }
   }
 
   function toggleMechanization(toolId, isChecked) {
@@ -1931,126 +2760,168 @@
         </div>
       `;
     } else if (currentStep === 4) {
-      // Step 4: Soil Profile & Hydrology
+      // Step 4: Soil Profile & Hydrology (Dynamic based on classification)
+      const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+      if (!currentCfg.soils.includes(surveyState.soil_texture)) {
+        surveyState.soil_texture = currentCfg.defaultSoil;
+      }
+      if (!currentCfg.waterSources.includes(surveyState.water_source)) {
+        surveyState.water_source = currentCfg.defaultWaterSource;
+      }
+      if (!currentCfg.irrigationMethods.includes(surveyState.irrigation_method)) {
+        surveyState.irrigation_method = currentCfg.defaultIrrigationMethod;
+      }
+      if (!surveyState.soil_ph) {
+        surveyState.soil_ph = currentCfg.defaultPh;
+      }
+
+      const isAqua = surveyState.farming_classification.includes("Pisciculture");
+      const isProtected = surveyState.farming_classification.includes("Polyhouse");
+
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 4: Soil Profile & Hydrological Infrastructure</h4>
-        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Configure physical soil chemistry and water conveyance network.</p>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">
+          Step 4: ${isAqua ? 'Pond Bed Edaphology & Hydrology' : (isProtected ? 'Growing Medium & Fertigation Controls' : 'Soil Profile & Hydrological Infrastructure')}
+        </h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
+          Calibrated specifically for <strong>${surveyState.farming_classification}</strong>.
+        </p>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
           <div class="input-group">
-            <label style="font-weight:600;">Soil Texture Classification</label>
+            <label style="font-weight:600;">${isAqua ? 'Pond Bed / Embankment Soil Type' : (isProtected ? 'Substrate / Growing Medium' : 'Soil Texture Classification')}</label>
             <select class="form-control" id="wiz-soil-texture" onchange="surveyState.soil_texture = this.value;">
-              <option value="Alluvial Silt Loam" ${surveyState.soil_texture === 'Alluvial Silt Loam' ? 'selected' : ''}>Alluvial Silt Loam (Indo-Gangetic / Mahanadi Basin)</option>
-              <option value="Red & Laterite Soil" ${surveyState.soil_texture === 'Red & Laterite Soil' ? 'selected' : ''}>Red & Laterite Soil (Odisha Highlands / Plateau)</option>
-              <option value="Black Cotton Soil (Vertisol)" ${surveyState.soil_texture.includes('Black') ? 'selected' : ''}>Black Cotton Soil / Vertisol (Central / Deccan)</option>
-              <option value="Sandy Loam" ${surveyState.soil_texture === 'Sandy Loam' ? 'selected' : ''}>Sandy Loam (Sub-Arid / Coastal dunes)</option>
-              <option value="Clay Loam" ${surveyState.soil_texture === 'Clay Loam' ? 'selected' : ''}>Clay Loam (Lowland Paddy / Wetland)</option>
+              ${currentCfg.soils.map(st => `
+                <option value="${st}" ${surveyState.soil_texture === st ? 'selected' : ''}>${st}</option>
+              `).join("")}
             </select>
           </div>
 
           <div class="input-group">
-            <label style="font-weight:600;">Soil pH Level (Optimal: 6.5 – 7.5)</label>
+            <label style="font-weight:600;">${isAqua ? 'Pond Water pH (Optimal: 7.5 – 8.5)' : 'Soil / Medium pH (Optimal: ' + currentCfg.defaultPh + ')'}</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <input type="number" step="0.1" min="4.5" max="9.5" class="form-control" value="${surveyState.soil_ph}" onchange="surveyState.soil_ph = parseFloat(this.value);">
-              <span class="card-badge badge-success" style="font-size:0.75rem;">Optimal</span>
+              <input type="number" step="0.1" min="4.0" max="10.0" class="form-control" value="${surveyState.soil_ph}" onchange="surveyState.soil_ph = parseFloat(this.value);">
+              <span class="card-badge badge-success" style="font-size:0.75rem;">Calibrated</span>
             </div>
           </div>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem;">
           <div class="input-group">
-            <label style="font-weight:600;">Primary Water Conveyance Source</label>
-            <select class="form-control" onchange="surveyState.water_source = this.value;">
-              <option value="Canal Distributary Sluice + Solar Drip" selected>Canal Distributary Sluice + Solar Drip</option>
-              <option value="Hirakud Gravity Canal Command">Hirakud Gravity Canal Command (Odisha)</option>
-              <option value="Solar Submersible Tube Well (75m Depth)">Solar Submersible Tube Well (75m Depth)</option>
-              <option value="River Lift Irrigation Network">River Lift Irrigation Network</option>
-              <option value="Perennial Farm Pond Rainwater Harvesting">Perennial Farm Pond Rainwater Harvesting</option>
+            <label style="font-weight:600;">${isAqua ? 'Primary Inflow Water Source' : 'Primary Water Conveyance Source'}</label>
+            <select class="form-control" id="wiz-water-source" onchange="surveyState.water_source = this.value;">
+              ${currentCfg.waterSources.map(ws => `
+                <option value="${ws}" ${surveyState.water_source === ws ? 'selected' : ''}>${ws}</option>
+              `).join("")}
             </select>
           </div>
 
           <div class="input-group">
-            <label style="font-weight:600;">Field Irrigation Methodology</label>
-            <select class="form-control" onchange="surveyState.irrigation_method = this.value;">
-              <option value="Automated Drip Lines" selected>Automated Drip Lines (Water-Efficient)</option>
-              <option value="Micro-Sprinkler Overhead Network">Micro-Sprinkler Overhead Network</option>
-              <option value="Controlled Laser-Leveled Furrow Flooding">Controlled Laser-Leveled Furrow Flooding</option>
-              <option value="Pond Aeration & Sluice Inflow">Pond Aeration & Sluice Inflow (Aquaculture)</option>
+            <label style="font-weight:600;">${isAqua ? 'Aeration & Water Circulation Method' : (isProtected ? 'Micro-Irrigation & Climate Delivery' : 'Field Irrigation Methodology')}</label>
+            <select class="form-control" id="wiz-irrigation-method" onchange="surveyState.irrigation_method = this.value;">
+              ${currentCfg.irrigationMethods.map(im => `
+                <option value="${im}" ${surveyState.irrigation_method === im ? 'selected' : ''}>${im}</option>
+              `).join("")}
             </select>
           </div>
         </div>
       `;
     } else if (currentStep === 5) {
-      // Step 5: Season & Agro-Climate
+      // Step 5: Season & Agro-Climate (Contextualized)
+      const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+      const isAqua = surveyState.farming_classification.includes("Pisciculture");
+      const isProtected = surveyState.farming_classification.includes("Polyhouse");
+
       content.innerHTML = `
         <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 5: Season & Agro-Climatic Window</h4>
-        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select growing season to calibrate degree-day thermal sums and monsoonal precipitation safeguards.</p>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
+          Select production season. Recommended for ${surveyState.farming_classification}: <strong>${currentCfg.defaultSeason}</strong>.
+        </p>
 
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
           ${[
             { id: "Kharif", icon: "🌧️", label: "Kharif Season", months: "June – October (Monsoon)" },
             { id: "Rabi", icon: "❄️", label: "Rabi Season", months: "November – March (Winter)" },
             { id: "Zaid", icon: "☀️", label: "Zaid Season", months: "March – June (Summer)" },
-            { id: "Perennial", icon: "🔄", label: "Perennial / Year-Round", months: "365-Day Aquaculture/Orchard" }
+            { id: "Perennial", icon: "🔄", label: "Perennial / Year-Round", months: "365-Day Cycle / Controlled" }
           ].map(s => `
             <div onclick="selectSeason('${s.id}')" style="cursor:pointer; padding:12px; border-radius:8px; border:2px solid ${surveyState.season === s.id ? '#10b981' : '#e2e8f0'}; background:${surveyState.season === s.id ? '#ecfdf5' : '#ffffff'}; text-align:center;">
               <div style="font-size:1.5rem;">${s.icon}</div>
               <div style="font-weight:700; font-size:0.85rem; color:#0f172a; margin-top:4px;">${s.label}</div>
               <div style="font-size:0.7rem; color:#64748b; margin-top:2px;">${s.months}</div>
+              ${currentCfg.defaultSeason === s.id ? `<span class="card-badge badge-success" style="font-size:0.65rem; margin-top:4px; display:inline-block;">Recommended</span>` : ''}
             </div>
           `).join("")}
         </div>
 
         <div style="margin-top:1.25rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.8rem; color:#64748b;">
-          <strong style="color:#0f172a;">Agro-Climatic Baseline:</strong> Annual precipitation window calibrated between <strong>650 mm – 1150 mm</strong>. Relative humidity swings tracked via Sentinel-2 & AWS telemetry.
+          <strong style="color:#0f172a;">${isAqua ? 'Dissolved Oxygen & Temperature Baseline:' : (isProtected ? 'Greenhouse Vapor Pressure Deficit (VPD):' : 'Agro-Climatic Baseline:')}</strong> 
+          ${isAqua ? 'Pond water temp calibrated at 26°C–32°C. Critical DO threshold monitored at 4.0 mg/L via automated aerator controllers.' : (isProtected ? 'VPD set to 0.8–1.2 kPa with automated micro-fogging misting sensors.' : 'Annual precipitation window calibrated between 650 mm – 1150 mm. Relative humidity swings tracked via Sentinel-2 & AWS telemetry.')}
         </div>
       `;
     } else if (currentStep === 6) {
-      // Step 6: Crop Cultivar & Cycle Duration
+      // Step 6: Lead Crop Cultivar & Cycle Duration (STRICTLY Dynamic based on classification)
+      const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+      
+      const cropExists = currentCfg.crops.some(c => c.name === surveyState.crop_name);
+      if (!cropExists && currentCfg.crops.length > 0) {
+        surveyState.crop_name = currentCfg.defaultCrop || currentCfg.crops[0].name;
+        const cObj = currentCfg.crops.find(c => c.name === surveyState.crop_name) || currentCfg.crops[0];
+        surveyState.duration_days = cObj.duration;
+        surveyState.expected_yield = cObj.yield;
+      }
+
+      const isAqua = surveyState.farming_classification.includes("Pisciculture");
+
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 6: Lead Crop Cultivar & Cycle Duration</h4>
-        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Choose targeted crop. The precision engine will calibrate specific nutrition, water regimes, and duration calendars.</p>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">
+          Step 6: ${isAqua ? 'Target Aquatic Species & Culture Cycle' : 'Lead Crop Cultivar & Cycle Duration'}
+        </h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
+          Available species & cultivars specifically calibrated for <strong>${surveyState.farming_classification}</strong>:
+        </p>
 
         <div class="input-group">
-          <label style="font-weight:600;">Lead Monitored Crop</label>
+          <label style="font-weight:600;">${isAqua ? 'Target Culture Species / Blend' : 'Lead Monitored Crop'}</label>
           <select class="form-control" id="wiz-crop-select" onchange="handleCropSelect(this.value)">
-            <option value="Wheat" ${surveyState.crop_name === 'Wheat' ? 'selected' : ''}>Wheat (Triticum aestivum / PBW-550) • 120 Days</option>
-            <option value="Rice" ${surveyState.crop_name === 'Rice' ? 'selected' : ''}>Paddy / Rice (Oryza sativa / Swarna Sub-1) • 135 Days</option>
-            <option value="Potato" ${surveyState.crop_name === 'Potato' ? 'selected' : ''}>Potato (Solanum tuberosum / Kufri Pukhraj) • 85 Days</option>
-            <option value="Pisciculture" ${surveyState.crop_name === 'Pisciculture' ? 'selected' : ''}>Pisciculture / Freshwater Carp Polyculture • 195 Days</option>
-            <option value="Tomato" ${surveyState.crop_name === 'Tomato' ? 'selected' : ''}>Tomato (Solanum lycopersicum / Pusa Hybrid) • 105 Days</option>
-            <option value="Mustard" ${surveyState.crop_name === 'Mustard' ? 'selected' : ''}>Mustard (Brassica juncea / Pusa Bold) • 105 Days</option>
-            <option value="Moong" ${surveyState.crop_name === 'Moong' ? 'selected' : ''}>Summer Moong (Vigna radiata / SML-668) • 65 Days</option>
-            <option value="Cotton" ${surveyState.crop_name === 'Cotton' ? 'selected' : ''}>Cotton (Gossypium hirsutum / Bt Cotton) • 155 Days</option>
+            ${currentCfg.crops.map(c => `
+              <option value="${c.name}" ${surveyState.crop_name === c.name ? 'selected' : ''}>${c.label}</option>
+            `).join("")}
           </select>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem;">
           <div class="input-group">
-            <label style="font-weight:600;">Target Cycle Duration (Days)</label>
+            <label style="font-weight:600;">${isAqua ? 'Grow-Out Cycle Duration (Days)' : 'Target Cycle Duration (Days)'}</label>
             <input type="number" class="form-control" id="wiz-crop-duration" value="${surveyState.duration_days}" onchange="surveyState.duration_days = parseInt(this.value) || 120;">
           </div>
           <div class="input-group">
-            <label style="font-weight:600;">Expected Yield Target (qtl/acre)</label>
+            <label style="font-weight:600;">${isAqua ? 'Target Biomass Yield (qtl/acre)' : 'Expected Yield Target (qtl/acre)'}</label>
             <input type="number" step="0.5" class="form-control" id="wiz-crop-yield" value="${surveyState.expected_yield}" onchange="surveyState.expected_yield = parseFloat(this.value) || 24.5;">
           </div>
         </div>
       `;
     } else if (currentStep === 7) {
-      // Step 7: Mechanization Tools
+      // Step 7: Mechanization Tools (STRICTLY Dynamic based on classification)
+      const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+      
+      const validIds = currentCfg.mechanization.map(m => m.id);
+      surveyState.mechanization = surveyState.mechanization.filter(id => validIds.includes(id));
+      if (surveyState.mechanization.length === 0 && currentCfg.mechanization.length > 0) {
+        surveyState.mechanization = currentCfg.mechanization.slice(0, 3).map(m => m.id);
+      }
+
+      const isAqua = surveyState.farming_classification.includes("Pisciculture");
+
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 7: Available Farm Tools & Mechanization</h4>
-        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select available machinery. Tasks will only specify equipment verified in this inventory.</p>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">
+          Step 7: ${isAqua ? 'Available Aquaculture Equipment & Monitoring Tools' : 'Available Farm Tools & Mechanization'}
+        </h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
+          Equipment inventory specific to <strong>${surveyState.farming_classification}</strong>. Tasks will only specify verified implements.
+        </p>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          ${[
-            { id: "Tractor & Multi-Row Seed Drill", icon: "🚜", label: "Tractor & Multi-Row Zero-Till Seed Drill" },
-            { id: "Laser Land Leveler", icon: "📐", label: "Laser Land Leveler & Precision Grader" },
-            { id: "Solar Drip Fertigation Automation", icon: "💧", label: "Solar Drip Fertigation Automated Manifold" },
-            { id: "Drone & Knapsack Battery Sprayers", icon: "🚁", label: "Drone & Battery-Assisted Knapsack Sprayers" },
-            { id: "Paddle Aerators & O2 Probes", icon: "🌀", label: "Paddlewheel Aerators & Dissolved O2 Probes" },
-            { id: "Combine Harvester & Straw Baler", icon: "🌾", label: "Combine Harvester with Super SMS Straw Baler" }
-          ].map(m => `
+          ${currentCfg.mechanization.map(m => `
             <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:0.82rem;">
               <input type="checkbox" ${surveyState.mechanization.includes(m.id) ? 'checked' : ''} onchange="toggleMechanization('${m.id}', this.checked)">
               <span style="font-size:1.1rem;">${m.icon}</span>
@@ -2087,7 +2958,8 @@
           <div style="font-size:0.8rem; color:#047857; line-height:1.4;">
             ✓ <strong>Cadre Pool:</strong> ${registeredCadre.length} Registered Individuals (${registeredCadre.filter(c => c.role === 'worker').length} Workers, ${registeredCadre.filter(c => c.role === 'farmer').length} Farmers)<br>
             ✓ <strong>Jurisdiction:</strong> ${surveyState.state} • ${surveyState.district_basin}<br>
-            ✓ <strong>Target Crop:</strong> ${surveyState.crop_name} (${surveyState.duration_days} Days) • Classification: ${surveyState.farming_classification}
+            ✓ <strong>Target Enterprise:</strong> ${surveyState.crop_name} (${surveyState.duration_days} Days) • Classification: ${surveyState.farming_classification}<br>
+            ✓ <strong>Hydrology:</strong> ${surveyState.water_source} • ${surveyState.irrigation_method}
           </div>
         </div>
       `;
@@ -2122,6 +2994,10 @@
 
     const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
     
+    // Read calibrated acreage
+    const acreageInput = document.getElementById("wiz-acreage");
+    const calibratedAcres = acreageInput ? acreageInput.value : "14.5";
+
     // Build survey payload
     const payload = {
       agronomist_id: user.id,
@@ -2139,7 +3015,8 @@
       workers: registeredCadre.filter(c => c.role === "worker"),
       farmers: registeredCadre.filter(c => c.role === "farmer"),
       mechanization: surveyState.mechanization,
-      fatigue_protection_rules: surveyState.fatigue_rules
+      fatigue_protection_rules: surveyState.fatigue_rules,
+      monitored_acres: calibratedAcres
     };
 
     try {
@@ -2155,13 +3032,31 @@
       const calibratedPlan = await res.json();
       activeCropPlan = calibratedPlan;
 
-      // Mark onboarding as complete
+      // Mark onboarding as complete and store calibration in localStorage
       user.has_completed_onboarding = true;
       localStorage.setItem("agrios_user", JSON.stringify(user));
+      localStorage.setItem("agrios_onboarding_completed", "true");
+      localStorage.setItem("agrios_calibrated_crop", calibratedPlan.crop_name);
+      localStorage.setItem("agrios_calibrated_acres", calibratedAcres);
+
       isMandatoryOnboarding = false;
       document.getElementById("onboarding-wizard-modal").style.display = "none";
 
       AgriosUI.showToast("Precision Engine Calibrated", `Master plan generated for ${calibratedPlan.crop_name} (${calibratedPlan.state}). Workforce load balanced.`, "🌱");
+
+      // Update 3D twin scene if adapter is present
+      const adapter = twinAdapter3D || window.twinAdapter3D;
+      if (adapter) {
+        if (typeof adapter.setCropPlan === "function") {
+          adapter.setCropPlan(calibratedPlan);
+        } else {
+          adapter.cropName = calibratedPlan.crop_name;
+          adapter.cropPlan = calibratedPlan;
+          if (typeof adapter._rebuildScene === "function") {
+            adapter._rebuildScene();
+          }
+        }
+      }
 
       // Render plan and refresh profile
       renderCalibratedCropPlan(calibratedPlan);
@@ -2259,9 +3154,8 @@
       };
       const res = await AgriosAPI.createQuarantineZone(payload);
       closeQuarantineModal();
-      AgriosUI.showToast("Quarantine Enforced", `Containment zone ${res.id} active with ${res.radius_km}km perimeter ring.`, "🛡️");
-      await loadQuarantineZones();
-      switchTab("quarantine");
+      AgriosUI.showToast("Quarantine Enforced", `Containment zone ${res.id} active with ${res.radius_km}km perimeter ring (Forwarded to State Command).`, "🛡️");
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     } catch (err) {
       AgriosUI.showToast("Creation Failed", err.message, "❌");
     } finally {

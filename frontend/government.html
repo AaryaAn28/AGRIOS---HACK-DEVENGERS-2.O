@@ -534,6 +534,74 @@
             Click "Generate & Export Report" to synthesize official agricultural intelligence from canonical God Database records.
           </div>
         </div>
+      <!-- TAB: NOTIFICATIONS -->
+      <div id="tab-notifications" class="vizitor-tab-content">
+        <div id="notifications-tab-container"></div>
+      </div>
+
+      <!-- TAB: PEST OUTBREAK RADAR (SURVEILLANCE) -->
+      <div id="tab-surveillance" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Regional Pest & Pathogen Surveillance (Pest Outbreak Radar)</h3>
+              <p class="panel-subtitle">Statewide satellite radar, spore trap telemetry, and active vector hotspot clustering across Punjab.</p>
+            </div>
+            <button class="btn-primary" onclick="openQuarantineModal()">
+              🛡️ + Declare Quarantine Buffer
+            </button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem;" id="surveillance-hotspots-grid">
+            <!-- Dynamic hotspots loaded via loadSurveillance() -->
+          </div>
+        </div>
+
+        <!-- Integrated Pest Management (IPM) & Biological Controls -->
+        <div class="card-panel" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Integrated Pest Management (IPM) & Biological Controls</h3>
+              <p class="panel-subtitle">Economic threshold levels (ETL), bio-control agents, and cultural practices.</p>
+            </div>
+          </div>
+          <div id="ipm-protocols-container">
+            <div style="text-align:center; padding:1.5rem; color:#64748b;">Loading IPM protocols...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: CONTAINMENT BUFFER ZONES (QUARANTINE) -->
+      <div id="tab-quarantine" class="vizitor-tab-content">
+        <div class="card-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Outbreak Containment & Buffer Radius Enforcement</h3>
+              <p class="panel-subtitle">Legal phytosanitary cordon sanitaires preventing regional vector migration across districts.</p>
+            </div>
+            <button class="btn-primary" onclick="openQuarantineModal()">
+              🛡️ + New Containment Zone
+            </button>
+          </div>
+
+          <div class="vizitor-table-container">
+            <table class="vizitor-table">
+              <thead>
+                <tr>
+                  <th>Zone ID</th>
+                  <th>District Basin</th>
+                  <th>Target Pest / Pathogen</th>
+                  <th>Buffer Radius</th>
+                  <th>Phytosanitary Protocol</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="quarantine-zones-table">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -679,6 +747,50 @@
         <button type="submit" class="btn-primary" id="btn-submit-directive">Promulgate Directive Across State</button>
       </div>
     </form>
+<!-- Modal: Establish Quarantine Zone -->
+<div id="quarantine-modal" class="vizitor-modal-overlay">
+  <div class="vizitor-modal">
+    <div class="vizitor-modal-header">
+      <h3 class="vizitor-modal-title">Establish Phytosanitary Containment Zone</h3>
+      <button onclick="closeQuarantineModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <form onsubmit="handleCreateQuarantine(event)">
+      <div class="vizitor-modal-body">
+        <div class="input-group">
+          <label>District Agro-Climatic Basin</label>
+          <select id="qz-district" class="form-control" required>
+            <option value="Sangrur North Basin">Sangrur North Basin</option>
+            <option value="Bathinda Southern Buffer Hub">Bathinda Southern Buffer Hub</option>
+            <option value="Ludhiana Model Sector">Ludhiana Model Sector</option>
+            <option value="Patiala South Belt">Patiala South Belt</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Target Pest / Pathogen Vector</label>
+          <input type="text" id="qz-pest" class="form-control" required value="Fall Armyworm (Spodoptera frugiperda)">
+        </div>
+        <div class="input-group">
+          <label>Containment Buffer Radius (km)</label>
+          <input type="number" id="qz-radius" class="form-control" value="3.5" step="0.5" min="1" max="25" required>
+        </div>
+        <div class="input-group">
+          <label>Enforcement Level</label>
+          <select id="qz-severity" class="form-control" required>
+            <option value="high">High (Prophylactic ring spray + transit ban)</option>
+            <option value="critical">Critical (Mandatory field isolation)</option>
+            <option value="moderate">Moderate Surveillance Ring</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Immediate Containment Protocol</label>
+          <textarea id="qz-action" class="form-control" rows="2" required>Deploy pheromone trap barrier at 50m intervals. Dispatch neem azadirachtin bio-spray to perimeter farm parcels.</textarea>
+        </div>
+      </div>
+      <div class="vizitor-modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeQuarantineModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="btn-submit-qz">Establish Containment Perimeter</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -699,6 +811,9 @@
       loadGovFertilizers,
       loadGovTelemetry,
       loadGovDirectives,
+      loadSurveillance,
+      loadQuarantineZones,
+      loadIPMProtocols,
       loadCropIntel,
       loadWorkforceRegistry,
       loadFinancialOverview,
@@ -708,12 +823,14 @@
     for (const loader of loaders) {
       try { await loader(); } catch (err) { console.error("Initial load error:", err); }
     }
+    if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
 
     window.addEventListener("agrios:event", async (e) => {
       console.log("[Government] Live domain event received:", e.detail.event_type);
       for (const loader of loaders) {
         try { await loader(); } catch (err) { console.error("Event update error:", err); }
       }
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
     });
   });
 
@@ -738,6 +855,15 @@
     if (tabId === "overview") {
       loadAgronomists();
       loadGovKPIs();
+    } else if (tabId === "notifications") {
+      const container = document.getElementById("notifications-tab-container");
+      if (container) container.innerHTML = AgriosUI.renderNotificationsTab();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
+    } else if (tabId === "surveillance") {
+      loadSurveillance();
+      loadIPMProtocols();
+    } else if (tabId === "quarantine") {
+      loadQuarantineZones();
     } else if (tabId === "subsidies") {
       loadGovSubsidies();
       loadGovKPIs();
@@ -759,6 +885,114 @@
       loadInfrastructureStatus();
     } else if (tabId === "compliance") {
       loadComplianceAudit();
+    }
+  }
+
+  async function loadSurveillance() {
+    try {
+      const res = await AgriosAPI.getAgronomistSurveillance();
+      const grid = document.getElementById("surveillance-hotspots-grid");
+      if (grid && res.hotspots) {
+        grid.innerHTML = res.hotspots.map(h => `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid ${h.risk_index === 'Elevated' ? '#f59e0b' : (h.risk_index === 'High' ? '#dc2626' : '#059669')}; border-radius:8px; padding:1.25rem;">
+            <div style="font-weight:700; color:#0f172a;">${h.zone}</div>
+            <div style="font-size:0.8rem; color:${h.risk_index === 'Low' ? '#059669' : '#d97706'}; font-weight:600; margin-top:4px;">Risk Level: ${h.risk_index}</div>
+            <div style="font-size:0.8rem; color:#475569; margin-top:2px;">Target: ${h.pest} • ${h.affected_acres} Acres</div>
+            <button class="btn-secondary" style="margin-top:10px; height:28px; font-size:0.75rem; padding:0 8px;" onclick="openQuarantineModal('${h.zone}', '${h.pest}')">Establish Perimeter</button>
+          </div>
+        `).join("");
+      }
+    } catch (err) {
+      console.error("Surveillance load error:", err);
+    }
+  }
+
+  async function loadIPMProtocols() {
+    try {
+      const container = document.getElementById("ipm-protocols-container");
+      if (!container) return;
+      const res = await fetch("/api/pathogens/ipm-protocols");
+      let data = [];
+      if (res.ok) {
+        data = await res.json();
+      } else {
+        data = [
+          { crop: "Rice", pest: "Yellow Stem Borer", etl: "1 egg mass / m²", biocontrol: "Trichogramma japonicum @ 50,000/ha", cultural: "Pheromone traps @ 20/ha" },
+          { crop: "Wheat", pest: "Yellow Rust (Puccinia)", etl: "Spore incidence > 2% leaf area", biocontrol: "Trichoderma viride foliar spray", cultural: "Plant resistant cultivars (PBW-550)" },
+          { crop: "Tomato", pest: "Tuta absoluta / Fruit Borer", etl: "1 moth / delta trap / week", biocontrol: "Bacillus thuringiensis (Bt) @ 2g/L", cultural: "Yellow sticky cards + sanitation" },
+          { crop: "Cotton", pest: "Pink Bollworm (Pectinophora)", etl: "8 moths / trap / night consecutive", biocontrol: "Trichogramma bactrae + Neem azadirachtin 1500ppm", cultural: "Light traps + stalk destruction" }
+        ];
+      }
+      container.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem;">
+          ${data.map(p => `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem;">
+              <div style="font-weight:700; color:#0f172a; font-size:0.9rem;">${p.crop} — ${p.pest}</div>
+              <div style="font-size:0.75rem; color:#dc2626; margin-top:4px;"><strong>ETL Threshold:</strong> ${p.etl}</div>
+              <div style="font-size:0.75rem; color:#059669; margin-top:2px;"><strong>Bio-Control:</strong> ${p.biocontrol}</div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;"><strong>Cultural Practice:</strong> ${p.cultural}</div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    } catch (err) {
+      console.warn("IPM load error:", err);
+    }
+  }
+
+  async function loadQuarantineZones() {
+    try {
+      const zones = await AgriosAPI.listQuarantineZones();
+      const tbody = document.getElementById("quarantine-zones-table");
+      if (tbody && zones) {
+        tbody.innerHTML = zones.map(z => `
+          <tr>
+            <td><code>${z.id}</code></td>
+            <td><strong>${z.district}</strong></td>
+            <td>${z.pest_type}</td>
+            <td><span class="card-badge badge-warning">${z.radius_km} km Radius</span></td>
+            <td style="font-size:0.8rem; color:#475569;">${z.action_taken}</td>
+            <td><span class="card-badge badge-danger">ENFORCED</span></td>
+          </tr>
+        `).join("");
+      }
+    } catch (err) {
+      console.error("Quarantine load error:", err);
+    }
+  }
+
+  function openQuarantineModal(district = "", pest = "") {
+    if (district) document.getElementById("qz-district").value = district;
+    if (pest) document.getElementById("qz-pest").value = pest;
+    document.getElementById("quarantine-modal").style.display = "flex";
+  }
+
+  function closeQuarantineModal() {
+    document.getElementById("quarantine-modal").style.display = "none";
+  }
+
+  async function handleCreateQuarantine(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btn-submit-qz");
+    btn.disabled = true;
+    try {
+      const payload = {
+        district: document.getElementById("qz-district").value,
+        pest_type: document.getElementById("qz-pest").value.trim(),
+        radius_km: parseFloat(document.getElementById("qz-radius").value),
+        severity: document.getElementById("qz-severity").value,
+        action_taken: document.getElementById("qz-action").value.trim()
+      };
+      const res = await AgriosAPI.createQuarantineZone(payload);
+      closeQuarantineModal();
+      AgriosUI.showToast("Quarantine Enforced", `Containment zone ${res.id} active with ${res.radius_km}km perimeter ring across state.`, "🛡️");
+      await loadQuarantineZones();
+      if (window.AgriosNotifications) AgriosNotifications.loadNotifications();
+      switchTab("quarantine");
+    } catch (err) {
+      AgriosUI.showToast("Creation Failed", err.message, "❌");
+    } finally {
+      btn.disabled = false;
     }
   }
 

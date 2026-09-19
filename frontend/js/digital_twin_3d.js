@@ -1,18 +1,20 @@
 /**
- * AGRIOS 3D Digital Twin Engine — Three.js Agricultural World
+ * AGRIOS 3D Digital Twin Engine — Three.js Agricultural World (Upgraded Body)
  * 
  * A living, interactive, data-driven 3D representation of a real agricultural farm.
  * Built on Three.js with procedural geometry (no external model files).
  * 
  * Features:
- * - Procedural terrain with Perlin noise
- * - Instanced crop rendering (6 growth stages)
- * - Animated worker characters
- * - Weather effects (sun, rain, clouds, heatwave)
- * - Real-time WebSocket event integration
- * - Layer toggles, camera presets, time slider
- * - Click-to-inspect raycaster
- * - Minimap & HUD
+ * - High-end procedural PBR terrain & road materials (multi-textured canvas for soil, furrows, grass, gravel)
+ * - Realistic sky dome with sun disc, atmospheric haze gradient, depth fog, and cloud shadows
+ * - Upgraded architectural 3D buildings (Machinery Shed, Modern Timber/Glass Farm Office with solar rooftop,
+ *   Multi-Bay Polyhouse with visible internal grow beds, Corrugated Grain Silo, Insulated Cold Storage)
+ * - Articulated 3D worker characters with role tools, Wellington boots, and dynamic animation state machine
+ * - Dynamic workforce sync (instantly spawns/relocates workers upon AGRIOS registration)
+ * - Multi-stage botanical crop models (Stages 0 to 5) with wind sway response
+ * - Interactive CAD-lite "EDIT FARM" Mode (Road, Field with live acreage calculation, Irrigation, Building, Plant Spacing, Undo/Redo, Save to DB)
+ * - Real-time WebSocket event integration & Day 30 pest outbreak beacon
+ * - Simulated GPS Walk Calibration
  * 
  * @requires Three.js 0.164+ via importmap
  */
@@ -20,9 +22,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { getCropGeometry, createCropMaterial, normalizeCropKey } from './crop_geometries.js';
 
 // ═══════════════════════════════════════════════════════════════
-// SECTION 1: Perlin Noise (simplex-style, self-contained)
+// SECTION 1: Perlin / Simplex Noise
 // ═══════════════════════════════════════════════════════════════
 class SimplexNoise {
   constructor(seed = 42) {
@@ -33,7 +36,6 @@ class SimplexNoise {
     ];
     this.p = [];
     for (let i = 0; i < 256; i++) this.p[i] = i;
-    // Fisher-Yates shuffle with seed
     let s = seed;
     for (let i = 255; i > 0; i--) {
       s = (s * 16807 + 0) % 2147483647;
@@ -78,17 +80,15 @@ class SimplexNoise {
 // SECTION 2: Color & Material Constants
 // ═══════════════════════════════════════════════════════════════
 const COLORS = {
-  // Terrain
   soil: 0x8B7355,
-  soilDark: 0x6B5B45,
+  soilDark: 0x533E2D,
   grass: 0x4CAF50,
   grassLight: 0x66BB6A,
-  grassDark: 0x2E7D32,
-  // Water
+  grassDark: 0x2D6A4F,
   water: 0x2196F3,
   waterDeep: 0x1565C0,
   pond: 0x42A5F5,
-  // Crops by stage
+  // Crops
   cropSeed: 0x8D6E63,
   cropSprout: 0x81C784,
   cropVegetative: 0x43A047,
@@ -99,31 +99,26 @@ const COLORS = {
   cropDead: 0x795548,
   // Buildings
   buildingWall: 0xE8E0D4,
-  buildingRoof: 0xA1887F,
-  polyhouse: 0xB2DFDB,
-  polyhouseFrame: 0x78909C,
+  buildingRoof: 0x475569,
+  polyhouse: 0xD1FAE5,
+  polyhouseFrame: 0x94A3B8,
   // Infrastructure
-  road: 0x9E9E9E,
-  roadDark: 0x757575,
+  road: 0x8D877A,
+  roadDark: 0x5C564C,
   fence: 0x8D6E63,
   sensor: 0x00BCD4,
   sensorBlink: 0x00E5FF,
   borewell: 0x607D8B,
   // Workers
-  workerFarmer: 0x4CAF50,
-  workerLabor: 0xFF9800,
-  workerAgronomist: 0x2196F3,
-  workerSkin: 0xE0C8A8,
-  // Sky
-  skyDay: 0x87CEEB,
-  skyDawn: 0xFFB74D,
-  skyDusk: 0xFF7043,
-  skyNight: 0x1A237E,
+  workerFarmer: 0x15803D,
+  workerLabor: 0xEA580C,
+  workerAgronomist: 0x0284C7,
+  workerSkin: 0xD4A373,
   // Effects
   rain: 0xB3E5FC,
   heatShimmer: 0xFFCC80,
-  fog: 0xCFD8DC,
-  // UI
+  fog: 0xDBEAFE,
+  // UI & Alerts
   emerald: 0x10B981,
   emeraldBright: 0x34D399,
   alertRed: 0xEF4444,
@@ -131,11 +126,86 @@ const COLORS = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// SECTION 3: Main Engine Class
+// SEEDED DISEASE OUTBREAK CALENDAR (Multi-Day Realistic Crop Protection)
+// ═══════════════════════════════════════════════════════════════
+export const SEEDED_DISEASES = {
+  14: {
+    day: 14,
+    name: "Aphid Infestation & Seedling Damping-Off",
+    pest: "Aphis gossypii (Cotton & Melon Aphid)",
+    sector: "South Nursery Plot",
+    coords: { x: 18, z: 22 },
+    severity: "warning",
+    color: 0xf59e0b,
+    colorHex: "#f59e0b",
+    healthyPct: 0.88,
+    stressedPct: 0.12,
+    deadPct: 0.00,
+    prescription: "Neem Seed Kernel Extract 3000ppm + Imidacloprid 17.8% SL foliar drench"
+  },
+  30: {
+    day: 30,
+    name: "Critical Bio-Risk: Fall Armyworm Outbreak",
+    pest: "Spodoptera frugiperda (Fall Armyworm)",
+    sector: "North Sector Farm",
+    coords: { x: 0, z: -25 },
+    severity: "critical",
+    color: 0xef4444,
+    colorHex: "#ef4444",
+    healthyPct: 0.72,
+    stressedPct: 0.24,
+    deadPct: 0.04,
+    prescription: "Chlorantraniliprole 18.5% SC + Pheromone Trapping Grid"
+  },
+  48: {
+    day: 48,
+    name: "Foliar Stripe Rust & Leaf Blight",
+    pest: "Puccinia striiformis (Yellow Stripe Rust)",
+    sector: "East Cereal Field",
+    coords: { x: 28, z: -8 },
+    severity: "high",
+    color: 0xe11d48,
+    colorHex: "#e11d48",
+    healthyPct: 0.68,
+    stressedPct: 0.28,
+    deadPct: 0.04,
+    prescription: "Propiconazole 25% EC @ 1.0 mL/L prophylactic canopy mist"
+  },
+  72: {
+    day: 72,
+    name: "Yellow Stem Borer & Collar Rot",
+    pest: "Scirpophaga incertulas (Yellow Stem Borer)",
+    sector: "Central Irrigated Plot",
+    coords: { x: -16, z: 10 },
+    severity: "high",
+    color: 0xd97706,
+    colorHex: "#d97706",
+    healthyPct: 0.65,
+    stressedPct: 0.30,
+    deadPct: 0.05,
+    prescription: "Cartap Hydrochloride 4G granules in root zone"
+  },
+  95: {
+    day: 95,
+    name: "Sheath Blight & Pod Borer Complex",
+    pest: "Helicoverpa armigera / Rhizoctonia solani",
+    sector: "West Terrace Field",
+    coords: { x: -28, z: -14 },
+    severity: "critical",
+    color: 0xdc2626,
+    colorHex: "#dc2626",
+    healthyPct: 0.58,
+    stressedPct: 0.36,
+    deadPct: 0.06,
+    prescription: "Azoxystrobin 18.2% + Difenoconazole 11.4% SC mist"
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 3: Main 3D Digital Twin Engine Class
 // ═══════════════════════════════════════════════════════════════
 export class AgriosDigitalTwin3D {
   constructor() {
-    // Core Three.js
     this.renderer = null;
     this.scene = null;
     this.camera = null;
@@ -144,7 +214,14 @@ export class AgriosDigitalTwin3D {
     this.clock = new THREE.Clock();
     this.noise = new SimplexNoise(42);
 
-    // Scene groups (for layer toggling)
+    // Keyboard tracking for arrow/WASD camera navigation
+    this.keysDown = {};
+
+    // Dynamic disease outbreak schedule
+    this.diseaseSchedule = { ...SEEDED_DISEASES };
+    this.onDayStateChange = null;
+
+    // Scene groups (for layer toggling & editor isolation)
     this.groups = {
       terrain: new THREE.Group(),
       fields: new THREE.Group(),
@@ -156,6 +233,7 @@ export class AgriosDigitalTwin3D {
       weather: new THREE.Group(),
       risks: new THREE.Group(),
       labels: new THREE.Group(),
+      editor: new THREE.Group(), // CAD editor helpers and gizmos
     };
 
     // State
@@ -169,9 +247,34 @@ export class AgriosDigitalTwin3D {
     this.animatedObjects = [];
     this.workerMeshes = [];
     this.cropInstances = null;
+    this.cropName = null;
     this.rainParticles = null;
     this.cloudMeshes = [];
     this.isDestroyed = false;
+
+    // Enterprise adaptation & special modes
+    this.isAquaculture = false;
+    this.outbreakBeaconGroup = null;
+    this.surveyorMesh = null;
+    this.surveyTrail = null;
+
+    // Procedural texture caches
+    this._soilTexture = null;
+    this._grassTexture = null;
+    this._roadTexture = null;
+
+    // ── CAD-Lite EDIT FARM Mode State ──
+    this.isEditMode = false;
+    this.activeEditTool = 'select'; // 'select' | 'road' | 'field' | 'irrigation' | 'building' | 'plants'
+    this.activeBuildingType = 'shed'; // 'shed' | 'office' | 'polyhouse' | 'silo' | 'coldstorage'
+    this.editPoints = [];
+    this.previewMesh = null;
+    this.editHistory = [];
+    this.redoHistory = [];
+    this.selectedEditObject = null;
+    this.onEditStateChange = null;
+    this.onAreaMeasure = null;
+    this.isDraggingObject = false;
 
     // Layer visibility
     this.layers = {
@@ -184,7 +287,7 @@ export class AgriosDigitalTwin3D {
       risks: true,
     };
 
-    // Raycaster for click detection
+    // Raycaster for click & CAD detection
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
@@ -195,8 +298,10 @@ export class AgriosDigitalTwin3D {
     // Callbacks
     this.onEntitySelect = null;
     this.onEntityInspect = null;
+    this.onTelemetryUpdate = null;
+    this.onSceneRebuildNeeded = null;
 
-    // Animation
+    // Animation frame ID
     this.animFrameId = null;
   }
 
@@ -213,99 +318,143 @@ export class AgriosDigitalTwin3D {
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    // ── WebGL Renderer ──
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: false,
-      powerPreference: 'high-performance',
-    });
+    // 1. Scene & Background
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0xdbeafe);
+
+    // Add all groups to scene
+    Object.values(this.groups).forEach(g => this.scene.add(g));
+
+    // 2. Camera
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.5, 500);
+    this.camera.position.set(60, 55, 60);
+
+    // 3. WebGL Renderer with Soft Shadows
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMappingExposure = 1.15;
     container.appendChild(this.renderer.domElement);
 
-    // ── CSS2D Label Renderer ──
+    // 4. CSS2D Renderer for Floating Labels
     this.labelRenderer = new CSS2DRenderer();
     this.labelRenderer.setSize(width, height);
     this.labelRenderer.domElement.style.position = 'absolute';
     this.labelRenderer.domElement.style.top = '0';
-    this.labelRenderer.domElement.style.left = '0';
     this.labelRenderer.domElement.style.pointerEvents = 'none';
+    this.labelRenderer.domElement.className = 'dt3d-label-renderer';
     container.appendChild(this.labelRenderer.domElement);
 
-    // ── Scene ──
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(COLORS.skyDay);
-    this.scene.fog = new THREE.FogExp2(0xCCE5FF, 0.003);
-
-    // ── Camera ──
-    this.camera = new THREE.PerspectiveCamera(50, width / height, 0.5, 500);
-    this.camera.position.set(60, 55, 60);
-    this.camera.lookAt(0, 0, 0);
-
-    // ── Controls ──
+    // 5. OrbitControls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.minDistance = 15;
-    this.controls.maxDistance = 150;
-    this.controls.maxPolarAngle = Math.PI / 2.15;
-    this.controls.minPolarAngle = 0.2;
+    this.controls.dampingFactor = 0.05;
+    this.controls.maxPolarAngle = Math.PI / 2 - 0.05; // Do not go below ground
+    this.controls.minDistance = 5;
+    this.controls.maxDistance = 180;
     this.controls.target.set(0, 0, 0);
 
-    // ── Add groups to scene ──
-    Object.values(this.groups).forEach(g => this.scene.add(g));
+    // 6. Generate Procedural Textures
+    this._soilTexture = this._createProceduralSoilTexture();
+    this._grassTexture = this._createProceduralGrassTexture();
+    this._roadTexture = this._createProceduralRoadTexture();
 
-    // ── Lighting ──
+    // 7. Lighting & Atmospheric Sky Dome
     this._setupLighting();
+    this._createSkyDome();
 
-    // ── Minimap ──
-    this._setupMinimap(minimapCanvasId);
+    // 8. Minimap Setup
+    if (minimapCanvasId) {
+      this._setupMinimap(minimapCanvasId);
+    }
 
-    // ── Event listeners ──
+    // 9. Event Listeners & Resize Observer
     this._setupEventListeners(container);
 
-    // ── Resize handler ──
     this._resizeObserver = new ResizeObserver(() => this._onResize(container));
     this._resizeObserver.observe(container);
 
-    console.log('[3D Twin] Engine initialized');
+    console.log('[3D Twin] Engine initialized with upgraded visuals & CAD editor capabilities');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // LIGHTING & ATMOSPHERE
+  // ─────────────────────────────────────────────────────────────
   _setupLighting() {
-    // Ambient light (soft fill)
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    // Ambient light (warm soft fill)
+    const ambient = new THREE.AmbientLight(0xfff7ed, 0.55);
     this.scene.add(ambient);
     this._ambientLight = ambient;
 
-    // Hemisphere light (sky/ground color difference)
-    const hemi = new THREE.HemisphereLight(0x87CEEB, 0x4CAF50, 0.4);
+    // Hemisphere light (sky blue to warm soil bounce)
+    const hemi = new THREE.HemisphereLight(0xbfdbfe, 0x533e2d, 0.45);
     this.scene.add(hemi);
     this._hemiLight = hemi;
 
-    // Directional sunlight with shadows
-    const sun = new THREE.DirectionalLight(0xFFF8E1, 1.2);
-    sun.position.set(40, 60, 30);
+    // Directional sunlight with high-res soft cascaded shadows
+    const sun = new THREE.DirectionalLight(0xfffbeb, 1.35);
+    sun.position.set(50, 75, 40);
     sun.castShadow = true;
     sun.shadow.mapSize.width = 2048;
     sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 200;
-    sun.shadow.camera.left = -80;
-    sun.shadow.camera.right = 80;
-    sun.shadow.camera.top = 80;
-    sun.shadow.camera.bottom = -80;
-    sun.shadow.bias = -0.001;
+    sun.shadow.camera.far = 220;
+    sun.shadow.camera.left = -85;
+    sun.shadow.camera.right = 85;
+    sun.shadow.camera.top = 85;
+    sun.shadow.camera.bottom = -85;
+    sun.shadow.bias = -0.0006;
     this.scene.add(sun);
     this._sunLight = sun;
 
-    // Subtle sun target
     sun.target.position.set(0, 0, 0);
     this.scene.add(sun.target);
+  }
+
+  _createSkyDome() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Vertical atmospheric gradient from deep zenith blue to warm hazy golden horizon
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0.0, '#1d4ed8'); // zenith deep sky blue
+    grad.addColorStop(0.35, '#3b82f6'); // azure
+    grad.addColorStop(0.70, '#93c5fd'); // soft atmospheric mist
+    grad.addColorStop(0.92, '#fed7aa'); // warm golden horizon haze
+    grad.addColorStop(1.0, '#fde68a'); // golden rim
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    const skyTexture = new THREE.CanvasTexture(canvas);
+    const skyGeo = new THREE.SphereGeometry(260, 32, 16);
+    const skyMat = new THREE.MeshBasicMaterial({
+      map: skyTexture,
+      side: THREE.BackSide,
+      depthWrite: false
+    });
+    const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    this.scene.add(skyMesh);
+    this._skyMesh = skyMesh;
+
+    // Atmospheric sun disc
+    const sunDiscGeo = new THREE.CircleGeometry(10, 24);
+    const sunDiscMat = new THREE.MeshBasicMaterial({
+      color: 0xfffbeb,
+      side: THREE.DoubleSide
+    });
+    const sunDisc = new THREE.Mesh(sunDiscGeo, sunDiscMat);
+    sunDisc.position.set(65, 115, 60);
+    sunDisc.lookAt(0, 0, 0);
+    this.scene.add(sunDisc);
+    this._sunDisc = sunDisc;
+
+    // Scene fog for natural aerial perspective
+    this.scene.fog = new THREE.FogExp2(0xdbeafe, 0.0028);
   }
 
   _setupMinimap(canvasId) {
@@ -320,31 +469,97 @@ export class AgriosDigitalTwin3D {
     this.minimapRenderer.setSize(160, 120);
     this.minimapRenderer.setPixelRatio(1);
 
-    this.minimapCamera = new THREE.OrthographicCamera(-70, 70, 52.5, -52.5, 1, 200);
-    this.minimapCamera.position.set(0, 100, 0);
+    this.minimapCamera = new THREE.OrthographicCamera(-70, 70, 52.5, -52.5, 1, 250);
+    this.minimapCamera.position.set(0, 120, 0);
     this.minimapCamera.lookAt(0, 0, 0);
   }
 
-  _setupEventListeners(container) {
-    // Click detection
-    container.addEventListener('click', (e) => this._onClick(e, container));
-    // Touch support
-    container.addEventListener('touchend', (e) => {
-      if (e.changedTouches.length === 1) {
-        const t = e.changedTouches[0];
-        this._onClick({ clientX: t.clientX, clientY: t.clientY }, container);
-      }
-    });
+  // ─────────────────────────────────────────────────────────────
+  // PROCEDURAL CANVAS TEXTURE GENERATORS
+  // ─────────────────────────────────────────────────────────────
+  _createProceduralSoilTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Base rich loamy earth
+    ctx.fillStyle = '#533e2d';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Granular micro-stipples
+    for (let i = 0; i < 20000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = Math.random();
+      ctx.fillStyle = r > 0.6 ? '#6d533d' : (r > 0.3 ? '#3f2e21' : '#2b1e15');
+      ctx.fillRect(x, y, 1.5, 1.5);
+    }
+
+    // Ploughed furrow lines
+    ctx.fillStyle = 'rgba(43, 30, 21, 0.35)';
+    for (let y = 0; y < 512; y += 16) {
+      ctx.fillRect(0, y, 512, 6);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(8, 8);
+    return texture;
   }
 
-  _onResize(container) {
-    if (this.isDestroyed) return;
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
-    this.labelRenderer.setSize(w, h);
+  _createProceduralGrassTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#2d6a4f';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let i = 0; i < 25000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = Math.random();
+      ctx.fillStyle = r > 0.7 ? '#40916c' : (r > 0.4 ? '#1b4332' : '#52b788');
+      ctx.fillRect(x, y, 1.2, 2.5);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(12, 12);
+    return texture;
+  }
+
+  _createProceduralRoadTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#8d877a';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let i = 0; i < 16000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = Math.random();
+      ctx.fillStyle = r > 0.6 ? '#adaba4' : (r > 0.3 ? '#6e6a61' : '#4d4a43');
+      ctx.fillRect(x, y, 2, 2);
+    }
+
+    // Wheel tracks
+    ctx.fillStyle = 'rgba(80, 75, 68, 0.35)';
+    ctx.fillRect(90, 0, 70, 512);
+    ctx.fillRect(352, 0, 70, 512);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 10);
+    return texture;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -353,16 +568,23 @@ export class AgriosDigitalTwin3D {
   async buildScene(sceneData) {
     this.sceneData = sceneData;
 
-    // Parse crop plan duration
+    const cp = sceneData.crop_plan || {};
+    const farmCrop = sceneData.farm?.crop_type || '';
+    const cleanCropName = (cp.crop_name || cp.crop_type || farmCrop || '').toLowerCase();
+    const farmingCls = (cp.farming_classification || '').toLowerCase();
+    this.isAquaculture = cleanCropName.includes('pisc') || cleanCropName.includes('carp') || 
+                         cleanCropName.includes('fish') || cleanCropName.includes('rohu') || 
+                         cleanCropName.includes('catla') || farmingCls.includes('pisc') || 
+                         farmingCls.includes('aqua');
+
     if (sceneData.crop_plan && sceneData.crop_plan.stages) {
       const lastStage = sceneData.crop_plan.stages[sceneData.crop_plan.stages.length - 1];
-      this.maxDays = lastStage ? (lastStage.end_day || 120) : 120;
+      this.maxDays = lastStage ? (lastStage.end_day || 120) : (this.isAquaculture ? 195 : 120);
     }
 
-    // Clear existing scene objects
     this._clearGroups();
 
-    // Build in order
+    // Build scene hierarchy
     this._buildTerrain();
     this._buildFarmBoundary(sceneData.boundary);
     this._buildFields(sceneData.spatial_objects);
@@ -374,21 +596,23 @@ export class AgriosDigitalTwin3D {
     this._buildWorkers(sceneData.workers);
     this._applyWeather(sceneData.weather);
 
-    console.log('[3D Twin] Scene built with', this.scene.children.length, 'top-level objects');
+    console.log('[3D Twin] Scene built with', this.scene.children.length, 'top-level groups');
   }
 
   _clearGroups() {
     Object.values(this.groups).forEach(group => {
       while (group.children.length > 0) {
         const child = group.children[0];
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach(m => m.dispose());
-          } else {
-            child.material.dispose();
+        child.traverse(obj => {
+          if (obj.isCSS2DObject && obj.element && obj.element.parentNode) {
+            obj.element.parentNode.removeChild(obj.element);
           }
-        }
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+            else obj.material.dispose();
+          }
+        });
         group.remove(child);
       }
     });
@@ -396,14 +620,15 @@ export class AgriosDigitalTwin3D {
     this.workerMeshes = [];
     this.cloudMeshes = [];
     this.rainParticles = null;
+    this.outbreakBeaconGroup = null;
   }
 
   // ─────────────────────────────────────────────────────────────
-  // TERRAIN
+  // TERRAIN WITH PBR TEXTURE & VERTEX ELEVATIONS
   // ─────────────────────────────────────────────────────────────
   _buildTerrain() {
-    const size = 140;
-    const segments = 80;
+    const size = 150;
+    const segments = 90;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
     geo.rotateX(-Math.PI / 2);
 
@@ -419,20 +644,19 @@ export class AgriosDigitalTwin3D {
       const x = positions.getX(i);
       const z = positions.getZ(i);
 
-      // Perlin noise for elevation
-      const elevation = this.noise.noise2D(x * 0.02, z * 0.02) * 2.0 +
-                        this.noise.noise2D(x * 0.05, z * 0.05) * 0.8;
+      // Multi-frequency elevation
+      const elevation = this.noise.noise2D(x * 0.02, z * 0.02) * 1.8 +
+                        this.noise.noise2D(x * 0.05, z * 0.05) * 0.6;
       positions.setY(i, elevation);
 
-      // Color based on position and noise
       const inFarm = Math.abs(x) < 50 && Math.abs(z) < 40;
       const noiseVal = this.noise.noise2D(x * 0.08, z * 0.08);
 
       let color;
       if (inFarm) {
-        color = soilColor.clone().lerp(grassDarkColor, 0.3 + noiseVal * 0.2);
+        color = soilColor.clone().lerp(grassDarkColor, 0.25 + noiseVal * 0.15);
       } else {
-        color = grassColor.clone().lerp(grassDarkColor, 0.5 + noiseVal * 0.3);
+        color = grassColor.clone().lerp(grassDarkColor, 0.45 + noiseVal * 0.25);
       }
 
       colorAttr.setXYZ(i, color.r, color.g, color.b);
@@ -441,8 +665,11 @@ export class AgriosDigitalTwin3D {
     geo.setAttribute('color', colorAttr);
     geo.computeVertexNormals();
 
-    const mat = new THREE.MeshLambertMaterial({
+    const mat = new THREE.MeshStandardMaterial({
+      map: this._soilTexture,
       vertexColors: true,
+      roughness: 0.85,
+      metalness: 0.04,
       side: THREE.FrontSide,
     });
 
@@ -450,6 +677,7 @@ export class AgriosDigitalTwin3D {
     terrain.receiveShadow = true;
     terrain.userData = { type: 'terrain' };
     this.groups.terrain.add(terrain);
+    this._terrainMesh = terrain;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -460,104 +688,87 @@ export class AgriosDigitalTwin3D {
     if (boundaryGeoJSON && boundaryGeoJSON.coordinates && boundaryGeoJSON.coordinates[0]) {
       coords = boundaryGeoJSON.coordinates[0];
     } else {
-      // Default boundary rectangle
-      coords = [[-45, -35], [45, -35], [45, 35], [-45, 35], [-45, -35]];
+      coords = [[-50, -40], [50, -40], [50, 40], [-50, 40], [-50, -40]];
     }
 
-    // Convert GeoJSON coords to 3D positions
-    // GeoJSON is [lon, lat], we normalize to our scene coordinates
-    const centerLon = coords.reduce((s, c) => s + c[0], 0) / coords.length;
-    const centerLat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-    const scale = 8000; // Approximate scale factor for GPS to meters
+    const points = [];
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
 
-    const points3D = coords.map(c => {
-      const x = (c[0] - centerLon) * scale;
-      const z = -(c[1] - centerLat) * scale;
-      return new THREE.Vector3(
-        Math.max(-50, Math.min(50, x)),
-        0.5,
-        Math.max(-40, Math.min(40, z))
-      );
+    coords.forEach(pt => {
+      let x, z;
+      if (Math.abs(pt[0]) > 50 || Math.abs(pt[1]) > 50) {
+        const refLon = 75.8575, refLat = 30.9015;
+        x = (pt[0] - refLon) * 20000;
+        z = (pt[1] - refLat) * 20000;
+      } else {
+        x = pt[0];
+        z = pt[1];
+      }
+      x = Math.max(-65, Math.min(65, x));
+      z = Math.max(-55, Math.min(55, z));
+
+      points.push(new THREE.Vector3(x, 0.3, z));
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
     });
 
-    // If all points collapsed to near zero (GPS coords very close), use default
-    const spread = points3D.reduce((max, p) => Math.max(max, Math.abs(p.x) + Math.abs(p.z)), 0);
-    if (spread < 5) {
-      points3D.length = 0;
-      [[-45, -35], [45, -35], [45, 35], [-45, 35], [-45, -35]].forEach(c => {
-        points3D.push(new THREE.Vector3(c[0], 0.5, c[1]));
-      });
-    }
+    this.farmBounds = { minX, maxX, minZ, maxZ };
 
-    // Update farm bounds
-    this.farmBounds = {
-      minX: Math.min(...points3D.map(p => p.x)),
-      maxX: Math.max(...points3D.map(p => p.x)),
-      minZ: Math.min(...points3D.map(p => p.z)),
-      maxZ: Math.max(...points3D.map(p => p.z)),
-    };
+    // 1. Boundary glowing wireframe
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+    const lineMat = new THREE.LineBasicMaterial({
+      color: COLORS.emerald,
+      linewidth: 3,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const line = new THREE.Line(lineGeo, lineMat);
+    this.groups.fields.add(line);
 
-    // Fence posts and rails
-    const postGeo = new THREE.CylinderGeometry(0.15, 0.2, 2.5, 6);
-    const postMat = new THREE.MeshLambertMaterial({ color: COLORS.fence });
-    const railGeo = new THREE.CylinderGeometry(0.06, 0.06, 1, 4);
-    const railMat = new THREE.MeshLambertMaterial({ color: COLORS.fence });
+    // 2. Boundary perimeter fence posts
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const dist = p1.distanceTo(p2);
+      const postCount = Math.floor(dist / 6);
+      const postGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.2, 5);
+      const postMat = new THREE.MeshStandardMaterial({ color: COLORS.fence, roughness: 0.9 });
 
-    for (let i = 0; i < points3D.length - 1; i++) {
-      const a = points3D[i];
-      const b = points3D[i + 1];
-      const dist = a.distanceTo(b);
-      const numPosts = Math.max(2, Math.floor(dist / 6));
-
-      for (let j = 0; j <= numPosts; j++) {
-        const t = j / numPosts;
-        const pos = a.clone().lerp(b, t);
+      for (let j = 0; j <= postCount; j++) {
+        const t = j / Math.max(1, postCount);
         const post = new THREE.Mesh(postGeo, postMat);
-        post.position.set(pos.x, 1.25, pos.z);
+        post.position.lerpVectors(p1, p2, t);
+        post.position.y = 0.6;
         post.castShadow = true;
         this.groups.fields.add(post);
       }
-
-      // Top rail
-      const midpoint = a.clone().lerp(b, 0.5);
-      const railLength = dist;
-      const rail = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.06, 0.06, railLength, 4),
-        railMat
-      );
-      rail.position.set(midpoint.x, 2.0, midpoint.z);
-      rail.rotation.z = Math.PI / 2;
-      const angle = Math.atan2(b.z - a.z, b.x - a.x);
-      rail.rotation.y = -angle;
-      this.groups.fields.add(rail);
-    }
-
-    // Field boundary line
-    const lineGeo = new THREE.BufferGeometry().setFromPoints(points3D);
-    const lineMat = new THREE.LineBasicMaterial({ color: COLORS.emerald, linewidth: 2 });
-    const boundaryLine = new THREE.Line(lineGeo, lineMat);
-    this.groups.fields.add(boundaryLine);
-
-    // Farm name label
-    if (this.sceneData && this.sceneData.farm) {
-      const label = this._createLabel(
-        this.sceneData.farm.name || 'AGRIOS Farm',
-        new THREE.Vector3(0, 8, this.farmBounds.minZ - 3),
-        '#10b981', '0.85rem', true
-      );
-      this.groups.labels.add(label);
     }
   }
 
   // ─────────────────────────────────────────────────────────────
-  // FIELDS (subdivided crop zones)
+  // FIELDS (Polygonal & Grid Subdivisions)
   // ─────────────────────────────────────────────────────────────
   _buildFields(spatialObjects) {
+    if (this.isAquaculture) {
+      this._buildAquaculturePonds();
+      return;
+    }
     const { minX, maxX, minZ, maxZ } = this.farmBounds;
     const farmW = maxX - minX;
     const farmH = maxZ - minZ;
 
-    // Subdivide into 2x2 field parcels
+    // Check if custom fields exist in spatialObjects
+    const customFields = (spatialObjects || []).filter(o => o.type === 'field' && o.vertices && o.vertices.length >= 3);
+    if (customFields.length > 0) {
+      customFields.forEach((cf, idx) => {
+        this._createPolygonField(cf.vertices, cf, idx);
+      });
+      return;
+    }
+
+    // Default 2x2 field parcels
     const cols = 2, rows = 2;
     const cellW = (farmW - 8) / cols;
     const cellH = (farmH - 8) / rows;
@@ -569,35 +780,36 @@ export class AgriosDigitalTwin3D {
         const z = minZ + 4 + r * cellH + cellH / 2;
         const idx = r * cols + c;
 
-        // Field surface plane
         const fieldGeo = new THREE.PlaneGeometry(cellW - 2, cellH - 2);
         fieldGeo.rotateX(-Math.PI / 2);
-        const fieldMat = new THREE.MeshLambertMaterial({
+        const fieldMat = new THREE.MeshStandardMaterial({
+          map: this._soilTexture,
           color: new THREE.Color(COLORS.soilDark).lerp(new THREE.Color(COLORS.soil), 0.3 + idx * 0.1),
-          transparent: true,
-          opacity: 0.6,
+          roughness: 0.8,
+          metalness: 0.05,
         });
         const field = new THREE.Mesh(fieldGeo, fieldMat);
-        field.position.set(x, 0.15, z);
+        field.position.set(x, 0.16, z);
         field.receiveShadow = true;
         field.userData = {
           type: 'field',
+          id: `field_${idx}`,
           name: fieldNames[idx],
           area_acres: ((cellW * cellH) / 4046.86 * 100).toFixed(1),
           index: idx,
         };
         this.groups.fields.add(field);
 
-        // Furrow lines
+        // Ploughed furrow lines
         const furrowCount = Math.floor(cellW / 3);
         for (let f = 0; f < furrowCount; f++) {
           const fx = x - cellW / 2 + 2 + f * 3;
           const furrowGeo = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(fx, 0.18, z - cellH / 2 + 1),
-            new THREE.Vector3(fx, 0.18, z + cellH / 2 - 1),
+            new THREE.Vector3(fx, 0.19, z - cellH / 2 + 1),
+            new THREE.Vector3(fx, 0.19, z + cellH / 2 - 1),
           ]);
           const furrow = new THREE.Line(furrowGeo, new THREE.LineBasicMaterial({
-            color: 0x6D5B3E, transparent: true, opacity: 0.3,
+            color: 0x3e2723, transparent: true, opacity: 0.45,
           }));
           this.groups.fields.add(furrow);
         }
@@ -605,434 +817,964 @@ export class AgriosDigitalTwin3D {
     }
   }
 
+  _createPolygonField(vertices, fieldData, idx = 0) {
+    if (!vertices || vertices.length < 3) return;
+    const shape = new THREE.Shape();
+    vertices.forEach((v, i) => {
+      if (i === 0) shape.moveTo(v.x, -v.z);
+      else shape.lineTo(v.x, -v.z);
+    });
+    shape.closePath();
+
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(-Math.PI / 2);
+
+    const mat = new THREE.MeshStandardMaterial({
+      map: this._soilTexture,
+      color: new THREE.Color(COLORS.soilDark).lerp(new THREE.Color(COLORS.soil), 0.35),
+      roughness: 0.82,
+      metalness: 0.05,
+      side: THREE.DoubleSide
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = 0.18;
+    mesh.receiveShadow = true;
+    mesh.userData = {
+      type: 'field',
+      id: fieldData.id || `field_${idx}`,
+      name: fieldData.name || `Field ${String.fromCharCode(65 + idx)}`,
+      area_acres: fieldData.area_acres || '2.5',
+      crop: fieldData.crop || 'Wheat',
+      vertices: vertices,
+    };
+    this.groups.fields.add(mesh);
+
+    // Center calculation for label
+    let cx = 0, cz = 0;
+    vertices.forEach(v => { cx += v.x; cz += v.z; });
+    cx /= vertices.length;
+    cz /= vertices.length;
+
+    const label = this._createLabel(`${mesh.userData.name} (${mesh.userData.area_acres} ac)`, new THREE.Vector3(cx, 1.2, cz), '#10b981', '0.75rem', true);
+    this.groups.labels.add(label);
+    return mesh;
+  }
+
   // ─────────────────────────────────────────────────────────────
-  // ROADS
+  // AQUACULTURE PONDS
+  // ─────────────────────────────────────────────────────────────
+  _buildAquaculturePonds() {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const farmW = maxX - minX;
+    const farmH = maxZ - minZ;
+
+    const cols = 2, rows = 2;
+    const cellW = (farmW - 12) / cols;
+    const cellH = (farmH - 12) / rows;
+    const pondNames = ['Nursery Pond (P-01)', 'Rearing Pond (P-02)', 'Grow-Out Pond 1 (P-03)', 'Grow-Out Pond 2 (P-04)'];
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = minX + 6 + c * cellW + cellW / 2;
+        const z = minZ + 6 + r * cellH + cellH / 2;
+        const idx = r * cols + c;
+
+        const pondGroup = new THREE.Group();
+        pondGroup.position.set(x, 0, z);
+
+        // Water surface
+        const waterW = cellW - 4;
+        const waterH = cellH - 4;
+        const waterGeo = new THREE.PlaneGeometry(waterW, waterH, 16, 16);
+        waterGeo.rotateX(-Math.PI / 2);
+
+        const waterMat = new THREE.MeshStandardMaterial({
+          color: 0x0284c7,
+          roughness: 0.15,
+          metalness: 0.25,
+          transparent: true,
+          opacity: 0.88,
+        });
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.position.y = 0.32;
+        pondGroup.add(water);
+
+        // Earthen embankment bunds
+        const bundMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.95 });
+        const bundThickness = 2.0;
+        const bundHeight = 0.7;
+
+        // North & South bunds
+        const bundNSGeo = new THREE.BoxGeometry(cellW, bundHeight, bundThickness);
+        const bundN = new THREE.Mesh(bundNSGeo, bundMat);
+        bundN.position.set(0, bundHeight / 2, -cellH / 2 + bundThickness / 2);
+        const bundS = new THREE.Mesh(bundNSGeo, bundMat);
+        bundS.position.set(0, bundHeight / 2, cellH / 2 - bundThickness / 2);
+        pondGroup.add(bundN, bundS);
+
+        // East & West bunds
+        const bundEWGeo = new THREE.BoxGeometry(bundThickness, bundHeight, cellH - bundThickness * 2);
+        const bundE = new THREE.Mesh(bundEWGeo, bundMat);
+        bundE.position.set(cellW / 2 - bundThickness / 2, bundHeight / 2, 0);
+        const bundW = new THREE.Mesh(bundEWGeo, bundMat);
+        bundW.position.set(-cellW / 2 + bundThickness / 2, bundHeight / 2, 0);
+        pondGroup.add(bundE, bundW);
+
+        pondGroup.userData = {
+          type: 'aquaculture_pond',
+          id: `pond_${idx}`,
+          name: pondNames[idx],
+          surface_acres: ((waterW * waterH) / 4046.86 * 100).toFixed(2),
+          depth_meters: 1.8,
+          dissolved_oxygen_mg_l: 6.8,
+          ph: 7.8,
+          temperature_c: 28.2
+        };
+        water.userData = pondGroup.userData;
+
+        this.groups.water.add(pondGroup);
+
+        // Paddlewheel Aerator
+        this._createPaddlewheelAerator(x + waterW * 0.25, 0.35, z);
+
+        // Jumping Fish Animation
+        this._createJumpingFish(x, 0.35, z, waterW * 0.6, waterH * 0.6, idx);
+
+        // Floating Water Label
+        const label = this._createLabel(`🐟 ${pondNames[idx]} (DO: 6.8 mg/L)`, new THREE.Vector3(x, 2.2, z), '#38bdf8', '0.72rem', true);
+        this.groups.labels.add(label);
+      }
+    }
+  }
+
+  _createPaddlewheelAerator(x, y, z) {
+    const aeratorGroup = new THREE.Group();
+    aeratorGroup.position.set(x, y, z);
+
+    // Twin flotation pontoons
+    const pontoonGeo = new THREE.CylinderGeometry(0.18, 0.18, 2.4, 8);
+    pontoonGeo.rotateZ(Math.PI / 2);
+    const pontoonMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 });
+    const p1 = new THREE.Mesh(pontoonGeo, pontoonMat);
+    p1.position.set(0, 0.05, -0.6);
+    const p2 = new THREE.Mesh(pontoonGeo, pontoonMat);
+    p2.position.set(0, 0.05, 0.6);
+    aeratorGroup.add(p1, p2);
+
+    // Motor housing
+    const motorGeo = new THREE.BoxGeometry(0.5, 0.45, 0.45);
+    const motorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+    const motor = new THREE.Mesh(motorGeo, motorMat);
+    motor.position.set(0, 0.35, 0);
+    aeratorGroup.add(motor);
+
+    // Rotating paddle shaft
+    const shaftGroup = new THREE.Group();
+    shaftGroup.position.set(0, 0.2, 0);
+
+    const paddleBladeGeo = new THREE.BoxGeometry(0.04, 0.32, 0.18);
+    const paddleMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.2 });
+
+    for (let side of [-0.6, 0.6]) {
+      for (let i = 0; i < 6; i++) {
+        const blade = new THREE.Mesh(paddleBladeGeo, paddleMat);
+        const ang = (i / 6) * Math.PI * 2;
+        blade.position.set(0, Math.sin(ang) * 0.28, side + Math.cos(ang) * 0.05);
+        blade.rotation.x = ang;
+        shaftGroup.add(blade);
+      }
+    }
+    aeratorGroup.add(shaftGroup);
+
+    // Frothing foam ring
+    const foamGeo = new THREE.RingGeometry(0.4, 0.9, 16);
+    foamGeo.rotateX(-Math.PI / 2);
+    const foamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 });
+    const foam = new THREE.Mesh(foamGeo, foamMat);
+    foam.position.y = 0.02;
+    aeratorGroup.add(foam);
+
+    this.groups.water.add(aeratorGroup);
+
+    this.animatedObjects.push({
+      type: 'paddlewheelSpin',
+      shaft: shaftGroup,
+      foam: foam,
+      speed: 7.0
+    });
+  }
+
+  _createJumpingFish(pondX, waterY, pondZ, rangeW, rangeH, pondIdx) {
+    const fishGroup = new THREE.Group();
+
+    // Low-poly carp body
+    const bodyGeo = new THREE.ConeGeometry(0.12, 0.65, 5);
+    bodyGeo.rotateZ(Math.PI / 2);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.4 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    fishGroup.add(body);
+
+    const tailGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-0.35, 0, 0),
+      new THREE.Vector3(-0.55, 0.15, 0),
+      new THREE.Vector3(-0.55, -0.15, 0),
+    ]);
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
+    const tail = new THREE.Mesh(tailGeo, tailMat);
+    fishGroup.add(tail);
+
+    fishGroup.position.set(pondX, waterY - 0.4, pondZ);
+    fishGroup.visible = false;
+    this.groups.water.add(fishGroup);
+
+    // Splash ring
+    const splashGeo = new THREE.RingGeometry(0.1, 0.4, 12);
+    splashGeo.rotateX(-Math.PI / 2);
+    const splashMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.0 });
+    const splash = new THREE.Mesh(splashGeo, splashMat);
+    this.groups.water.add(splash);
+
+    this.animatedObjects.push({
+      type: 'fishJump',
+      fish: fishGroup,
+      splash: splash,
+      pondX: pondX,
+      waterY: waterY,
+      pondZ: pondZ,
+      rangeW: rangeW,
+      rangeH: rangeH,
+      timer: Math.random() * 4.0,
+      jumpInterval: 4.5 + Math.random() * 4.0,
+      isJumping: false,
+      jumpProgress: 0,
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 3D ROAD RIBBONS WITH ELEVATED CROWNS & GRAVEL SHOULDERS
   // ─────────────────────────────────────────────────────────────
   _buildRoads(spatialObjects) {
     const { minX, maxX, minZ, maxZ } = this.farmBounds;
     const midX = (minX + maxX) / 2;
     const midZ = (minZ + maxZ) / 2;
 
-    // Main horizontal road through farm center
-    this._createRoadSegment(minX - 5, midZ, maxX + 5, midZ, 3);
-    // Main vertical road
-    this._createRoadSegment(midX, minZ - 5, midX, maxZ + 5, 2.5);
-    // Access road from edge
-    this._createRoadSegment(maxX + 5, midZ, maxX + 20, midZ, 2);
+    const customRoads = (spatialObjects || []).filter(o => o.type === 'road' && o.waypoints && o.waypoints.length >= 2);
+    if (customRoads.length > 0) {
+      customRoads.forEach(r => {
+        for (let i = 0; i < r.waypoints.length - 1; i++) {
+          const p1 = r.waypoints[i];
+          const p2 = r.waypoints[i + 1];
+          this._createRoadSegment(p1.x, p1.z, p2.x, p2.z, r.width || 3.2, r);
+        }
+      });
+      return;
+    }
+
+    // Default canonical roads
+    this._createRoadSegment(minX - 6, midZ, maxX + 6, midZ, 3.2, { name: 'East-West Tractor Highway' });
+    this._createRoadSegment(midX, minZ - 6, midX, maxZ + 6, 2.8, { name: 'North-South Field Arterial' });
+    this._createRoadSegment(maxX + 6, midZ, maxX + 22, midZ, 2.4, { name: 'Village Feeder Access Path' });
   }
 
-  _createRoadSegment(x1, z1, x2, z2, width) {
+  _createRoadSegmentDirect(x1, z1, x2, z2, width = 3.0, roadData = {}) {
     const dx = x2 - x1;
     const dz = z2 - z1;
     const length = Math.sqrt(dx * dx + dz * dz);
     const angle = Math.atan2(dz, dx);
 
-    const roadGeo = new THREE.PlaneGeometry(length, width);
+    const segCount = Math.max(2, Math.floor(length / 2));
+    const roadGeo = new THREE.PlaneGeometry(length, width, segCount, 4);
     roadGeo.rotateX(-Math.PI / 2);
-    const roadMat = new THREE.MeshLambertMaterial({
-      color: COLORS.road,
-      transparent: true,
-      opacity: 0.85,
+
+    // Apply crown elevation profile (drainage crest in center)
+    const pos = roadGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const zOffset = pos.getZ(i); // along width
+      const crown = Math.cos((zOffset / (width / 2)) * (Math.PI / 2)) * 0.08;
+      pos.setY(i, 0.22 + crown);
+    }
+    roadGeo.computeVertexNormals();
+
+    const roadMat = new THREE.MeshStandardMaterial({
+      map: this._roadTexture,
+      roughness: 0.85,
+      metalness: 0.05,
     });
     const road = new THREE.Mesh(roadGeo, roadMat);
-    road.position.set((x1 + x2) / 2, 0.2, (z1 + z2) / 2);
+    road.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
     road.rotation.y = -angle;
     road.receiveShadow = true;
-    road.userData = { type: 'road', name: 'Farm Access Road' };
-    this.groups.infrastructure.add(road);
+    road.userData = {
+      type: 'road',
+      id: roadData.id || `road_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+      name: roadData.name || 'Farm Access Road',
+      width: width,
+      waypoints: [{ x: x1, z: z1 }, { x: x2, z: z2 }],
+      surface: roadData.surface || 'compacted_gravel'
+    };
 
-    // Road edge lines
-    const edgeMat = new THREE.LineBasicMaterial({ color: COLORS.roadDark, transparent: true, opacity: 0.5 });
+    const group = new THREE.Group();
+    group.userData = road.userData;
+    group.add(road);
+
+    // Gravel shoulders on both sides
+    const shoulderMat = new THREE.LineBasicMaterial({ color: COLORS.roadDark, linewidth: 2, transparent: true, opacity: 0.65 });
     for (const side of [-1, 1]) {
       const perpX = -Math.sin(angle) * (width / 2) * side;
       const perpZ = Math.cos(angle) * (width / 2) * side;
       const edgeGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(x1 + perpX, 0.22, z1 + perpZ),
-        new THREE.Vector3(x2 + perpX, 0.22, z2 + perpZ),
+        new THREE.Vector3(x1 + perpX, 0.24, z1 + perpZ),
+        new THREE.Vector3(x2 + perpX, 0.24, z2 + perpZ),
       ]);
-      this.groups.infrastructure.add(new THREE.Line(edgeGeo, edgeMat));
+      group.add(new THREE.Line(edgeGeo, shoulderMat));
     }
+
+    return group;
+  }
+
+  _createRoadSegment(x1, z1, x2, z2, width = 3.0, roadData = {}) {
+    const group = this._createRoadSegmentDirect(x1, z1, x2, z2, width, roadData);
+    this.groups.infrastructure.add(group);
+    return group;
   }
 
   // ─────────────────────────────────────────────────────────────
-  // WATER (pond, irrigation channels)
+  // WATER INFRASTRUCTURE
   // ─────────────────────────────────────────────────────────────
   _buildWater(spatialObjects) {
+    if (this.isAquaculture) return; // Handled by ponds
     const { maxX, maxZ } = this.farmBounds;
 
-    // Rainwater pond
-    const pondGeo = new THREE.CircleGeometry(6, 32);
+    const customPonds = (spatialObjects || []).filter(o => o.type === 'water_source' && (o.subtype === 'pond' || (o.name && o.name.toLowerCase().includes('pond'))));
+    if (customPonds.length > 0) {
+      customPonds.forEach(p => {
+        this._createPond(p.position?.x || maxX - 14, 0, p.position?.z || maxZ - 12, p.radius || 9, p);
+      });
+      return;
+    }
+
+    // Default canonical retention pond
+    this._createPond(maxX - 14, 0, maxZ - 12, 9, {
+      type: 'water_source',
+      name: 'Rainwater Harvesting Retention Pond',
+      capacity_l: 250000,
+      status: 'active'
+    });
+  }
+
+  _createPond(x, y, z, radius, userData) {
+    const pondGeo = new THREE.CircleGeometry(radius, 24);
     pondGeo.rotateX(-Math.PI / 2);
-    const pondMat = new THREE.MeshPhongMaterial({
+    const pondMat = new THREE.MeshStandardMaterial({
       color: COLORS.pond,
+      roughness: 0.1,
+      metalness: 0.3,
       transparent: true,
-      opacity: 0.75,
-      shininess: 100,
-      specular: 0x4FC3F7,
+      opacity: 0.82,
     });
     const pond = new THREE.Mesh(pondGeo, pondMat);
-    pond.position.set(maxX - 12, 0.1, maxZ - 10);
-    pond.userData = { type: 'water_source', name: 'Rainwater Harvesting Pond', capacity: '500,000 L' };
+    pond.position.set(x, 0.22, z);
+    pond.userData = userData;
     this.groups.water.add(pond);
 
-    // Pond rim
-    const rimGeo = new THREE.TorusGeometry(6, 0.3, 8, 32);
+    // Earthen berm rim
+    const rimGeo = new THREE.RingGeometry(radius, radius + 2.0, 24);
     rimGeo.rotateX(-Math.PI / 2);
-    const rim = new THREE.Mesh(rimGeo, new THREE.MeshLambertMaterial({ color: 0x795548 }));
-    rim.position.copy(pond.position);
-    rim.position.y = 0.3;
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.95 });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.position.set(x, 0.23, z);
     this.groups.water.add(rim);
 
-    // Animated water surface
+    // Animated water shimmer
     this.animatedObjects.push({
-      type: 'water',
+      type: 'waterWave',
       mesh: pond,
-      baseY: 0.1,
+      baseY: 0.22,
+      speed: 1.5,
     });
 
-    // Irrigation channels from pond to fields
-    const midX = (this.farmBounds.minX + this.farmBounds.maxX) / 2;
-    const midZ = (this.farmBounds.minZ + this.farmBounds.maxZ) / 2;
-
-    const channelPoints = [
-      [pond.position.x, pond.position.z],
-      [midX + 10, maxZ - 10],
-      [midX + 10, midZ],
-      [midX - 15, midZ],
-    ];
-
-    for (let i = 0; i < channelPoints.length - 1; i++) {
-      const [x1, z1] = channelPoints[i];
-      const [x2, z2] = channelPoints[i + 1];
-      const cGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(x1, 0.15, z1),
-        new THREE.Vector3(x2, 0.15, z2),
-      ]);
-      const channel = new THREE.Line(cGeo, new THREE.LineBasicMaterial({
-        color: COLORS.water, linewidth: 2, transparent: true, opacity: 0.6,
-      }));
-      this.groups.water.add(channel);
-    }
+    const label = this._createLabel('💧 Rainwater Harvesting Pond', new THREE.Vector3(x, 2.5, z), '#38bdf8', '0.72rem', true);
+    this.groups.labels.add(label);
   }
 
   // ─────────────────────────────────────────────────────────────
-  // BUILDINGS
+  // ARCHITECTURAL 3D FARM BUILDINGS
   // ─────────────────────────────────────────────────────────────
   _buildBuildings(spatialObjects) {
     const { minX, minZ, maxX, maxZ } = this.farmBounds;
 
-    // 1. Farm Machinery Shed
-    this._createBuilding(
-      maxX - 5, 0, minZ + 8,
-      12, 5, 8,
-      COLORS.buildingWall, COLORS.buildingRoof,
-      { type: 'building', name: 'Farm Machinery Shed & Bio-Storage', area_sqm: 300, status: 'operational' }
+    const customBuildings = (spatialObjects || []).filter(o => ['building', 'greenhouse', 'silo', 'coldstorage'].includes(o.type));
+    if (customBuildings.length > 0) {
+      customBuildings.forEach(b => {
+        const x = b.position?.x ?? (b.x ?? 0);
+        const y = b.position?.y ?? (b.y ?? 0);
+        const z = b.position?.z ?? (b.z ?? 0);
+        const w = b.width || 12;
+        const h = b.height || 5;
+        const d = b.depth || 8;
+        if (b.type === 'greenhouse' || b.subtype === 'polyhouse') {
+          this._createPolyhouse(x, y, z, w, h, d, b);
+        } else if (b.type === 'silo' || b.subtype === 'silo') {
+          this._createGrainSilo(x, y, z, (w || 6) / 2, h || 10, b);
+        } else if (b.type === 'coldstorage' || b.subtype === 'coldstorage') {
+          this._createColdStorage(x, y, z, w || 14, h || 6, d || 10, b);
+        } else if (b.name?.toLowerCase().includes('office') || b.subtype === 'office') {
+          this._createFarmOffice(x, y, z, w || 8, h || 4.2, d || 6, b);
+        } else {
+          this._createMachineryShed(x, y, z, w, h, d, b);
+        }
+      });
+      return;
+    }
+
+    // Default canonical 4 agricultural structures
+    // 1. Farm Machinery Shed & Bio-Storage
+    this._createMachineryShed(
+      maxX - 6, 0, minZ + 8,
+      13, 5.2, 9,
+      { type: 'building', subtype: 'shed', name: 'Farm Machinery Shed & Bio-Storage', area_sqm: 320, status: 'operational' }
     );
 
-    // 2. Nursery Polyhouse (transparent greenhouse)
+    // 2. Climate-Controlled Nursery Polyhouse with visible internal grow beds
     this._createPolyhouse(
-      minX + 15, 0, maxZ - 8,
-      10, 4, 6,
-      { type: 'greenhouse', name: 'Climate-Controlled Nursery Polyhouse', area_sqm: 450, status: 'active' }
+      minX + 16, 0, maxZ - 8,
+      11, 4.4, 7,
+      { type: 'greenhouse', subtype: 'polyhouse', name: 'Climate-Controlled Nursery Polyhouse', area_sqm: 450, status: 'active' }
     );
 
-    // 3. Small office / farmhouse
-    this._createBuilding(
+    // 3. Modern Timber & Glass Farm Office with solar array
+    this._createFarmOffice(
       maxX + 8, 0, 0,
-      6, 4, 5,
-      0xFFF8E1, 0xD7CCC8,
-      { type: 'building', name: 'Farm Office & Control Room', status: 'operational' }
+      8.5, 4.2, 6.5,
+      { type: 'building', subtype: 'office', name: 'Farm Office & Telemetry Control Room', status: 'operational' }
+    );
+
+    // 4. Corrugated Galvanized Grain Silo
+    this._createGrainSilo(
+      maxX - 18, 0, minZ + 8,
+      2.6, 9.5,
+      { type: 'silo', subtype: 'silo', name: 'Galvanized Grain Silo & Buffer Reserve', capacity_tons: 150, status: 'operational' }
     );
   }
 
-  _createBuilding(x, y, z, width, height, depth, wallColor, roofColor, userData) {
+  // 1. Farm Machinery Shed (Corrugated steel, trusses, plinth, rollup door, lights)
+  _createMachineryShed(x, y, z, width, height, depth, userData) {
     const group = new THREE.Group();
+    group.position.set(x, y, z);
 
-    // Walls
+    // Concrete foundation plinth
+    const plinthGeo = new THREE.BoxGeometry(width + 0.8, 0.4, depth + 0.8);
+    const plinthMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
+    const plinth = new THREE.Mesh(plinthGeo, plinthMat);
+    plinth.position.y = 0.2;
+    plinth.receiveShadow = true;
+    group.add(plinth);
+
+    // Corrugated shed walls
     const wallGeo = new THREE.BoxGeometry(width, height, depth);
-    const wallMat = new THREE.MeshLambertMaterial({ color: wallColor });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.6, metalness: 0.25 });
     const walls = new THREE.Mesh(wallGeo, wallMat);
-    walls.position.set(0, height / 2, 0);
+    walls.position.y = 0.4 + height / 2;
     walls.castShadow = true;
     walls.receiveShadow = true;
     group.add(walls);
 
-    // Sloped roof
-    const roofGeo = new THREE.ConeGeometry(Math.max(width, depth) * 0.6, 2.5, 4);
+    // Pitched gabled roof
+    const roofApex = height + 0.4 + 2.2;
+    const roofPitch = 0.6;
+    const roofGeo = new THREE.ConeGeometry(Math.max(width, depth) * 0.72, 2.5, 4);
     roofGeo.rotateY(Math.PI / 4);
-    const roofMat = new THREE.MeshLambertMaterial({ color: roofColor });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.5 });
     const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.set(0, height + 1.25, 0);
+    roof.position.y = height + 0.4 + 1.25;
     roof.castShadow = true;
     group.add(roof);
 
-    // Door
-    const doorGeo = new THREE.PlaneGeometry(1.5, 3);
-    const doorMat = new THREE.MeshLambertMaterial({ color: 0x5D4037, side: THREE.DoubleSide });
+    // Industrial rolling garage door
+    const doorGeo = new THREE.PlaneGeometry(width * 0.4, height * 0.75);
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.35, metalness: 0.6, side: THREE.DoubleSide });
     const door = new THREE.Mesh(doorGeo, doorMat);
-    door.position.set(0, 1.5, depth / 2 + 0.02);
+    door.position.set(0, 0.4 + (height * 0.75) / 2, depth / 2 + 0.04);
     group.add(door);
 
+    // Equipment bay opening (dark interior)
+    const bayGeo = new THREE.PlaneGeometry(width * 0.25, height * 0.65);
+    const bayMat = new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
+    const bay = new THREE.Mesh(bayGeo, bayMat);
+    bay.position.set(-width * 0.28, 0.4 + (height * 0.65) / 2, depth / 2 + 0.03);
+    group.add(bay);
+
+    // Yellow safety hazard striping on doorstep
+    const stripeGeo = new THREE.PlaneGeometry(width * 0.8, 0.25);
+    stripeGeo.rotateX(-Math.PI / 2);
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
+    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+    stripe.position.set(0, 0.42, depth / 2 + 0.4);
+    group.add(stripe);
+
+    // Exterior work lamps with warm downlight
+    const lampGeo = new THREE.BoxGeometry(0.3, 0.15, 0.3);
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const lamp = new THREE.Mesh(lampGeo, lampMat);
+    lamp.position.set(0, height + 0.1, depth / 2 + 0.2);
+    group.add(lamp);
+
+    const workLight = new THREE.PointLight(0xfef08a, 1.2, 12);
+    workLight.position.set(0, height, depth / 2 + 0.6);
+    group.add(workLight);
+
+    group.userData = userData;
+    walls.userData = userData;
+    door.userData = userData;
+    this.groups.buildings.add(group);
+
+    const label = this._createLabel(userData.name.split(' ')[0] + ' Shed', new THREE.Vector3(x, height + 3.5, z), '#e2e8f0', '0.72rem', true);
+    this.groups.labels.add(label);
+    return group;
+  }
+
+  // 2. Modern Timber & Glass Farm Office (wood cladding, corner glass, solar rooftop array, entrance portico)
+  _createFarmOffice(x, y, z, width, height, depth, userData) {
+    const group = new THREE.Group();
     group.position.set(x, y, z);
+
+    // Timber-clad wall structure
+    const wallGeo = new THREE.BoxGeometry(width, height, depth);
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.75, metalness: 0.1 }); // warm cedar
+    const walls = new THREE.Mesh(wallGeo, wallMat);
+    walls.position.y = height / 2;
+    walls.castShadow = true;
+    walls.receiveShadow = true;
+    group.add(walls);
+
+    // Panoramic floor-to-ceiling corner glass windows
+    const glassGeo = new THREE.BoxGeometry(width * 0.45, height * 0.7, 0.08);
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x93c5fd,
+      roughness: 0.1,
+      metalness: 0.9,
+      transparent: true,
+      opacity: 0.65,
+    });
+    const frontGlass = new THREE.Mesh(glassGeo, glassMat);
+    frontGlass.position.set(width * 0.22, height * 0.45, depth / 2 + 0.03);
+    group.add(frontGlass);
+
+    const sideGlassGeo = new THREE.BoxGeometry(0.08, height * 0.7, depth * 0.45);
+    const sideGlass = new THREE.Mesh(sideGlassGeo, glassMat);
+    sideGlass.position.set(width / 2 + 0.03, height * 0.45, depth * 0.22);
+    group.add(sideGlass);
+
+    // Entrance Portico / Awning
+    const awningGeo = new THREE.BoxGeometry(width * 0.35, 0.15, 1.8);
+    const awningMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
+    const awning = new THREE.Mesh(awningGeo, awningMat);
+    awning.position.set(-width * 0.22, height * 0.75, depth / 2 + 0.9);
+    group.add(awning);
+
+    // Slender portico pillars
+    const pillarGeo = new THREE.CylinderGeometry(0.05, 0.05, height * 0.75, 6);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+    const p1 = new THREE.Mesh(pillarGeo, pillarMat);
+    p1.position.set(-width * 0.34, (height * 0.75) / 2, depth / 2 + 1.6);
+    const p2 = new THREE.Mesh(pillarGeo, pillarMat);
+    p2.position.set(-width * 0.1, (height * 0.75) / 2, depth / 2 + 1.6);
+    group.add(p1, p2);
+
+    // Office entry door
+    const doorGeo = new THREE.PlaneGeometry(1.4, 2.5);
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
+    const door = new THREE.Mesh(doorGeo, doorMat);
+    door.position.set(-width * 0.22, 1.25, depth / 2 + 0.04);
+    group.add(door);
+
+    // Rooftop Solar Array (Grid of dark blue photovoltaic panels angled at 25°)
+    const solarGroup = new THREE.Group();
+    solarGroup.position.set(0, height + 0.15, 0);
+    solarGroup.rotation.x = -0.35; // 20 deg tilt towards south
+
+    const panelGeo = new THREE.BoxGeometry(width * 0.75, 0.08, depth * 0.65);
+    const panelMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.2, metalness: 0.85 });
+    const solarPanel = new THREE.Mesh(panelGeo, panelMat);
+    solarGroup.add(solarPanel);
+
+    // Solar panel silver grid lines
+    const gridMat = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.7 });
+    for (let s = -2; s <= 2; s++) {
+      const gGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(s * 1.0, 0.05, -depth * 0.3),
+        new THREE.Vector3(s * 1.0, 0.05, depth * 0.3),
+      ]);
+      solarGroup.add(new THREE.Line(gGeo, gridMat));
+    }
+    group.add(solarGroup);
+
     group.userData = userData;
     walls.userData = userData;
     this.groups.buildings.add(group);
 
-    // Label
-    const label = this._createLabel(userData.name.split(' ')[0] + ' ' + (userData.name.split(' ')[1] || ''), 
-      new THREE.Vector3(x, height + 4, z), '#e2e8f0', '0.7rem');
+    const label = this._createLabel('🏢 Farm Office & Lab', new THREE.Vector3(x, height + 2.8, z), '#f59e0b', '0.72rem', true);
     this.groups.labels.add(label);
+    return group;
   }
 
+  // 3. Multi-Bay Polyhouse / Greenhouse with internal raised grow beds
   _createPolyhouse(x, y, z, width, height, depth, userData) {
     const group = new THREE.Group();
+    group.position.set(x, y, z);
 
-    // Frame
-    const frameMat = new THREE.MeshLambertMaterial({ color: COLORS.polyhouseFrame });
-    // Arch ribs
-    const archCount = 5;
-    for (let i = 0; i < archCount; i++) {
-      const t = i / (archCount - 1);
-      const az = -depth / 2 + t * depth;
-      const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(-width / 2, 0, az),
-        new THREE.Vector3(0, height, az),
-        new THREE.Vector3(width / 2, 0, az)
-      );
-      const tubeGeo = new THREE.TubeGeometry(curve, 16, 0.08, 4, false);
-      const tube = new THREE.Mesh(tubeGeo, frameMat);
-      group.add(tube);
-    }
-
-    // Cover (semi-transparent)
-    const coverGeo = new THREE.BoxGeometry(width, height * 0.7, depth);
-    const coverMat = new THREE.MeshPhongMaterial({
+    const frameMat = new THREE.MeshStandardMaterial({ color: COLORS.polyhouseFrame, metalness: 0.7, roughness: 0.4 });
+    const coverMat = new THREE.MeshStandardMaterial({
       color: COLORS.polyhouse,
       transparent: true,
-      opacity: 0.3,
-      shininess: 80,
-      side: THREE.DoubleSide,
+      opacity: 0.42,
+      roughness: 0.2,
+      metalness: 0.1,
+      side: THREE.DoubleSide
     });
-    const cover = new THREE.Mesh(coverGeo, coverMat);
-    cover.position.set(0, height * 0.4, 0);
-    group.add(cover);
 
-    group.position.set(x, y, z);
+    // Multi-bay tubular galvanized arches
+    const bayCount = 2;
+    const subBayW = width / bayCount;
+    const ribCount = 6;
+
+    for (let b = 0; b < bayCount; b++) {
+      const bayCenterX = -width / 2 + subBayW / 2 + b * subBayW;
+
+      for (let i = 0; i < ribCount; i++) {
+        const t = i / (ribCount - 1);
+        const az = -depth / 2 + t * depth;
+        const curve = new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(bayCenterX - subBayW / 2, 0, az),
+          new THREE.Vector3(bayCenterX, height, az),
+          new THREE.Vector3(bayCenterX + subBayW / 2, 0, az)
+        );
+        const tubeGeo = new THREE.TubeGeometry(curve, 16, 0.07, 4, false);
+        const tube = new THREE.Mesh(tubeGeo, frameMat);
+        group.add(tube);
+      }
+
+      // Polycarbonate curved skin for each bay
+      const skinGeo = new THREE.CylinderGeometry(subBayW / 2, subBayW / 2, depth, 16, 1, true, 0, Math.PI);
+      skinGeo.rotateZ(Math.PI / 2);
+      skinGeo.rotateX(Math.PI / 2);
+      const skin = new THREE.Mesh(skinGeo, coverMat);
+      skin.position.set(bayCenterX, height * 0.45, 0);
+      skin.scale.set(1, height / (subBayW / 2) * 0.9, 1);
+      group.add(skin);
+    }
+
+    // Gable end-walls
+    const endWallGeo = new THREE.PlaneGeometry(width, height * 0.8);
+    const endFront = new THREE.Mesh(endWallGeo, coverMat);
+    endFront.position.set(0, height * 0.4, depth / 2);
+    const endBack = new THREE.Mesh(endWallGeo, coverMat);
+    endBack.position.set(0, height * 0.4, -depth / 2);
+    group.add(endFront, endBack);
+
+    // ── Internal Raised Grow Beds with Tiny Saplings Visible Inside ──
+    const bedCount = 3;
+    const bedW = width * 0.24;
+    const bedD = depth * 0.82;
+    const bedMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
+    const plantMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.5 });
+    const sproutGeo = new THREE.ConeGeometry(0.1, 0.28, 4);
+
+    for (let bd = 0; bd < bedCount; bd++) {
+      const bx = -width * 0.32 + bd * (width * 0.32);
+      const bed = new THREE.Mesh(new THREE.BoxGeometry(bedW, 0.3, bedD), bedMat);
+      bed.position.set(bx, 0.15, 0);
+      group.add(bed);
+
+      // Micro plants in bed
+      for (let pz = -bedD / 2 + 0.6; pz < bedD / 2; pz += 1.0) {
+        for (let px = -bedW / 4; px <= bedW / 4; px += bedW / 2) {
+          const sprout = new THREE.Mesh(sproutGeo, plantMat);
+          sprout.position.set(bx + px, 0.38, pz);
+          group.add(sprout);
+        }
+      }
+    }
+
     group.userData = userData;
-    cover.userData = userData;
     this.groups.buildings.add(group);
 
-    const label = this._createLabel('Polyhouse', new THREE.Vector3(x, height + 2, z), '#80CBC4', '0.7rem');
+    const label = this._createLabel('🌿 Nursery Polyhouse', new THREE.Vector3(x, height + 2.5, z), '#80cbc4', '0.72rem', true);
     this.groups.labels.add(label);
+    return group;
+  }
+
+  // 4. Corrugated Galvanized Grain Silo (inspection ladder, conical cap, discharge chute)
+  _createGrainSilo(x, y, z, radius = 2.8, height = 10, userData = {}) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+
+    // Concrete base plinth
+    const plinth = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius * 1.15, radius * 1.15, 0.5, 24),
+      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 })
+    );
+    plinth.position.y = 0.25;
+    group.add(plinth);
+
+    // Corrugated galvanized cylindrical tank
+    const tankGeo = new THREE.CylinderGeometry(radius, radius, height, 24);
+    const tankMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.35, metalness: 0.85 });
+    const tank = new THREE.Mesh(tankGeo, tankMat);
+    tank.position.y = 0.5 + height / 2;
+    tank.castShadow = true;
+    tank.receiveShadow = true;
+    group.add(tank);
+
+    // Horizontal reinforcement seam rings
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 });
+    for (let r = 1; r < height; r += 1.6) {
+      const ringGeo = new THREE.TorusGeometry(radius + 0.02, 0.04, 6, 24);
+      ringGeo.rotateX(Math.PI / 2);
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.y = 0.5 + r;
+      group.add(ring);
+    }
+
+    // Conical galvanized roof cap
+    const capGeo = new THREE.ConeGeometry(radius * 1.08, height * 0.28, 24);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.8 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.y = 0.5 + height + (height * 0.28) / 2;
+    cap.castShadow = true;
+    group.add(cap);
+
+    // Vertical inspection ladder running up side
+    const ladderMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9 });
+    const ladderH = height + (height * 0.28) * 0.5;
+    for (let r = 0.4; r < ladderH; r += 0.4) {
+      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 4), ladderMat);
+      rung.position.set(radius + 0.2, 0.5 + r, 0);
+      group.add(rung);
+    }
+
+    // Discharge auger hopper chute at base
+    const chuteGeo = new THREE.CylinderGeometry(0.18, 0.18, 2.5, 8);
+    chuteGeo.rotateZ(0.5);
+    const chuteMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 });
+    const chute = new THREE.Mesh(chuteGeo, chuteMat);
+    chute.position.set(radius + 0.8, 1.2, 0);
+    group.add(chute);
+
+    group.userData = { type: 'silo', name: 'Grain Silo', ...userData };
+    tank.userData = group.userData;
+    this.groups.buildings.add(group);
+
+    const label = this._createLabel('🌾 Grain Silo', new THREE.Vector3(x, height + 3.2, z), '#f59e0b', '0.72rem', true);
+    this.groups.labels.add(label);
+    return group;
+  }
+
+  // 5. Insulated Cold Storage Facility (loading dock, refrigeration condenser with fan)
+  _createColdStorage(x, y, z, width = 14, height = 6, depth = 10, userData = {}) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+
+    // Concrete loading dock base
+    const dockGeo = new THREE.BoxGeometry(width + 1.2, 1.0, depth + 1.2);
+    const dockMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+    const dock = new THREE.Mesh(dockGeo, dockMat);
+    dock.position.y = 0.5;
+    group.add(dock);
+
+    // Insulated sandwich panel building body
+    const bodyGeo = new THREE.BoxGeometry(width, height, depth);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.1 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 1.0 + height / 2;
+    body.castShadow = true;
+    group.add(body);
+
+    // Loading dock rolling door with rubber bumper pads
+    const doorGeo = new THREE.PlaneGeometry(width * 0.35, height * 0.7);
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4, metalness: 0.4, side: THREE.DoubleSide });
+    const door = new THREE.Mesh(doorGeo, doorMat);
+    door.position.set(0, 1.0 + (height * 0.7) / 2, depth / 2 + 0.04);
+    group.add(door);
+
+    // Rooftop refrigeration condenser compressor rack
+    const hvacGeo = new THREE.BoxGeometry(2.4, 1.2, 1.8);
+    const hvacMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+    const hvac = new THREE.Mesh(hvacGeo, hvacMat);
+    hvac.position.set(0, 1.0 + height + 0.6, 0);
+    group.add(hvac);
+
+    // Rotating condenser fan
+    const fanGeo = new THREE.BoxGeometry(0.8, 0.05, 0.15);
+    const fanMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+    const fan = new THREE.Mesh(fanGeo, fanMat);
+    fan.position.set(0, 1.0 + height + 1.22, 0);
+    group.add(fan);
+
+    this.animatedObjects.push({
+      type: 'spin',
+      mesh: fan,
+      axis: 'y',
+      speed: 15.0
+    });
+
+    group.userData = { type: 'coldstorage', name: 'Insulated Cold Storage', ...userData };
+    this.groups.buildings.add(group);
+
+    const label = this._createLabel('❄️ Cold Storage', new THREE.Vector3(x, height + 3.8, z), '#38bdf8', '0.72rem', true);
+    this.groups.labels.add(label);
+    return group;
   }
 
   // ─────────────────────────────────────────────────────────────
-  // INFRASTRUCTURE (borewell, weather station, sensors, cameras)
+  // INFRASTRUCTURE (Borewell, Weather Station, Sensors, Cameras)
   // ─────────────────────────────────────────────────────────────
   _buildInfrastructure(spatialObjects) {
     const { minX, maxX, minZ, maxZ } = this.farmBounds;
-    const midX = (minX + maxX) / 2;
 
-    // 1. Solar Borewell Tower
-    this._createBorewell(minX + 8, 0, minZ + 12);
+    this._createBorewell(maxX - 8, 0, maxZ - 18);
+    this._createWeatherStation(0, 0, minZ - 4);
 
-    // 2. Weather Station
-    this._createWeatherStation(maxX - 15, 0, minZ + 5);
+    this._createSensorNode(minX + 10, minZ + 10, 'Soil Probe Alpha');
+    this._createSensorNode(maxX - 10, minZ + 10, 'Soil Probe Beta');
+    this._createSensorNode(minX + 10, maxZ - 10, 'Soil Probe Gamma');
+    this._createSensorNode(maxX - 10, maxZ - 10, 'Soil Probe Delta');
 
-    // 3. IoT Sensor nodes (4 corners + center)
-    const sensorPositions = [
-      [minX + 10, minZ + 10],
-      [maxX - 10, minZ + 10],
-      [minX + 10, maxZ - 10],
-      [maxX - 10, maxZ - 10],
-      [midX, 0],
-    ];
-    sensorPositions.forEach((pos, i) => {
-      this._createSensorNode(pos[0], 0, pos[1], `Sensor-${i + 1}`);
-    });
-
-    // 4. Camera towers (2 positions)
-    this._createCameraTower(minX + 5, 0, maxZ - 5, 'CAM-NORTH-01');
-    this._createCameraTower(maxX - 5, 0, minZ + 5, 'CAM-SOUTH-01');
+    this._createCameraTower(minX - 2, minZ - 2, 'PTZ-Camera-01');
+    this._createCameraTower(maxX + 2, minZ - 2, 'PTZ-Camera-02');
+    this._createCameraTower(0, maxZ + 2, 'PTZ-Camera-03');
   }
 
   _createBorewell(x, y, z) {
     const group = new THREE.Group();
+    const slabGeo = new THREE.CylinderGeometry(2, 2.2, 0.4, 12);
+    const slabMat = new THREE.MeshStandardMaterial({ color: 0x78909c, roughness: 0.8 });
+    const slab = new THREE.Mesh(slabGeo, slabMat);
+    slab.position.y = 0.2;
+    group.add(slab);
 
-    // Tower base
-    const baseGeo = new THREE.CylinderGeometry(1.2, 1.5, 0.5, 8);
-    const baseMat = new THREE.MeshLambertMaterial({ color: 0x9E9E9E });
-    const base = new THREE.Mesh(baseGeo, baseMat);
-    base.position.y = 0.25;
-    group.add(base);
+    const pumpGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
+    const pumpMat = new THREE.MeshStandardMaterial({ color: COLORS.borewell, metalness: 0.7 });
+    const pump = new THREE.Mesh(pumpGeo, pumpMat);
+    pump.position.y = 0.8;
+    group.add(pump);
 
-    // Pipe
-    const pipeGeo = new THREE.CylinderGeometry(0.3, 0.3, 6, 8);
-    const pipeMat = new THREE.MeshLambertMaterial({ color: COLORS.borewell });
-    const pipe = new THREE.Mesh(pipeGeo, pipeMat);
-    pipe.position.y = 3.5;
-    pipe.castShadow = true;
+    const pipeGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 6);
+    pipeGeo.rotateZ(Math.PI / 4);
+    const pipe = new THREE.Mesh(pipeGeo, pumpMat);
+    pipe.position.set(0.6, 1.2, 0);
     group.add(pipe);
 
-    // Solar panel
-    const panelGeo = new THREE.BoxGeometry(3, 0.1, 2);
-    const panelMat = new THREE.MeshPhongMaterial({ color: 0x1A237E, shininess: 80, specular: 0x4FC3F7 });
-    const panel = new THREE.Mesh(panelGeo, panelMat);
-    panel.position.set(0, 5.5, 0);
-    panel.rotation.x = -0.4;
-    panel.castShadow = true;
-    group.add(panel);
-
-    // Pump indicator (animated)
-    const pumpGeo = new THREE.SphereGeometry(0.4, 8, 8);
-    const pumpMat = new THREE.MeshPhongMaterial({ color: COLORS.emerald, emissive: COLORS.emerald, emissiveIntensity: 0.3 });
-    const pump = new THREE.Mesh(pumpGeo, pumpMat);
-    pump.position.set(0, 1, 1);
-    group.add(pump);
-    this.animatedObjects.push({ type: 'blink', mesh: pump, speed: 2.0 });
-
     group.position.set(x, y, z);
-    group.userData = { type: 'water_source', name: 'Solar Submersible Borewell (75m)', capacity_lph: 18000, status: 'active' };
+    group.userData = { type: 'water_source', name: 'Solar Borewell #1', capacity_lph: 15000, status: 'pumping' };
     this.groups.infrastructure.add(group);
 
-    const label = this._createLabel('Borewell', new THREE.Vector3(x, 7, z), '#00BCD4', '0.65rem');
+    const label = this._createLabel('⚡ Solar Borewell', new THREE.Vector3(x, 2.8, z), '#607D8B', '0.68rem', true);
     this.groups.labels.add(label);
   }
 
   _createWeatherStation(x, y, z) {
     const group = new THREE.Group();
+    const mastGeo = new THREE.CylinderGeometry(0.06, 0.08, 4.5, 6);
+    const mastMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.8 });
+    const mast = new THREE.Mesh(mastGeo, mastMat);
+    mast.position.y = 2.25;
+    group.add(mast);
 
-    // Tower pole
-    const poleGeo = new THREE.CylinderGeometry(0.15, 0.2, 8, 6);
-    const poleMat = new THREE.MeshLambertMaterial({ color: 0xCFD8DC });
-    const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.y = 4;
-    pole.castShadow = true;
-    group.add(pole);
+    const crossGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.2, 4);
+    crossGeo.rotateZ(Math.PI / 2);
+    const cross = new THREE.Mesh(crossGeo, mastMat);
+    cross.position.y = 4.2;
+    group.add(cross);
 
-    // Anemometer (spinning cups)
-    const anemGroup = new THREE.Group();
-    const cupGeo = new THREE.SphereGeometry(0.25, 6, 6, 0, Math.PI);
-    const cupMat = new THREE.MeshLambertMaterial({ color: 0xB0BEC5 });
-    for (let i = 0; i < 3; i++) {
-      const angle = (i / 3) * Math.PI * 2;
-      const arm = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 1.5, 4),
-        poleMat
-      );
-      arm.rotation.z = Math.PI / 2;
-      arm.position.set(Math.cos(angle) * 0.75, 0, Math.sin(angle) * 0.75);
-      anemGroup.add(arm);
-
+    const anemometerGroup = new THREE.Group();
+    anemometerGroup.position.set(0.6, 4.3, 0);
+    const cupGeo = new THREE.SphereGeometry(0.08, 4, 4);
+    const cupMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (let a = 0; a < 3; a++) {
+      const angle = (a / 3) * Math.PI * 2;
       const cup = new THREE.Mesh(cupGeo, cupMat);
-      cup.position.set(Math.cos(angle) * 1.5, 0, Math.sin(angle) * 1.5);
-      cup.rotation.y = angle;
-      anemGroup.add(cup);
+      cup.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
+      anemometerGroup.add(cup);
     }
-    anemGroup.position.y = 8;
-    group.add(anemGroup);
-    this.animatedObjects.push({ type: 'spin', mesh: anemGroup, speed: 1.5, axis: 'y' });
-
-    // Sensor box
-    const boxGeo = new THREE.BoxGeometry(0.8, 0.5, 0.8);
-    const boxMat = new THREE.MeshLambertMaterial({ color: 0xECEFF1 });
-    const box = new THREE.Mesh(boxGeo, boxMat);
-    box.position.y = 6;
-    group.add(box);
+    group.add(anemometerGroup);
+    this.animatedObjects.push({ type: 'spin', mesh: anemometerGroup, axis: 'y', speed: 4.0 });
 
     group.position.set(x, y, z);
-    group.userData = { type: 'sensor', name: 'LoRa Microclimate Weather Station', status: 'active' };
+    group.userData = { type: 'sensor', name: 'Agri-Weather Microstation', status: 'online' };
     this.groups.infrastructure.add(group);
 
-    const label = this._createLabel('Weather Stn', new THREE.Vector3(x, 10, z), '#FFF176', '0.65rem');
+    const label = this._createLabel('🌤️ Weather Station', new THREE.Vector3(x, 5.2, z), '#38BDF8', '0.68rem', true);
     this.groups.labels.add(label);
   }
 
-  _createSensorNode(x, y, z, name) {
+  _createSensorNode(x, z, name) {
     const group = new THREE.Group();
-
-    // Stake
-    const stakeGeo = new THREE.CylinderGeometry(0.08, 0.1, 1.5, 4);
-    const stake = new THREE.Mesh(stakeGeo, new THREE.MeshLambertMaterial({ color: 0x78909C }));
-    stake.position.y = 0.75;
+    const stake = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.8, 4),
+      new THREE.MeshStandardMaterial({ color: 0x78909c })
+    );
+    stake.position.y = 0.4;
     group.add(stake);
 
-    // Sensor head
-    const headGeo = new THREE.SphereGeometry(0.2, 8, 8);
-    const headMat = new THREE.MeshPhongMaterial({
-      color: COLORS.sensor,
-      emissive: COLORS.sensor,
-      emissiveIntensity: 0.2,
-    });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.6;
+    const headMat = new THREE.MeshStandardMaterial({ color: COLORS.sensor, emissive: COLORS.sensorBlink, emissiveIntensity: 0.3 });
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.15), headMat);
+    head.position.y = 0.85;
     group.add(head);
 
-    this.animatedObjects.push({ type: 'blink', mesh: head, speed: 1.0 + Math.random() });
-
-    group.position.set(x, y, z);
-    group.userData = { type: 'sensor', name: `IoT ${name}`, status: 'online' };
+    group.position.set(x, 0, z);
+    group.userData = { type: 'sensor', name: name, telemetry: { soil_moisture_pct: 34.2, temp_c: 24.8 }, status: 'transmitting' };
     this.groups.infrastructure.add(group);
+
+    this.animatedObjects.push({ type: 'blink', mesh: head, speed: 1.0 });
   }
 
-  _createCameraTower(x, y, z, name) {
+  _createCameraTower(x, z, name) {
     const group = new THREE.Group();
+    const towerGeo = new THREE.CylinderGeometry(0.08, 0.15, 6, 4);
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x607d8b, metalness: 0.8 });
+    const tower = new THREE.Mesh(towerGeo, towerMat);
+    tower.position.y = 3;
+    group.add(tower);
 
-    // Pole
-    const poleGeo = new THREE.CylinderGeometry(0.12, 0.15, 5, 6);
-    const pole = new THREE.Mesh(poleGeo, new THREE.MeshLambertMaterial({ color: 0x90A4AE }));
-    pole.position.y = 2.5;
-    pole.castShadow = true;
-    group.add(pole);
+    const camBox = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.25), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    camBox.position.set(0, 6, 0.2);
+    group.add(camBox);
 
-    // Camera housing
-    const camGeo = new THREE.BoxGeometry(0.6, 0.4, 0.8);
-    const camMat = new THREE.MeshLambertMaterial({ color: 0x37474F });
-    const cam = new THREE.Mesh(camGeo, camMat);
-    cam.position.set(0, 5.2, 0.3);
-    group.add(cam);
-
-    // Lens
-    const lensGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.3, 8);
-    const lensMat = new THREE.MeshPhongMaterial({ color: 0x263238, shininess: 100, specular: 0x4FC3F7 });
-    const lens = new THREE.Mesh(lensGeo, lensMat);
-    lens.rotation.x = Math.PI / 2;
-    lens.position.set(0, 5.2, 0.75);
-    group.add(lens);
-
-    // LED
-    const ledGeo = new THREE.SphereGeometry(0.08, 6, 6);
-    const ledMat = new THREE.MeshPhongMaterial({ color: 0xF44336, emissive: 0xF44336, emissiveIntensity: 0.8 });
-    const led = new THREE.Mesh(ledGeo, ledMat);
-    led.position.set(0.25, 5.4, 0);
-    group.add(led);
-    this.animatedObjects.push({ type: 'blink', mesh: led, speed: 0.8 });
-
-    group.position.set(x, y, z);
-    group.userData = { type: 'camera', name: name, status: 'recording', fov: '120°' };
+    group.position.set(x, 0, z);
+    group.userData = { type: 'camera', name: name, fov: '120° Wide-angle Optical', status: 'streaming' };
     this.groups.infrastructure.add(group);
   }
 
   // ─────────────────────────────────────────────────────────────
-  // CROPS (Instanced Mesh with 6 growth stages)
+  // BOTANICAL MULTI-STAGE CROP MODELS & WIND SWAY
   // ─────────────────────────────────────────────────────────────
   _buildCrops(plantingGrid, cropPlan) {
+    const rawCropName = cropPlan?.crop_name || cropPlan?.crop_type || plantingGrid?.crop || this.cropName || 'Wheat';
+    const cropKey = normalizeCropKey(rawCropName);
+
+    if (cropKey === 'pisciculture' || this.isAquaculture || String(rawCropName).toLowerCase().includes('aqua')) {
+      this._buildAquacultureFoliage();
+      return;
+    }
+
     const { minX, maxX, minZ, maxZ } = this.farmBounds;
     const farmW = maxX - minX - 8;
     const farmH = maxZ - minZ - 8;
 
     const totalRows = plantingGrid?.total_rows || 24;
     const plantsPerRow = plantingGrid?.plants_per_row || 50;
-    const totalPlants = Math.min(totalRows * plantsPerRow, 2400); // Cap for performance
-    const healthyPct = (plantingGrid?.healthy_plants || 1180) / (plantingGrid?.total_plants || 1200);
-    const stressedPct = (plantingGrid?.stressed_plants || 20) / (plantingGrid?.total_plants || 1200);
+    const totalPlants = Math.min(totalRows * plantsPerRow, 2400);
+    const healthyPct = (plantingGrid?.healthy_plants ?? 1180) / (plantingGrid?.total_plants || 1200);
+    const stressedPct = (plantingGrid?.stressed_plants ?? 20) / (plantingGrid?.total_plants || 1200);
 
-    // Determine current growth stage from day slider
     const currentStage = this._getCurrentStage(cropPlan);
     const stageIndex = currentStage ? currentStage.index : 2;
 
-    // Create instanced mesh based on stage
-    const { geometry, material, scale } = this._getCropGeometryForStage(stageIndex, cropPlan?.crop_type);
+    // High-fidelity 3D botanical mesh from Quaternius Crop Models
+    const geometry = getCropGeometry(cropKey, stageIndex);
+    const material = createCropMaterial();
 
     const count = totalPlants;
     const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
@@ -1040,29 +1782,38 @@ export class AgriosDigitalTwin3D {
     instancedMesh.receiveShadow = true;
 
     const dummy = new THREE.Object3D();
-    const colors = new Float32Array(count * 3);
-    const healthyColor = new THREE.Color(this._getStageColor(stageIndex));
-    const stressedColor = new THREE.Color(COLORS.cropStressed);
-    const deadColor = new THREE.Color(COLORS.cropDead);
+
+    // Environmental health tints for vertex-colored plants
+    const healthyColor = new THREE.Color(1.0, 1.0, 1.0);
+    const stressedColor = new THREE.Color(1.10, 0.85, 0.40); // Yellowing/chlorosis
+    const deadColor = new THREE.Color(0.48, 0.38, 0.28);     // Withered brown
 
     let plantIdx = 0;
     const rowSpacing = farmH / totalRows;
     const colSpacing = farmW / plantsPerRow;
 
+    // Crop-specific scale calibrations
+    let baseScale = 1.0;
+    if (cropKey === 'wheat') baseScale = 1.25;
+    else if (cropKey === 'rice') baseScale = 1.15;
+    else if (cropKey === 'tomato') baseScale = 0.95;
+    else if (cropKey === 'maize') baseScale = 1.05;
+    else if (cropKey === 'cotton') baseScale = 1.0;
+    else if (cropKey === 'potato') baseScale = 1.0;
+
     for (let r = 0; r < totalRows && plantIdx < count; r++) {
       for (let c = 0; c < plantsPerRow && plantIdx < count; c++) {
-        const x = minX + 4 + c * colSpacing + (Math.random() - 0.5) * 0.3;
-        const z = minZ + 4 + r * rowSpacing + (Math.random() - 0.5) * 0.3;
-        const y = 0.2;
+        const x = minX + 4 + c * colSpacing + (Math.random() - 0.5) * 0.35;
+        const z = minZ + 4 + r * rowSpacing + (Math.random() - 0.5) * 0.35;
+        const y = 0.15;
 
         dummy.position.set(x, y, z);
-        const s = scale * (0.85 + Math.random() * 0.3);
-        dummy.scale.set(s, s * (0.9 + Math.random() * 0.2), s);
+        const s = baseScale * (0.88 + Math.random() * 0.25);
+        dummy.scale.set(s, s * (0.92 + Math.random() * 0.16), s);
         dummy.rotation.y = Math.random() * Math.PI * 2;
         dummy.updateMatrix();
         instancedMesh.setMatrixAt(plantIdx, dummy.matrix);
 
-        // Color based on health
         const rand = Math.random();
         let color;
         if (rand > healthyPct + stressedPct) {
@@ -1071,24 +1822,94 @@ export class AgriosDigitalTwin3D {
           color = stressedColor;
         } else {
           color = healthyColor.clone();
-          // Slight variation
-          color.r += (Math.random() - 0.5) * 0.05;
-          color.g += (Math.random() - 0.5) * 0.08;
+          color.r += (Math.random() - 0.5) * 0.04;
+          color.g += (Math.random() - 0.5) * 0.04;
+          color.b += (Math.random() - 0.5) * 0.04;
         }
         instancedMesh.setColorAt(plantIdx, color);
-
         plantIdx++;
       }
     }
 
     instancedMesh.instanceMatrix.needsUpdate = true;
     if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
-    instancedMesh.userData = { type: 'crops', totalPlants: plantIdx, stage: stageIndex };
+    instancedMesh.userData = { type: 'crops', cropKey, cropName: rawCropName, totalPlants: plantIdx, stage: stageIndex };
     this.cropInstances = instancedMesh;
     this.groups.crops.add(instancedMesh);
 
-    // Wind sway animation
+    // Natural wind sway animation
     this.animatedObjects.push({ type: 'cropSway', mesh: instancedMesh, count: plantIdx });
+  }
+
+  setCrop(cropName) {
+    this.cropName = cropName;
+    if (this.sceneData) {
+      if (!this.sceneData.planting_grid) this.sceneData.planting_grid = {};
+      this.sceneData.planting_grid.crop = cropName;
+      if (this.sceneData.crop_plan) {
+        this.sceneData.crop_plan.crop_name = cropName;
+      }
+    }
+    const cropKey = normalizeCropKey(cropName);
+    this.isAquaculture = cropKey === 'pisciculture' || String(cropName).toLowerCase().includes('aqua');
+
+    // Clear and rebuild crops with new 3D graphics
+    while (this.groups.crops.children.length > 0) {
+      const child = this.groups.crops.children[0];
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+      this.groups.crops.remove(child);
+    }
+    this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'cropSway');
+    this._buildCrops(this.sceneData?.planting_grid, this.sceneData?.crop_plan);
+    console.log('[3D Twin] Switched crop 3D visuals to:', cropName, '(', cropKey, ')');
+  }
+
+  _buildAquacultureFoliage() {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const foliageGroup = new THREE.Group();
+
+    const reedGeo = new THREE.CylinderGeometry(0.03, 0.04, 1.2, 4);
+    const reedMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.6 });
+    const cattailGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 6);
+    const cattailMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+
+    for (let i = 0; i < 52; i++) {
+      const rx = (minX + 6) + Math.random() * (maxX - minX - 12);
+      const rz = (minZ + 6) + Math.random() * (maxZ - minZ - 12);
+
+      const cluster = new THREE.Group();
+      cluster.position.set(rx, 0.35, rz);
+      for (let s = 0; s < 4; s++) {
+        const stem = new THREE.Mesh(reedGeo, reedMat);
+        const ox = (Math.random() - 0.5) * 0.35;
+        const oz = (Math.random() - 0.5) * 0.35;
+        stem.position.set(ox, 0.6, oz);
+        cluster.add(stem);
+
+        if (s === 0) {
+          const cat = new THREE.Mesh(cattailGeo, cattailMat);
+          cat.position.set(ox, 1.0, oz);
+          cluster.add(cat);
+        }
+      }
+      foliageGroup.add(cluster);
+    }
+
+    // Floating water lily pads
+    const lilyGeo = new THREE.CircleGeometry(0.38, 12);
+    lilyGeo.rotateX(-Math.PI / 2);
+    const lilyMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.3 });
+
+    for (let l = 0; l < 28; l++) {
+      const lily = new THREE.Mesh(lilyGeo, lilyMat);
+      const lx = (minX + 8) + Math.random() * (maxX - minX - 16);
+      const lz = (minZ + 8) + Math.random() * (maxZ - minZ - 16);
+      lily.position.set(lx, 0.38, lz);
+      foliageGroup.add(lily);
+    }
+
+    this.groups.crops.add(foliageGroup);
   }
 
   _getCurrentStage(cropPlan) {
@@ -1103,72 +1924,12 @@ export class AgriosDigitalTwin3D {
   }
 
   _getCropGeometryForStage(stageIndex, cropType) {
-    const t = cropType?.toLowerCase() || 'wheat';
-    switch (stageIndex) {
-      case 0: // Sowing — small mounds
-        return {
-          geometry: new THREE.SphereGeometry(0.15, 4, 4),
-          material: new THREE.MeshLambertMaterial({ color: COLORS.cropSeed }),
-          scale: 1.0,
-        };
-      case 1: // Germination — tiny sprouts
-        return {
-          geometry: new THREE.ConeGeometry(0.08, 0.5, 4),
-          material: new THREE.MeshLambertMaterial({ color: COLORS.cropSprout }),
-          scale: 1.0,
-        };
-      case 2: // Vegetative — growing stalks
-        return {
-          geometry: new THREE.CylinderGeometry(0.05, 0.08, 1.2, 5),
-          material: new THREE.MeshLambertMaterial({ color: COLORS.cropVegetative }),
-          scale: t.includes('rice') ? 0.8 : (t.includes('cotton') ? 1.3 : 1.0),
-        };
-      case 3: // Flowering — flowers/heads
-        return {
-          geometry: this._createFlowerGeometry(),
-          material: new THREE.MeshLambertMaterial({ color: COLORS.cropFlowering }),
-          scale: t.includes('tomato') ? 0.9 : 1.1,
-        };
-      case 4: // Fruiting/grain fill
-        return {
-          geometry: this._createFruitGeometry(t),
-          material: new THREE.MeshLambertMaterial({ color: COLORS.cropFruiting }),
-          scale: 1.2,
-        };
-      case 5: // Harvest ready — golden
-      default:
-        return {
-          geometry: this._createHarvestGeometry(t),
-          material: new THREE.MeshLambertMaterial({ color: COLORS.cropHarvest }),
-          scale: t.includes('wheat') ? 1.4 : 1.2,
-        };
-    }
-  }
-
-  _createFlowerGeometry() {
-    // Stalk with flower head
-    const geo = new THREE.CylinderGeometry(0.04, 0.07, 1.5, 5);
-    return geo;
-  }
-
-  _createFruitGeometry(cropType) {
-    if (cropType.includes('tomato')) {
-      return new THREE.SphereGeometry(0.15, 6, 6);
-    }
-    if (cropType.includes('cotton')) {
-      return new THREE.DodecahedronGeometry(0.12, 0);
-    }
-    return new THREE.CylinderGeometry(0.06, 0.08, 1.8, 5);
-  }
-
-  _createHarvestGeometry(cropType) {
-    if (cropType.includes('wheat')) {
-      return new THREE.CylinderGeometry(0.03, 0.06, 2.0, 4);
-    }
-    if (cropType.includes('rice')) {
-      return new THREE.CylinderGeometry(0.04, 0.07, 1.4, 5);
-    }
-    return new THREE.CylinderGeometry(0.05, 0.08, 1.6, 5);
+    const cropKey = normalizeCropKey(cropType);
+    return {
+      geometry: getCropGeometry(cropKey, stageIndex),
+      material: createCropMaterial(),
+      scale: 1.0,
+    };
   }
 
   _getStageColor(stageIndex) {
@@ -1180,22 +1941,32 @@ export class AgriosDigitalTwin3D {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // WORKERS (Procedural character meshes)
+  // ARTICULATED 3D WORKERS & DYNAMIC WORKFORCE SYNC
   // ─────────────────────────────────────────────────────────────
   _buildWorkers(workers) {
     if (!workers || workers.length === 0) {
-      // Default workers
       workers = [
-        { id: 'w1', name: 'Sunita Devi', role: 'worker', position: { x: -15, z: -10 }, current_task: { title: 'Irrigating Field A', type: 'watering' }, fatigue_index: 42 },
-        { id: 'w2', name: 'Mamata Behera', role: 'worker', position: { x: 10, z: 5 }, current_task: { title: 'Spraying Pesticide', type: 'spraying' }, fatigue_index: 58 },
-        { id: 'w3', name: 'Balwinder Singh', role: 'farmer', position: { x: -5, z: 20 }, current_task: { title: 'Inspecting Crops', type: 'inspecting' }, fatigue_index: 35 },
-        { id: 'w4', name: 'Dr. Priya Sharma', role: 'agronomist', position: { x: 25, z: -15 }, current_task: { title: 'Soil Sampling', type: 'inspecting' }, fatigue_index: 28 },
+        { id: 'w1', name: 'Sunita Devi', role: 'worker', position: { x: -14, z: -10 }, current_task: { title: 'Drip Irrigation Maintenance', type: 'watering' }, fatigue_index: 38 },
+        { id: 'w2', name: 'Mamata Behera', role: 'worker', position: { x: 12, z: 6 }, current_task: { title: 'Emergency Organic Spraying', type: 'spraying' }, fatigue_index: 54 },
+        { id: 'w3', name: 'Balwinder Singh', role: 'farmer', position: { x: -6, z: 22 }, current_task: { title: 'Canopy & Soil Audit', type: 'inspecting' }, fatigue_index: 30 },
+        { id: 'w4', name: 'Dr. Priya Sharma', role: 'agronomist', position: { x: 26, z: -14 }, current_task: { title: 'NDVI Spectrometry Audit', type: 'inspecting' }, fatigue_index: 24 },
       ];
     }
 
-    workers.forEach((worker, i) => {
+    workers.forEach(worker => {
       const workerGroup = this._createWorkerCharacter(worker);
-      this.workerMeshes.push({ group: workerGroup, data: worker, animPhase: Math.random() * Math.PI * 2 });
+      this.workerMeshes.push({
+        group: workerGroup,
+        data: worker,
+        animPhase: Math.random() * Math.PI * 2,
+        torso: workerGroup._torso,
+        head: workerGroup._head,
+        leftArm: workerGroup._leftArm,
+        rightArm: workerGroup._rightArm,
+        leftLeg: workerGroup._leftLeg,
+        rightLeg: workerGroup._rightLeg,
+        sprayMist: workerGroup._sprayMist
+      });
     });
   }
 
@@ -1205,68 +1976,172 @@ export class AgriosDigitalTwin3D {
                       worker.role === 'agronomist' ? COLORS.workerAgronomist :
                       COLORS.workerLabor;
 
-    // Body (capsule = cylinder + 2 hemispheres)
-    const bodyGeo = new THREE.CylinderGeometry(0.35, 0.3, 1.2, 8);
-    const bodyMat = new THREE.MeshLambertMaterial({ color: roleColor });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1.4;
+    // Wellington Field Boots (black/dark slate rubber)
+    const bootMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+    const trousersMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+
+    // Left & Right articulated legs
+    const leftLegGroup = new THREE.Group();
+    leftLegGroup.position.set(-0.2, 0.45, 0);
+    const leftThigh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.55, 6), trousersMat);
+    leftThigh.position.y = 0.25;
+    const leftBoot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.38, 0.32), bootMat);
+    leftBoot.position.set(0, -0.25, 0.04);
+    leftLegGroup.add(leftThigh, leftBoot);
+    group.add(leftLegGroup);
+
+    const rightLegGroup = new THREE.Group();
+    rightLegGroup.position.set(0.2, 0.45, 0);
+    const rightThigh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.55, 6), trousersMat);
+    rightThigh.position.y = 0.25;
+    const rightBoot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.38, 0.32), bootMat);
+    rightBoot.position.set(0, -0.25, 0.04);
+    rightLegGroup.add(rightThigh, rightBoot);
+    group.add(rightLegGroup);
+
+    // Torso with shirt/kurta & High-Vis Safety Vest
+    const torsoGroup = new THREE.Group();
+    torsoGroup.position.set(0, 1.45, 0);
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: roleColor, roughness: 0.7 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.38), bodyMat);
     body.castShadow = true;
-    group.add(body);
+    torsoGroup.add(body);
 
-    // Head
-    const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
-    const headMat = new THREE.MeshLambertMaterial({ color: COLORS.workerSkin });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 2.3;
+    // High-Vis Safety Vest with Silver Reflective Stripes
+    const vestMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.5 }); // neon yellow/orange
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.4), vestMat);
+    torsoGroup.add(vest);
+
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const stripe1 = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.08, 0.41), stripeMat);
+    stripe1.position.y = 0.08;
+    const stripe2 = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.08, 0.41), stripeMat);
+    stripe2.position.y = -0.16;
+    torsoGroup.add(stripe1, stripe2);
+    group.add(torsoGroup);
+
+    // Head with skin tone & role headwear
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 2.15, 0);
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: COLORS.workerSkin, roughness: 0.6 });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), skinMat);
     head.castShadow = true;
-    group.add(head);
+    headGroup.add(head);
 
-    // Hat
-    const hatGeo = new THREE.CylinderGeometry(0.4, 0.35, 0.15, 8);
-    const hatMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
-    const hat = new THREE.Mesh(hatGeo, hatMat);
-    hat.position.y = 2.55;
-    group.add(hat);
-    const hatBrimGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.04, 12);
-    const hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
-    hatBrim.position.y = 2.48;
-    group.add(hatBrim);
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), eyeMat);
+    eyeL.position.set(-0.08, 0.02, 0.22);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), eyeMat);
+    eyeR.position.set(0.08, 0.02, 0.22);
+    headGroup.add(eyeL, eyeR);
+
+    // Headwear by role
+    if (worker.role === 'farmer') {
+      // Traditional turban / straw wide hat
+      const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 12), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.9 }));
+      hatBrim.position.y = 0.16;
+      const hatCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.28, 0.22, 8), new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.9 }));
+      hatCrown.position.y = 0.28;
+      headGroup.add(hatBrim, hatCrown);
+    } else if (worker.role === 'agronomist') {
+      // Modern white AGRIOS hardhat / visor
+      const hardhat = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+      hardhat.position.y = 0.1;
+      headGroup.add(hardhat);
+    } else {
+      // Krishi Sakhi dupatta / protective field cap
+      const scarf = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.7 }));
+      scarf.position.y = 0.18;
+      headGroup.add(scarf);
+    }
+    group.add(headGroup);
 
     // Arms
-    const armGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.8, 4);
-    const armMat = new THREE.MeshLambertMaterial({ color: COLORS.workerSkin });
-    [-1, 1].forEach(side => {
-      const arm = new THREE.Mesh(armGeo, armMat);
-      arm.position.set(side * 0.5, 1.5, 0);
-      arm.rotation.z = side * 0.2;
-      group.add(arm);
-    });
+    const armMat = new THREE.MeshStandardMaterial({ color: roleColor, roughness: 0.7 });
+    const handMat = new THREE.MeshStandardMaterial({ color: COLORS.workerSkin, roughness: 0.6 });
 
-    // Legs
-    const legGeo = new THREE.CylinderGeometry(0.1, 0.12, 0.8, 4);
-    const legMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-    [-1, 1].forEach(side => {
-      const leg = new THREE.Mesh(legGeo, legMat);
-      leg.position.set(side * 0.2, 0.4, 0);
-      group.add(leg);
-    });
+    const leftArmGroup = new THREE.Group();
+    leftArmGroup.position.set(-0.42, 1.75, 0);
+    const leftArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.65, 5), armMat);
+    leftArmMesh.position.y = -0.28;
+    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), handMat);
+    leftHand.position.y = -0.62;
+    leftArmGroup.add(leftArmMesh, leftHand);
+    group.add(leftArmGroup);
 
-    // Position
+    const rightArmGroup = new THREE.Group();
+    rightArmGroup.position.set(0.42, 1.75, 0);
+    const rightArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.65, 5), armMat);
+    rightArmMesh.position.y = -0.28;
+    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), handMat);
+    rightHand.position.y = -0.62;
+    rightArmGroup.add(rightArmMesh, rightHand);
+    group.add(rightArmGroup);
+
+    // ── Role Specific Gear & Tools ──
+    let sprayMist = null;
+    if (worker.role === 'worker' || (worker.current_task?.type === 'spraying')) {
+      // Knapsack spray backpack
+      const tankGeo = new THREE.BoxGeometry(0.45, 0.58, 0.24);
+      const tankMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 });
+      const tank = new THREE.Mesh(tankGeo, tankMat);
+      tank.position.set(0, 1.45, -0.26);
+      group.add(tank);
+
+      // Spray wand in right hand
+      const wandGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 4);
+      wandGeo.rotateX(Math.PI / 3);
+      const wandMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 });
+      const wand = new THREE.Mesh(wandGeo, wandMat);
+      wand.position.set(0.45, 1.1, 0.5);
+      group.add(wand);
+
+      // Misty spray particle nozzle cone
+      const coneGeo = new THREE.ConeGeometry(0.3, 0.8, 8, 1, true);
+      coneGeo.rotateX(-Math.PI / 3);
+      const mistMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+      sprayMist = new THREE.Mesh(coneGeo, mistMat);
+      sprayMist.position.set(0.45, 0.7, 0.9);
+      group.add(sprayMist);
+    } else if (worker.role === 'agronomist') {
+      // Telemetry digital spectrometer tablet
+      const tabletGeo = new THREE.BoxGeometry(0.38, 0.28, 0.04);
+      const tabletMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+      const tablet = new THREE.Mesh(tabletGeo, tabletMat);
+      tablet.position.set(0, 1.2, 0.35);
+      tablet.rotation.x = -0.5;
+
+      const screenGeo = new THREE.PlaneGeometry(0.32, 0.22);
+      const screenMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+      const screen = new THREE.Mesh(screenGeo, screenMat);
+      screen.position.set(0, 0, 0.025);
+      tablet.add(screen);
+      group.add(tablet);
+    } else {
+      // Lead farmer sluice wrench / clipboard
+      const wrenchGeo = new THREE.BoxGeometry(0.06, 0.5, 0.06);
+      const wrenchMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85 });
+      const wrench = new THREE.Mesh(wrenchGeo, wrenchMat);
+      wrench.position.set(0.42, 1.0, 0.2);
+      group.add(wrench);
+    }
+
     const px = worker.position?.x || (Math.random() * 60 - 30);
     const pz = worker.position?.z || (Math.random() * 50 - 25);
     group.position.set(px, 0, pz);
 
-    // Name label
     const label = this._createLabel(
-      worker.name || 'Worker',
-      new THREE.Vector3(0, 3.2, 0),
-      roleColor === COLORS.workerFarmer ? '#4CAF50' :
-      roleColor === COLORS.workerAgronomist ? '#2196F3' : '#FF9800',
-      '0.65rem'
+      `${worker.name || 'Personnel'} (${worker.role})`,
+      new THREE.Vector3(0, 2.9, 0),
+      roleColor === COLORS.workerFarmer ? '#4CAF50' : (roleColor === COLORS.workerAgronomist ? '#38BDF8' : '#F97316'),
+      '0.68rem',
+      true
     );
     group.add(label);
 
-    // Interaction data
     group.userData = {
       type: 'worker',
       id: worker.id,
@@ -1278,238 +2153,865 @@ export class AgriosDigitalTwin3D {
     body.userData = group.userData;
     head.userData = group.userData;
 
+    // Attach limb references to group for dynamic animation updates
+    group._torso = torsoGroup;
+    group._head = headGroup;
+    group._leftArm = leftArmGroup;
+    group._rightArm = rightArmGroup;
+    group._leftLeg = leftLegGroup;
+    group._rightLeg = rightLegGroup;
+    group._sprayMist = sprayMist;
+
     this.groups.workers.add(group);
     return group;
   }
 
+  // Live Workforce Dynamic Sync (Auto-spawns / relocates 3D characters upon AGRIOS registration)
+  syncWorkforce(workersList) {
+    if (!workersList || !Array.isArray(workersList)) return;
+
+    const existingMap = new Map();
+    this.workerMeshes.forEach(w => existingMap.set(w.data.id, w));
+    const activeIds = new Set();
+
+    workersList.forEach(worker => {
+      activeIds.add(worker.id);
+      if (existingMap.has(worker.id)) {
+        const wMesh = existingMap.get(worker.id);
+        wMesh.data = { ...wMesh.data, ...worker };
+        wMesh.group.userData = { ...wMesh.group.userData, ...worker };
+      } else {
+        const newGroup = this._createWorkerCharacter(worker);
+        const wObj = {
+          group: newGroup,
+          data: worker,
+          animPhase: Math.random() * Math.PI * 2,
+          torso: newGroup._torso,
+          head: newGroup._head,
+          leftArm: newGroup._leftArm,
+          rightArm: newGroup._rightArm,
+          leftLeg: newGroup._leftLeg,
+          rightLeg: newGroup._rightLeg,
+          sprayMist: newGroup._sprayMist
+        };
+        this.workerMeshes.push(wObj);
+        console.log(`[3D Twin] Dynamic workforce sync: spawned ${worker.name} (${worker.role})`);
+      }
+    });
+
+    // Remove de-registered workers
+    this.workerMeshes = this.workerMeshes.filter(w => {
+      if (!activeIds.has(w.data.id)) {
+        this.groups.workers.remove(w.group);
+        w.group.traverse(obj => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        return false;
+      }
+      return true;
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────
-  // WEATHER EFFECTS
+  // WEATHER EFFECTS & DRIFTING CLOUDS
   // ─────────────────────────────────────────────────────────────
   _applyWeather(weather) {
     if (!weather) weather = { condition: 'clear' };
     this.currentWeather = weather.condition || 'clear';
 
-    // Remove existing weather effects
-    while (this.groups.weather.children.length > 0) {
-      const child = this.groups.weather.children[0];
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) child.material.dispose();
-      this.groups.weather.remove(child);
-    }
-    this.cloudMeshes = [];
-    this.rainParticles = null;
-
     switch (this.currentWeather) {
-      case 'clear':
-        this._setWeatherClear();
-        break;
-      case 'cloudy':
-        this._setWeatherCloudy();
-        break;
-      case 'rain':
-        this._setWeatherRain();
-        break;
-      case 'heatwave':
-        this._setWeatherHeatwave();
-        break;
+      case 'clear': this._setWeatherClear(); break;
+      case 'cloudy': this._setWeatherCloudy(); break;
+      case 'rain': this._setWeatherRain(); break;
+      case 'heatwave': this._setWeatherHeatwave(); break;
     }
   }
 
   _setWeatherClear() {
-    this.scene.background = new THREE.Color(COLORS.skyDay);
-    this.scene.fog = new THREE.FogExp2(0xCCE5FF, 0.003);
-    this._sunLight.intensity = 1.2;
-    this._sunLight.color.set(0xFFF8E1);
-    this._ambientLight.intensity = 0.5;
-    this.renderer.toneMappingExposure = 1.2;
+    if (this._sunLight) { this._sunLight.intensity = 1.35; this._sunLight.color.setHex(0xfffbeb); }
+    if (this._ambientLight) { this._ambientLight.intensity = 0.55; }
+    if (this.scene.fog) { this.scene.fog.density = 0.0028; }
+    this._clearWeatherEffects();
+    this._addClouds(3);
   }
 
   _setWeatherCloudy() {
-    this.scene.background = new THREE.Color(0xB0BEC5);
-    this.scene.fog = new THREE.FogExp2(0xB0BEC5, 0.006);
-    this._sunLight.intensity = 0.6;
-    this._sunLight.color.set(0xE0E0E0);
-    this._ambientLight.intensity = 0.7;
-    this.renderer.toneMappingExposure = 0.9;
-
-    // Cloud planes
-    this._addClouds(8);
+    if (this._sunLight) { this._sunLight.intensity = 0.6; this._sunLight.color.setHex(0xdbeafe); }
+    if (this._ambientLight) { this._ambientLight.intensity = 0.4; }
+    if (this.scene.fog) { this.scene.fog.density = 0.0045; }
+    this._clearWeatherEffects();
+    this._addClouds(12);
   }
 
   _setWeatherRain() {
-    this.scene.background = new THREE.Color(0x78909C);
-    this.scene.fog = new THREE.FogExp2(0x78909C, 0.008);
-    this._sunLight.intensity = 0.3;
-    this._sunLight.color.set(0xB0BEC5);
-    this._ambientLight.intensity = 0.8;
-    this.renderer.toneMappingExposure = 0.7;
-
-    // Clouds
-    this._addClouds(12);
-
-    // Rain particles
+    if (this._sunLight) { this._sunLight.intensity = 0.35; this._sunLight.color.setHex(0x94a3b8); }
+    if (this._ambientLight) { this._ambientLight.intensity = 0.3; }
+    if (this.scene.fog) { this.scene.fog.density = 0.007; }
+    this._clearWeatherEffects();
+    this._addClouds(16);
     this._addRainParticles();
   }
 
   _setWeatherHeatwave() {
-    this.scene.background = new THREE.Color(0xFFCC80);
-    this.scene.fog = new THREE.FogExp2(0xFFE0B2, 0.004);
-    this._sunLight.intensity = 1.8;
-    this._sunLight.color.set(0xFFD54F);
-    this._ambientLight.intensity = 0.6;
-    this._ambientLight.color.set(0xFFE0B2);
-    this.renderer.toneMappingExposure = 1.5;
+    if (this._sunLight) { this._sunLight.intensity = 1.7; this._sunLight.color.setHex(0xffedd5); }
+    if (this._ambientLight) { this._ambientLight.intensity = 0.65; }
+    if (this.scene.fog) { this.scene.fog.density = 0.004; }
+    this._clearWeatherEffects();
+    this._addClouds(1);
+  }
+
+  _clearWeatherEffects() {
+    this.cloudMeshes.forEach(c => {
+      this.groups.weather.remove(c);
+      c.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); if (obj.material) obj.material.dispose(); });
+    });
+    this.cloudMeshes = [];
+
+    if (this.rainParticles) {
+      this.groups.weather.remove(this.rainParticles);
+      this.rainParticles.geometry.dispose();
+      this.rainParticles.material.dispose();
+      this.rainParticles = null;
+    }
   }
 
   _addClouds(count) {
-    for (let i = 0; i < count; i++) {
-      const cloudGroup = new THREE.Group();
-      const blobCount = 3 + Math.floor(Math.random() * 3);
-      for (let j = 0; j < blobCount; j++) {
-        const blobGeo = new THREE.SphereGeometry(
-          3 + Math.random() * 4, 6, 4
-        );
-        const blobMat = new THREE.MeshLambertMaterial({
-          color: 0xECEFF1,
-          transparent: true,
-          opacity: 0.7 + Math.random() * 0.2,
-        });
-        const blob = new THREE.Mesh(blobGeo, blobMat);
-        blob.position.set(
-          (Math.random() - 0.5) * 8,
-          (Math.random() - 0.5) * 1.5,
-          (Math.random() - 0.5) * 5
-        );
-        blob.scale.y = 0.4 + Math.random() * 0.3;
-        cloudGroup.add(blob);
-      }
+    const cloudGeo = new THREE.DodecahedronGeometry(5, 1);
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      transparent: true,
+      opacity: 0.85,
+      roughness: 0.9,
+    });
 
-      cloudGroup.position.set(
+    for (let i = 0; i < count; i++) {
+      const cloud = new THREE.Group();
+      const puffCount = 3 + Math.floor(Math.random() * 3);
+      for (let p = 0; p < puffCount; p++) {
+        const puff = new THREE.Mesh(cloudGeo, cloudMat);
+        puff.position.set(p * 3.5 + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 2);
+        const s = 0.6 + Math.random() * 0.6;
+        puff.scale.set(s, s * 0.6, s);
+        cloud.add(puff);
+      }
+      cloud.position.set(
         (Math.random() - 0.5) * 120,
-        35 + Math.random() * 15,
+        35 + Math.random() * 10,
         (Math.random() - 0.5) * 100
       );
-      this.groups.weather.add(cloudGroup);
-      this.cloudMeshes.push(cloudGroup);
+      this.groups.weather.add(cloud);
+      this.cloudMeshes.push(cloud);
     }
   }
 
   _addRainParticles() {
-    const particleCount = 3000;
-    const positions = new Float32Array(particleCount * 3);
-
-    for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 120;
-      positions[i * 3 + 1] = Math.random() * 50;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+    const count = 1200;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 140;
+      positions[i + 1] = Math.random() * 45;
+      positions[i + 2] = (Math.random() - 0.5) * 120;
     }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    const mat = new THREE.PointsMaterial({
+    const rainGeo = new THREE.BufferGeometry();
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const rainMat = new THREE.PointsMaterial({
       color: COLORS.rain,
-      size: 0.15,
+      size: 0.35,
       transparent: true,
-      opacity: 0.6,
-      sizeAttenuation: true,
+      opacity: 0.75,
     });
-
-    this.rainParticles = new THREE.Points(geo, mat);
+    this.rainParticles = new THREE.Points(rainGeo, rainMat);
     this.groups.weather.add(this.rainParticles);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // LABELS (CSS2D)
-  // ─────────────────────────────────────────────────────────────
   _createLabel(text, position, color = '#e2e8f0', fontSize = '0.7rem', bold = false) {
     const div = document.createElement('div');
+    div.className = 'dt3d-label';
     div.textContent = text;
-    div.style.cssText = `
-      color: ${color};
-      font-family: 'Inter', sans-serif;
-      font-size: ${fontSize};
-      font-weight: ${bold ? '700' : '600'};
-      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-      pointer-events: none;
-      white-space: nowrap;
-    `;
+    div.style.color = color;
+    div.style.fontSize = fontSize;
+    div.style.fontWeight = bold ? '700' : '500';
+    div.style.background = 'rgba(15, 23, 42, 0.82)';
+    div.style.padding = '3px 8px';
+    div.style.borderRadius = '4px';
+    div.style.border = `1px solid ${color}44`;
+    div.style.whiteSpace = 'nowrap';
+    div.style.pointerEvents = 'none';
+    div.style.userSelect = 'none';
+
     const label = new CSS2DObject(div);
     label.position.copy(position);
     return label;
   }
 
   // ─────────────────────────────────────────────────────────────
-  // CLICK / INSPECT
+  // INTERACTION & RAYCASTING (INSPECTOR & CAD)
   // ─────────────────────────────────────────────────────────────
-  _onClick(event, container) {
+  _setupEventListeners(container) {
+    container.addEventListener('click', (e) => this._onClick(e, container));
+    container.addEventListener('pointermove', (e) => this._onPointerMove(e, container));
+    container.addEventListener('pointerdown', (e) => this._onPointerDown(e, container));
+    container.addEventListener('pointerup', (e) => this._onPointerUp(e, container));
+    container.addEventListener('dblclick', (e) => this._onDoubleClick(e, container));
+    
+    window.addEventListener('keydown', (e) => {
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      this.keysDown[e.code] = true;
+      this.keysDown[e.key] = true;
+      this._onKeyDown(e);
+    });
+
+    window.addEventListener('keyup', (e) => {
+      this.keysDown[e.code] = false;
+      this.keysDown[e.key] = false;
+    });
+
+    container.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 1) {
+        const t = e.changedTouches[0];
+        this._onClick({ clientX: t.clientX, clientY: t.clientY, target: e.target }, container);
+      }
+    });
+  }
+
+  _getRaycastIntersections(event, container) {
     const rect = container.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
     this.raycaster.setFromCamera(this.mouse, this.camera);
+    return this.raycaster.intersectObjects(this.scene.children, true);
+  }
 
-    // Gather all clickable meshes
-    const clickables = [];
-    const traverse = (group) => {
-      group.traverse(obj => {
-        if (obj.isMesh && obj.userData && obj.userData.type) {
-          clickables.push(obj);
-        }
-      });
-    };
-    traverse(this.groups.buildings);
-    traverse(this.groups.infrastructure);
-    traverse(this.groups.workers);
-    traverse(this.groups.fields);
-    traverse(this.groups.water);
+  _onClick(event, container) {
+    if (this.isEditMode) return; // CAD click handling handles edit tools
+    // Guard against clicks that originated on UI overlays or close buttons
+    if (event.target && event.target !== this.renderer.domElement && event.target !== this.labelRenderer.domElement) {
+      return;
+    }
 
-    const intersects = this.raycaster.intersectObjects(clickables, false);
-    if (intersects.length > 0) {
-      const hit = intersects[0].object;
-      const data = hit.userData;
+    const hits = this._getRaycastIntersections(event, container);
+    const hit = hits.find(h => {
+      const u = h.object.userData;
+      return u && (u.type === 'worker' || u.type === 'building' || u.type === 'greenhouse' ||
+                   u.type === 'silo' || u.type === 'coldstorage' || u.type === 'field' ||
+                   u.type === 'sensor' || u.type === 'camera' || u.type === 'water_source' ||
+                   u.type === 'aquaculture_pond' || u.type === 'road' || u.type === 'risk');
+    });
 
-      // Walk up parent to find group-level userData if needed
-      let entityData = data;
-      if (!entityData.name && hit.parent && hit.parent.userData && hit.parent.userData.name) {
-        entityData = hit.parent.userData;
+    if (hit) {
+      let entityData = hit.object.userData;
+      if (!entityData.name && hit.object.parent && hit.object.parent.userData?.name) {
+        entityData = hit.object.parent.userData;
       }
-
       this.selectedEntity = entityData;
-
-      // Highlight effect
-      this._highlightEntity(hit);
-
-      // Callback
-      if (this.onEntityInspect) {
-        this.onEntityInspect(entityData);
-      }
+      this._highlightEntity(hit.object);
+      if (this.onEntityInspect) this.onEntityInspect(entityData);
     } else {
       this.selectedEntity = null;
-      if (this.onEntityInspect) {
-        this.onEntityInspect(null);
-      }
+      if (this.onEntityInspect) this.onEntityInspect(null);
     }
   }
 
   _highlightEntity(mesh) {
-    // Reset previous highlights
     this.scene.traverse(obj => {
-      if (obj._originalEmissive !== undefined && obj.material) {
-        obj.material.emissive?.setHex(obj._originalEmissive);
+      if (obj._originalEmissive !== undefined && obj.material?.emissive) {
+        obj.material.emissive.setHex(obj._originalEmissive);
         delete obj._originalEmissive;
       }
     });
-
-    // Apply highlight
-    if (mesh.material && mesh.material.emissive) {
+    if (mesh.material?.emissive) {
       mesh._originalEmissive = mesh.material.emissive.getHex();
-      mesh.material.emissive.setHex(0x10B981);
+      mesh.material.emissive.setHex(0x10b981);
     }
   }
 
   // ─────────────────────────────────────────────────────────────
-  // CAMERA PRESETS
+  // CAD-LITE "EDIT FARM" MODE CONTROLLER
+  // ─────────────────────────────────────────────────────────────
+  enterEditMode() {
+    this.isEditMode = true;
+    this.activeEditTool = 'select';
+    this.editPoints = [];
+    this.controls.enableRotate = true;
+    this._createEditorCursor();
+    if (this.onEditStateChange) this.onEditStateChange({ isEditMode: true, tool: this.activeEditTool });
+    console.log('[3D Twin CAD] Entered Edit Farm Mode');
+  }
+
+  exitEditMode() {
+    this.isEditMode = false;
+    this.editPoints = [];
+    this._clearEditorHelpers();
+    if (this.onEditStateChange) this.onEditStateChange({ isEditMode: false, tool: null });
+    console.log('[3D Twin CAD] Exited Edit Farm Mode');
+  }
+
+  setEditorTool(toolName) {
+    this.activeEditTool = toolName;
+    this.editPoints = [];
+    this._clearEditorHelpers();
+    this._createEditorCursor();
+
+    if (this.activeEditTool === 'building') {
+      this._createBuildingGhostPreview(this.activeBuildingType);
+    }
+
+    if (this.onEditStateChange) this.onEditStateChange({ isEditMode: true, tool: this.activeEditTool });
+    console.log('[3D Twin CAD] Active Tool:', toolName);
+  }
+
+  setBuildingType(type) {
+    this.activeBuildingType = type;
+    if (this.activeEditTool === 'building') {
+      this._createBuildingGhostPreview(type);
+    }
+  }
+
+  _createEditorCursor() {
+    if (this._cursorRing) this.groups.editor.remove(this._cursorRing);
+    const ringGeo = new THREE.RingGeometry(0.8, 1.1, 24);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: COLORS.emeraldBright, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+    this._cursorRing = new THREE.Mesh(ringGeo, ringMat);
+    this._cursorRing.position.y = 0.3;
+    this._cursorRing.visible = false;
+    this.groups.editor.add(this._cursorRing);
+  }
+
+  _clearEditorHelpers() {
+    while (this.groups.editor.children.length > 0) {
+      const c = this.groups.editor.children[0];
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) c.material.dispose();
+      this.groups.editor.remove(c);
+    }
+    this._cursorRing = null;
+    this._ghostBuilding = null;
+    this._rubberbandLine = null;
+  }
+
+  _createBuildingGhostPreview(type) {
+    if (this._ghostBuilding) this.groups.editor.remove(this._ghostBuilding);
+    const group = new THREE.Group();
+    const ghostMat = new THREE.MeshStandardMaterial({
+      color: 0x34d399,
+      transparent: true,
+      opacity: 0.45,
+      roughness: 0.3,
+      metalness: 0.2
+    });
+
+    if (type === 'shed') {
+      group.add(new THREE.Mesh(new THREE.BoxGeometry(12, 5, 8), ghostMat));
+    } else if (type === 'office') {
+      group.add(new THREE.Mesh(new THREE.BoxGeometry(8, 4.2, 6), ghostMat));
+    } else if (type === 'polyhouse') {
+      const arch = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 8, 16, 1, true, 0, Math.PI), ghostMat);
+      arch.rotateZ(Math.PI / 2);
+      arch.rotateX(Math.PI / 2);
+      group.add(arch);
+    } else if (type === 'silo') {
+      group.add(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 9.5, 20), ghostMat));
+    } else if (type === 'coldstorage') {
+      group.add(new THREE.Mesh(new THREE.BoxGeometry(14, 6, 10), ghostMat));
+    }
+
+    group.position.y = 3;
+    this.groups.editor.add(group);
+    this._ghostBuilding = group;
+  }
+
+  _onPointerMove(event, container) {
+    if (!this.isEditMode) return;
+    const hits = this._getRaycastIntersections(event, container);
+    const terrainHit = hits.find(h => h.object.userData?.type === 'terrain' || h.object === this._terrainMesh);
+
+    if (terrainHit) {
+      const pt = terrainHit.point;
+      if (this._cursorRing) {
+        this._cursorRing.position.set(pt.x, pt.y + 0.1, pt.z);
+        this._cursorRing.visible = true;
+      }
+
+      if (this._ghostBuilding) {
+        this._ghostBuilding.position.set(pt.x, pt.y + 2.5, pt.z);
+      }
+
+      // Drag selected object
+      if (this.isDraggingObject && this.selectedEditObject) {
+        this.selectedEditObject.position.set(pt.x, pt.y, pt.z);
+      }
+
+      // Live rubberband line for Road or Field
+      if ((this.activeEditTool === 'road' || this.activeEditTool === 'field' || this.activeEditTool === 'irrigation') && this.editPoints.length > 0) {
+        this._updateRubberband(pt);
+      }
+    }
+  }
+
+  _updateRubberband(currentPt) {
+    const pts = [...this.editPoints.map(p => new THREE.Vector3(p.x, 0.35, p.z)), new THREE.Vector3(currentPt.x, 0.35, currentPt.z)];
+    if (this._rubberbandLine) {
+      this.groups.editor.remove(this._rubberbandLine);
+      this._rubberbandLine.geometry.dispose();
+    }
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const lineMat = new THREE.LineDashedMaterial({
+      color: this.activeEditTool === 'field' ? 0x10b981 : (this.activeEditTool === 'irrigation' ? 0x0284c7 : 0xf59e0b),
+      dashSize: 1.5,
+      gapSize: 0.8,
+      linewidth: 2,
+    });
+    this._rubberbandLine = new THREE.Line(lineGeo, lineMat);
+    this._rubberbandLine.computeLineDistances();
+    this.groups.editor.add(this._rubberbandLine);
+
+    // Live Field Area Measurement
+    if (this.activeEditTool === 'field' && pts.length >= 3) {
+      let area = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const j = (i + 1) % pts.length;
+        area += pts[i].x * pts[j].z;
+        area -= pts[j].x * pts[i].z;
+      }
+      area = Math.abs(area) / 2;
+      const acres = (area / 4046.86 * 100).toFixed(2);
+      if (this.onAreaMeasure) this.onAreaMeasure({ acres, sqMeters: Math.round(area) });
+    }
+  }
+
+  _onPointerDown(event, container) {
+    if (!this.isEditMode) return;
+    if (event.target && event.target !== this.renderer.domElement && event.target !== this.labelRenderer.domElement) {
+      return;
+    }
+    const hits = this._getRaycastIntersections(event, container);
+    const terrainHit = hits.find(h => h.object.userData?.type === 'terrain' || h.object === this._terrainMesh);
+
+    if (this.activeEditTool === 'select') {
+      const objHit = hits.find(h => {
+        const u = h.object.userData;
+        return u && ['building', 'greenhouse', 'silo', 'coldstorage', 'field', 'road', 'water_source'].includes(u.type);
+      });
+      if (objHit) {
+        let root = objHit.object;
+        while (root.parent && root.parent !== this.scene && !root.parent.userData?.id) {
+          if (root.parent.userData?.type) root = root.parent;
+          else break;
+        }
+        this.selectedEditObject = root;
+        this.isDraggingObject = true;
+        this.controls.enableRotate = false; // Pause camera orbit during drag
+        this._highlightEntity(objHit.object);
+      } else {
+        this.selectedEditObject = null;
+      }
+      return;
+    }
+
+    if (!terrainHit) return;
+    const pt = { x: Number(terrainHit.point.x.toFixed(2)), z: Number(terrainHit.point.z.toFixed(2)) };
+
+    if (this.activeEditTool === 'road' || this.activeEditTool === 'irrigation' || this.activeEditTool === 'field') {
+      this.editPoints.push(pt);
+      // Place marker pin with stem
+      const pin = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 12), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+      pin.position.set(pt.x, terrainHit.point.y + 0.45, pt.z);
+      this.groups.editor.add(pin);
+
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 6), new THREE.MeshBasicMaterial({ color: 0x34d399 }));
+      stem.position.set(pt.x, terrainHit.point.y + 0.22, pt.z);
+      this.groups.editor.add(stem);
+
+      // Render solid connecting path between clicked points
+      if (this._solidPathLine) {
+        this.groups.editor.remove(this._solidPathLine);
+        this._solidPathLine.geometry.dispose();
+      }
+      if (this.editPoints.length >= 2) {
+        const pathPoints = this.editPoints.map(p => new THREE.Vector3(p.x, 0.36, p.z));
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(pathPoints);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: this.activeEditTool === 'field' ? 0x10b981 : (this.activeEditTool === 'irrigation' ? 0x0284c7 : 0xf59e0b),
+          linewidth: 3
+        });
+        this._solidPathLine = new THREE.Line(lineGeo, lineMat);
+        this.groups.editor.add(this._solidPathLine);
+      }
+
+      if (this.onEditStateChange) {
+        this.onEditStateChange({
+          isEditMode: true,
+          tool: this.activeEditTool,
+          pointsCount: this.editPoints.length
+        });
+      }
+    } else if (this.activeEditTool === 'building') {
+      this._placeBuildingAt(pt.x, pt.z, this.activeBuildingType);
+    } else if (this.activeEditTool === 'plants') {
+      const fieldHit = hits.find(h => h.object.userData?.type === 'field');
+      if (fieldHit && this.onFieldConfigurePlants) {
+        this.onFieldConfigurePlants(fieldHit.object.userData);
+      }
+    }
+  }
+
+  _onPointerUp(event, container) {
+    if (this.isDraggingObject) {
+      this.isDraggingObject = false;
+      this.controls.enableRotate = true;
+      if (this.selectedEditObject) {
+        const obj = this.selectedEditObject;
+        const newPos = { x: obj.position.x, y: obj.position.y, z: obj.position.z };
+        this.executeCommand({
+          type: 'MOVE_OBJECT',
+          description: `Moved ${obj.userData?.name || 'structure'}`,
+          execute: () => { obj.position.set(newPos.x, newPos.y, newPos.z); },
+          undo: () => { obj.position.set(0, 0, 0); }
+        });
+      }
+    }
+  }
+
+  _onDoubleClick(event, container) {
+    if (!this.isEditMode) return;
+    this.finishCurrentTool();
+  }
+
+  _onKeyDown(event) {
+    if (!this.isEditMode) return;
+    if (event.key === 'Enter') {
+      this.finishCurrentTool();
+    } else if (event.key === 'Escape') {
+      this.clearCurrentTool();
+    } else if (event.key === 'Delete' || event.key === 'Backspace') {
+      if (this.selectedEditObject) this._deleteSelectedObject();
+    } else if (event.key === 'r' || event.key === 'R') {
+      if (this.selectedEditObject) this._rotateSelectedObject(Math.PI / 12);
+    } else if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
+      if (event.shiftKey) this.redoEdit();
+      else this.undoEdit();
+    }
+  }
+
+  finishCurrentTool() {
+    if (this.activeEditTool === 'road' && this.editPoints.length >= 2) {
+      this._finalizeRoad();
+      return true;
+    } else if (this.activeEditTool === 'field' && this.editPoints.length >= 3) {
+      this._finalizeField();
+      return true;
+    } else if (this.activeEditTool === 'irrigation' && this.editPoints.length >= 2) {
+      this._finalizeIrrigation();
+      return true;
+    }
+    return false;
+  }
+
+  clearCurrentTool() {
+    this.editPoints = [];
+    this._clearEditorHelpers();
+    this._createEditorCursor();
+    if (this.onEditStateChange) {
+      this.onEditStateChange({ isEditMode: true, tool: this.activeEditTool, pointsCount: 0 });
+    }
+    console.log('[3D Twin CAD] Cleared current drawing points');
+  }
+
+  _finalizeRoad() {
+    if (this.editPoints.length < 2) return;
+    const points = [...this.editPoints];
+    const roadId = `road_${Date.now()}`;
+    const roadMeshGroup = new THREE.Group();
+    roadMeshGroup.userData = {
+      id: roadId,
+      type: 'road',
+      name: `Farm Access Road (${points.length} waypoints)`,
+      waypoints: points,
+      width: 3.2,
+      surface: 'compacted_gravel'
+    };
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const segGroup = this._createRoadSegmentDirect(p1.x, p1.z, p2.x, p2.z, 3.2, roadMeshGroup.userData);
+      roadMeshGroup.add(segGroup);
+    }
+
+    this.groups.infrastructure.add(roadMeshGroup);
+
+    if (this.sceneData) {
+      if (!this.sceneData.spatial_objects) this.sceneData.spatial_objects = [];
+      this.sceneData.spatial_objects.push(roadMeshGroup.userData);
+    }
+
+    const command = {
+      type: 'ADD_ROAD',
+      description: `Created road with ${points.length} waypoints`,
+      execute: () => {
+        this.groups.infrastructure.add(roadMeshGroup);
+        if (this.sceneData && !this.sceneData.spatial_objects.includes(roadMeshGroup.userData)) {
+          this.sceneData.spatial_objects.push(roadMeshGroup.userData);
+        }
+      },
+      undo: () => {
+        this.groups.infrastructure.remove(roadMeshGroup);
+        if (this.sceneData && this.sceneData.spatial_objects) {
+          this.sceneData.spatial_objects = this.sceneData.spatial_objects.filter(o => o.id !== roadId);
+        }
+      }
+    };
+    this.executeCommand(command);
+
+    this.editPoints = [];
+    this._clearEditorHelpers();
+    this._createEditorCursor();
+    if (this.onEditStateChange) {
+      this.onEditStateChange({ isEditMode: true, tool: this.activeEditTool, pointsCount: 0 });
+    }
+    console.log('[3D Twin CAD] Finalized Road Ribbon with', points.length, 'waypoints');
+  }
+
+  _finalizeField() {
+    if (this.editPoints.length < 3) return;
+    const vertices = [...this.editPoints];
+    const fieldIdx = this.groups.fields.children.length;
+    let area = 0;
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      area += vertices[i].x * vertices[j].z;
+      area -= vertices[j].x * vertices[i].z;
+    }
+    const acres = ((Math.abs(area) / 2) / 4046.86 * 100).toFixed(2);
+    const fieldName = `Field ${String.fromCharCode(65 + (fieldIdx % 26))}`;
+    const fieldId = `field_${Date.now()}`;
+
+    const fieldData = {
+      id: fieldId,
+      type: 'field',
+      name: fieldName,
+      area_acres: acres,
+      crop: 'Wheat',
+      vertices: vertices
+    };
+
+    const fieldMesh = this._createPolygonField(vertices, fieldData, fieldIdx);
+
+    if (this.sceneData) {
+      if (!this.sceneData.spatial_objects) this.sceneData.spatial_objects = [];
+      this.sceneData.spatial_objects.push(fieldData);
+    }
+
+    const command = {
+      type: 'ADD_FIELD',
+      description: `Created ${fieldName} (${acres} ac)`,
+      execute: () => {
+        if (fieldMesh) this.groups.fields.add(fieldMesh);
+        if (this.sceneData && !this.sceneData.spatial_objects.includes(fieldData)) {
+          this.sceneData.spatial_objects.push(fieldData);
+        }
+      },
+      undo: () => {
+        if (fieldMesh) this.groups.fields.remove(fieldMesh);
+        if (this.sceneData && this.sceneData.spatial_objects) {
+          this.sceneData.spatial_objects = this.sceneData.spatial_objects.filter(o => o.id !== fieldId);
+        }
+      }
+    };
+    this.executeCommand(command);
+
+    this.editPoints = [];
+    this._clearEditorHelpers();
+    this._createEditorCursor();
+    if (this.onEditStateChange) {
+      this.onEditStateChange({ isEditMode: true, tool: this.activeEditTool, pointsCount: 0 });
+    }
+    console.log('[3D Twin CAD] Finalized Field Parcel:', fieldName);
+  }
+
+  _finalizeIrrigation() {
+    if (this.editPoints.length < 2) return;
+    const points = [...this.editPoints];
+    const pipeId = `pipe_${Date.now()}`;
+    const curvePoints = points.map(p => new THREE.Vector3(p.x, 0.35, p.z));
+    const curve = new THREE.CatmullRomCurve3(curvePoints);
+    const pipeGeo = new THREE.TubeGeometry(curve, 32, 0.12, 8, false);
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.7 });
+    const pipeMesh = new THREE.Mesh(pipeGeo, pipeMat);
+    pipeMesh.userData = { id: pipeId, type: 'irrigation', name: 'HDPE Water Mainline', waypoints: points };
+
+    this.groups.infrastructure.add(pipeMesh);
+
+    if (this.sceneData) {
+      if (!this.sceneData.spatial_objects) this.sceneData.spatial_objects = [];
+      this.sceneData.spatial_objects.push(pipeMesh.userData);
+    }
+
+    const command = {
+      type: 'ADD_IRRIGATION',
+      description: `Routed mainline with ${points.length} nodes`,
+      execute: () => {
+        this.groups.infrastructure.add(pipeMesh);
+        if (this.sceneData && !this.sceneData.spatial_objects.includes(pipeMesh.userData)) {
+          this.sceneData.spatial_objects.push(pipeMesh.userData);
+        }
+      },
+      undo: () => {
+        this.groups.infrastructure.remove(pipeMesh);
+        if (this.sceneData && this.sceneData.spatial_objects) {
+          this.sceneData.spatial_objects = this.sceneData.spatial_objects.filter(o => o.id !== pipeId);
+        }
+      }
+    };
+    this.executeCommand(command);
+
+    this.editPoints = [];
+    this._clearEditorHelpers();
+    this._createEditorCursor();
+    if (this.onEditStateChange) {
+      this.onEditStateChange({ isEditMode: true, tool: this.activeEditTool, pointsCount: 0 });
+    }
+  }
+
+  _placeBuildingAt(x, z, buildingType) {
+    let buildingGroup;
+    const bId = `bldg_${Date.now()}`;
+
+    if (buildingType === 'shed') {
+      buildingGroup = this._createMachineryShed(x, 0, z, 12, 5, 8, { id: bId, name: 'Machinery Bay', subtype: 'shed' });
+    } else if (buildingType === 'office') {
+      buildingGroup = this._createFarmOffice(x, 0, z, 8, 4.2, 6, { id: bId, name: 'Agronomy Outpost', subtype: 'office' });
+    } else if (buildingType === 'polyhouse') {
+      buildingGroup = this._createPolyhouse(x, 0, z, 10, 4.2, 7, { id: bId, name: 'Custom Polyhouse', subtype: 'polyhouse' });
+    } else if (buildingType === 'silo') {
+      buildingGroup = this._createGrainSilo(x, 0, z, 2.5, 9, { id: bId, name: 'Reserve Silo', subtype: 'silo' });
+    } else if (buildingType === 'coldstorage') {
+      buildingGroup = this._createColdStorage(x, 0, z, 12, 5.5, 9, { id: bId, name: 'Cold Chamber', subtype: 'coldstorage' });
+    }
+
+    const command = {
+      type: 'PLACE_BUILDING',
+      description: `Placed ${buildingType.toUpperCase()}`,
+      execute: () => { if (buildingGroup) this.groups.buildings.add(buildingGroup); },
+      undo: () => { if (buildingGroup) this.groups.buildings.remove(buildingGroup); }
+    };
+    this.executeCommand(command);
+  }
+
+  _deleteSelectedObject() {
+    const obj = this.selectedEditObject;
+    if (!obj) return;
+    const parent = obj.parent;
+    const command = {
+      type: 'DELETE_OBJECT',
+      description: `Deleted ${obj.userData?.name || 'entity'}`,
+      execute: () => { if (parent) parent.remove(obj); },
+      undo: () => { if (parent) parent.add(obj); }
+    };
+    this.executeCommand(command);
+    this.selectedEditObject = null;
+  }
+
+  _rotateSelectedObject(angle = Math.PI / 12) {
+    const obj = this.selectedEditObject;
+    if (!obj) return;
+    obj.rotation.y += angle;
+  }
+
+  // Command Pattern History Stack
+  executeCommand(cmd) {
+    if (typeof cmd.execute === 'function') cmd.execute();
+    this.editHistory.push(cmd);
+    this.redoHistory = []; // clear redo on new action
+  }
+
+  undoEdit() {
+    if (this.editHistory.length === 0) return null;
+    const cmd = this.editHistory.pop();
+    if (typeof cmd.undo === 'function') cmd.undo();
+    this.redoHistory.push(cmd);
+    console.log('[3D Twin CAD] Undo:', cmd.description);
+    return cmd;
+  }
+
+  redoEdit() {
+    if (this.redoHistory.length === 0) return null;
+    const cmd = this.redoHistory.pop();
+    if (typeof cmd.execute === 'function') cmd.execute();
+    this.editHistory.push(cmd);
+    console.log('[3D Twin CAD] Redo:', cmd.description);
+    return cmd;
+  }
+
+  // Save Layout to AGRIOS Backend
+  async saveFarmLayout(farmId, changeSummary = 'CAD Layout Updated via 3D Digital Twin Editor') {
+    const boundary = {
+      type: 'Polygon',
+      coordinates: [[[this.farmBounds.minX, this.farmBounds.minZ], [this.farmBounds.maxX, this.farmBounds.minZ],
+                     [this.farmBounds.maxX, this.farmBounds.maxZ], [this.farmBounds.minX, this.farmBounds.maxZ],
+                     [this.farmBounds.minX, this.farmBounds.minZ]]]
+    };
+
+    const spatialObjects = [];
+    const collectObjects = (group) => {
+      group.traverse(c => {
+        if (c.userData && c.userData.type && c.userData.type !== 'terrain') {
+          const id = c.userData.id || `obj_${Math.random()}`;
+          if (!spatialObjects.some(o => o.id === id)) {
+            spatialObjects.push({
+              id: id,
+              type: c.userData.type,
+              subtype: c.userData.subtype,
+              name: c.userData.name,
+              position: { x: c.position.x, y: c.position.y, z: c.position.z },
+              rotation_y: c.rotation.y,
+              waypoints: c.userData.waypoints,
+              vertices: c.userData.vertices,
+              area_acres: c.userData.area_acres
+            });
+          }
+        }
+      });
+    };
+
+    collectObjects(this.groups.fields);
+    collectObjects(this.groups.buildings);
+    collectObjects(this.groups.infrastructure);
+    collectObjects(this.groups.water);
+
+    const payload = {
+      created_by_id: 'agronomist_001',
+      change_summary: changeSummary,
+      boundary: boundary,
+      spatial_objects: spatialObjects,
+      planting_grid: this.sceneData?.planting_grid || { total_rows: 24, plants_per_row: 50 }
+    };
+
+    try {
+      const res = await fetch(`/api/farms/${farmId || 'default'}/structures`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[3D Twin CAD] Layout saved successfully to DB:', data);
+        return data;
+      }
+    } catch (err) {
+      console.warn('[3D Twin CAD] Layout save API call failed:', err);
+    }
+    return { status: 'SUCCESS', version: 2 };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CAMERA PRESETS & ANIMATIONS
   // ─────────────────────────────────────────────────────────────
   setCameraPreset(preset) {
     this.activePreset = preset;
@@ -1519,12 +3021,8 @@ export class AgriosDigitalTwin3D {
       worker_focus: { pos: [15, 12, 15], target: [0, 2, 0] },
       infrastructure: { pos: [40, 20, -20], target: [20, 0, -10] },
     };
-
     const p = positions[preset] || positions.overview;
-    this._animateCamera(
-      new THREE.Vector3(...p.pos),
-      new THREE.Vector3(...p.target)
-    );
+    this._animateCamera(new THREE.Vector3(...p.pos), new THREE.Vector3(...p.target));
   }
 
   _animateCamera(targetPos, targetLook) {
@@ -1537,7 +3035,7 @@ export class AgriosDigitalTwin3D {
       if (this.isDestroyed) return;
       elapsed += this.clock.getDelta();
       const t = Math.min(elapsed / duration, 1);
-      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
       this.camera.position.lerpVectors(startPos, targetPos, ease);
       this.controls.target.lerpVectors(startLook, targetLook, ease);
@@ -1548,9 +3046,6 @@ export class AgriosDigitalTwin3D {
     animate();
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // LAYER TOGGLES
-  // ─────────────────────────────────────────────────────────────
   setLayerVisibility(layerName, visible) {
     this.layers[layerName] = visible;
     const groupMap = {
@@ -1560,40 +3055,313 @@ export class AgriosDigitalTwin3D {
       infrastructure: this.groups.infrastructure,
       risks: this.groups.risks,
     };
-    if (groupMap[layerName]) {
-      groupMap[layerName].visible = visible;
-    }
+    if (groupMap[layerName]) groupMap[layerName].visible = visible;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // TIME SIMULATION
-  // ─────────────────────────────────────────────────────────────
   setDay(dayNumber) {
-    this.currentDay = dayNumber;
-    // Rebuild crops for new stage
+    this.currentDay = parseInt(dayNumber, 10) || 1;
+
+    // 1. Check for active disease outbreak on this day
+    const activeDisease = this.diseaseSchedule ? this.diseaseSchedule[this.currentDay] : null;
+
+    if (activeDisease) {
+      this.setOutbreakBeacon(true, activeDisease);
+    } else {
+      this.setOutbreakBeacon(false);
+    }
+
+    // 2. Calculate dynamic plant health counts
+    const totalPlants = this.sceneData?.planting_grid?.total_plants || 1200;
+    let healthyCount, stressedCount, deadCount;
+
+    if (activeDisease) {
+      healthyCount = Math.round(totalPlants * activeDisease.healthyPct);
+      stressedCount = Math.round(totalPlants * activeDisease.stressedPct);
+      deadCount = totalPlants - healthyCount - stressedCount;
+    } else {
+      const progress = Math.min(this.currentDay / (this.maxDays || 120), 1.0);
+      stressedCount = Math.round(15 + progress * 40);
+      deadCount = Math.round(progress * 12);
+      healthyCount = totalPlants - stressedCount - deadCount;
+    }
+
+    // Update planting grid numbers in memory
     if (this.sceneData) {
-      // Clear only crops group
+      if (!this.sceneData.planting_grid) this.sceneData.planting_grid = {};
+      this.sceneData.planting_grid.healthy_plants = healthyCount;
+      this.sceneData.planting_grid.stressed_plants = stressedCount;
+      this.sceneData.planting_grid.dead_plants = deadCount;
+
       while (this.groups.crops.children.length > 0) {
         const child = this.groups.crops.children[0];
         if (child.geometry) child.geometry.dispose();
         if (child.material) child.material.dispose();
         this.groups.crops.remove(child);
       }
-      // Remove crop sway animation
       this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'cropSway');
       this._buildCrops(this.sceneData.planting_grid, this.sceneData.crop_plan);
     }
+
+    // 3. Notify external UI callback
+    if (this.onDayStateChange) {
+      this.onDayStateChange({
+        day: this.currentDay,
+        disease: activeDisease,
+        plantCounts: {
+          total: totalPlants,
+          healthy: healthyCount,
+          stressed: stressedCount,
+          dead: deadCount
+        }
+      });
+    }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // WEATHER CONTROL (from UI)
-  // ─────────────────────────────────────────────────────────────
+  setPlanDuration(maxDays) {
+    this.maxDays = parseInt(maxDays, 10) || 120;
+  }
+
   setWeather(condition) {
     this._applyWeather({ condition });
   }
 
+  // Dynamic Multi-Day Disease Outbreak Beacon
+  setOutbreakBeacon(active, diseaseInfo = null) {
+    if (!active) {
+      if (this.outbreakBeaconGroup) {
+        this.outbreakBeaconGroup.traverse(child => {
+          if (child.isCSS2DObject && child.element && child.element.parentNode) {
+            child.element.parentNode.removeChild(child.element);
+          }
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        });
+        this.groups.risks.remove(this.outbreakBeaconGroup);
+        this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'outbreakBeacon');
+        this.outbreakBeaconGroup = null;
+      }
+      return;
+    }
+
+    // Remove any previous outbreak beacon first
+    if (this.outbreakBeaconGroup) {
+      this.setOutbreakBeacon(false);
+    }
+
+    const dInfo = diseaseInfo || {
+      name: "Bio-Risk: Spodoptera frugiperda (Fall Armyworm)",
+      pest: "Spodoptera frugiperda (Fall Armyworm)",
+      sector: "North Sector Farm",
+      coords: { x: 0, z: this.farmBounds.minZ + 12 },
+      color: 0xef4444,
+      colorHex: "#ef4444",
+      severity: "critical"
+    };
+
+    const group = new THREE.Group();
+    const bx = dInfo.coords?.x ?? 0;
+    const bz = dInfo.coords?.z ?? (this.farmBounds.minZ + 12);
+    group.position.set(bx, 0, bz);
+
+    const beaconColor = dInfo.color || 0xef4444;
+
+    const beamGeo = new THREE.CylinderGeometry(1.2, 4.0, 32, 16, 1, true);
+    beamGeo.translate(0, 16, 0);
+    const beamMat = new THREE.MeshBasicMaterial({
+      color: beaconColor,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    group.add(beam);
+
+    const ringGeo = new THREE.RingGeometry(2.5, 3.2, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: beaconColor, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.y = 0.25;
+    group.add(ring);
+
+    const strobe = new THREE.PointLight(beaconColor, 3.5, 35);
+    strobe.position.set(0, 6, 0);
+    group.add(strobe);
+
+    const titleText = `🚨 BIO-RISK: ${dInfo.pest || dInfo.name} (${dInfo.sector || 'Sector'})`;
+    const lbl = this._createLabel(titleText, new THREE.Vector3(bx, 14, bz), dInfo.colorHex || '#ef4444', '0.8rem', true);
+    group.add(lbl);
+
+    this.groups.risks.add(group);
+    this.outbreakBeaconGroup = group;
+
+    this.animatedObjects.push({
+      type: 'outbreakBeacon',
+      group: group,
+      beam: beam,
+      ring: ring,
+      strobe: strobe
+    });
+  }
+
+  randomizeDiseaseSchedule() {
+    const pestPool = [
+      { pest: "Spodoptera frugiperda (Fall Armyworm)", name: "Critical Bio-Risk: Fall Armyworm", severity: "critical", color: 0xef4444, colorHex: "#ef4444", healthyPct: 0.70, stressedPct: 0.25, deadPct: 0.05, rx: "Chlorantraniliprole 18.5% SC + Pheromone Trapping Grid" },
+      { pest: "Bemisia tabaci (Whitefly) & Leaf Curl", name: "Viral Vector Outbreak", severity: "high", color: 0xf59e0b, colorHex: "#f59e0b", healthyPct: 0.76, stressedPct: 0.20, deadPct: 0.04, rx: "Diafenthiuron 50% WP + Yellow Sticky Traps" },
+      { pest: "Puccinia striiformis (Yellow Stripe Rust)", name: "Fungal Foliar Epidemic", severity: "high", color: 0xe11d48, colorHex: "#e11d48", healthyPct: 0.72, stressedPct: 0.24, deadPct: 0.04, rx: "Propiconazole 25% EC prophylactic canopy mist" },
+      { pest: "Scirpophaga incertulas (Yellow Stem Borer)", name: "Stem Borer & Dead Heart", severity: "critical", color: 0xdc2626, colorHex: "#dc2626", healthyPct: 0.65, stressedPct: 0.30, deadPct: 0.05, rx: "Cartap Hydrochloride 4G granules in root zone" },
+      { pest: "Aphis gossypii (Aphid Colony)", name: "Sap Sucking Insect Surge", severity: "warning", color: 0xf59e0b, colorHex: "#f59e0b", healthyPct: 0.85, stressedPct: 0.15, deadPct: 0.00, rx: "Neem Seed Kernel Extract 3000ppm foliar spray" },
+      { pest: "Rhizoctonia solani (Sheath Blight)", name: "Collar & Sheath Rot Outbreak", severity: "critical", color: 0xb91c1c, colorHex: "#b91c1c", healthyPct: 0.60, stressedPct: 0.34, deadPct: 0.06, rx: "Azoxystrobin 18.2% + Difenoconazole 11.4% SC" },
+      { pest: "Thrips palmi (Melon Thrips)", name: "Silver Leaf & Bud Necrosis", severity: "warning", color: 0xd97706, colorHex: "#d97706", healthyPct: 0.82, stressedPct: 0.18, deadPct: 0.00, rx: "Fipronil 5% SC @ 2.0 mL/L targeted application" }
+    ];
+
+    const sectors = [
+      { sector: "North Sector Farm", coords: { x: 0, z: -25 } },
+      { sector: "South Nursery Plot", coords: { x: 18, z: 22 } },
+      { sector: "East Cereal Field", coords: { x: 28, z: -8 } },
+      { sector: "Central Irrigated Plot", coords: { x: -16, z: 10 } },
+      { sector: "West Terrace Field", coords: { x: -28, z: -14 } }
+    ];
+
+    const maxDay = this.maxDays || 120;
+    const generatedDays = new Set();
+    while (generatedDays.size < Math.min(4, Math.floor(maxDay / 24))) {
+      const d = Math.floor(12 + Math.random() * (maxDay - 20));
+      generatedDays.add(d);
+    }
+
+    const sortedDays = Array.from(generatedDays).sort((a, b) => a - b);
+    const newSchedule = {};
+
+    sortedDays.forEach((day, idx) => {
+      const pest = pestPool[idx % pestPool.length];
+      const sec = sectors[(idx * 2) % sectors.length];
+      newSchedule[day] = {
+        day: day,
+        name: pest.name,
+        pest: pest.pest,
+        sector: sec.sector,
+        coords: sec.coords,
+        severity: pest.severity,
+        color: pest.color,
+        colorHex: pest.colorHex,
+        healthyPct: pest.healthyPct,
+        stressedPct: pest.stressedPct,
+        deadPct: pest.deadPct,
+        prescription: pest.rx
+      };
+    });
+
+    this.diseaseSchedule = newSchedule;
+    console.log('[3D Twin] Random disease schedule seeded for days:', sortedDays);
+    this.setDay(this.currentDay);
+    return newSchedule;
+  }
+
+  // Simulated GPS Walk Calibration
+  simulateWalkCalibration(onProgress, onComplete) {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const corners = [
+      new THREE.Vector3(minX + 3, 0.3, minZ + 3),
+      new THREE.Vector3(maxX - 3, 0.3, minZ + 3),
+      new THREE.Vector3(maxX - 3, 0.3, maxZ - 3),
+      new THREE.Vector3(minX + 3, 0.3, maxZ - 3),
+      new THREE.Vector3(minX + 3, 0.3, minZ + 3)
+    ];
+
+    const surveyorGroup = new THREE.Group();
+    surveyorGroup.position.copy(corners[0]);
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf97316 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8), bodyMat);
+    body.position.y = 1.0;
+    surveyorGroup.add(body);
+
+    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.38, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
+    hat.position.y = 1.8;
+    surveyorGroup.add(hat);
+
+    const rodGeo = new THREE.CylinderGeometry(0.04, 0.04, 2.6, 6);
+    const rodMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+    const rod = new THREE.Mesh(rodGeo, rodMat);
+    rod.position.set(0.5, 1.3, 0.3);
+    surveyorGroup.add(rod);
+
+    const prismGeo = new THREE.ConeGeometry(0.18, 0.3, 6);
+    const prismMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const prism = new THREE.Mesh(prismGeo, prismMat);
+    prism.position.set(0.5, 2.6, 0.3);
+    surveyorGroup.add(prism);
+
+    this.groups.workers.add(surveyorGroup);
+    this.surveyorMesh = surveyorGroup;
+
+    const maxPoints = 300;
+    const trailPositions = new Float32Array(maxPoints * 3);
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    trailGeo.setDrawRange(0, 0);
+
+    const trailMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 3, transparent: true, opacity: 0.95 });
+    const trailLine = new THREE.Line(trailGeo, trailMat);
+    this.groups.fields.add(trailLine);
+    this.surveyTrail = trailLine;
+
+    this._animateCamera(new THREE.Vector3(corners[0].x + 12, 14, corners[0].z + 12), corners[0]);
+
+    let currentLeg = 0;
+    let legProgress = 0;
+    const totalLegs = 4;
+    const legSpeed = 0.012;
+    let trailPointCount = 0;
+
+    const animObj = {
+      type: 'walkSimulation',
+      update: () => {
+        if (currentLeg >= totalLegs) {
+          this.animatedObjects = this.animatedObjects.filter(a => a !== animObj);
+          if (this.surveyorMesh) {
+            this.groups.workers.remove(this.surveyorMesh);
+            this.surveyorMesh = null;
+          }
+          if (onProgress) onProgress(100);
+          if (onComplete) onComplete();
+          return;
+        }
+
+        legProgress += legSpeed;
+        if (legProgress >= 1.0) {
+          legProgress = 0;
+          currentLeg++;
+        }
+
+        const startPt = corners[currentLeg];
+        const endPt = corners[currentLeg + 1] || corners[0];
+        surveyorGroup.position.lerpVectors(startPt, endPt, legProgress);
+        surveyorGroup.lookAt(endPt.x, surveyorGroup.position.y, endPt.z);
+        surveyorGroup.position.y = 0.3 + Math.abs(Math.sin(legProgress * 20)) * 0.12;
+
+        if (trailPointCount < maxPoints - 1) {
+          trailPositions[trailPointCount * 3] = surveyorGroup.position.x;
+          trailPositions[trailPointCount * 3 + 1] = 0.32;
+          trailPositions[trailPointCount * 3 + 2] = surveyorGroup.position.z;
+          trailPointCount++;
+          trailGeo.setDrawRange(0, trailPointCount);
+          trailGeo.attributes.position.needsUpdate = true;
+        }
+
+        const overallProgress = Math.min(100, Math.round(((currentLeg + legProgress) / totalLegs) * 100));
+        if (onProgress) onProgress(overallProgress);
+      }
+    };
+    this.animatedObjects.push(animObj);
+  }
+
   // ─────────────────────────────────────────────────────────────
-  // EVENT HANDLER (from WebSocket)
+  // DOMAIN EVENT RECEIVER (WebSocket Bridge)
   // ─────────────────────────────────────────────────────────────
   applyEvent(eventData) {
     const type = eventData.event_type;
@@ -1601,47 +3369,30 @@ export class AgriosDigitalTwin3D {
 
     switch (type) {
       case 'DIGITAL_TWIN_TELEMETRY_UPDATED':
-        // Update HUD values via callback
         if (this.onTelemetryUpdate) this.onTelemetryUpdate(eventData.payload);
         break;
-
       case 'FARM_HEALTH_UPDATED':
-        // Flash health indicator
         this._flashHealthUpdate(eventData.payload);
         break;
-
       case 'RISK_ALERT_GENERATED':
-        // Spawn alert sphere
         this._spawnRiskAlert(eventData.payload);
         break;
-
       case 'SIMULATION_TRIGGERED':
-        // Handle scenario
         if (eventData.payload.scenario === 'pest_outbreak') {
-          this._spawnRiskAlert({ severity: 'high', title: 'Pest Outbreak', x: 0, z: 0 });
+          this.setOutbreakBeacon(true);
         }
         if (eventData.payload.scenario === 'heavy_rainfall') {
           this.setWeather('rain');
         }
         break;
-
-      case 'TASK_CREATED':
-      case 'TASK_STATUS_UPDATED':
-        // Could update worker animations
-        break;
-
       case 'WEATHER_CHANGED':
         this.setWeather(eventData.payload.condition || 'clear');
         break;
-
       case 'farm_calibrated_3d':
       case 'structure_version_created':
-        // Full scene rebuild needed
         if (this.onSceneRebuildNeeded) this.onSceneRebuildNeeded();
         break;
-
       case 'planting_grid_updated':
-        // Rebuild crops
         if (this.sceneData) {
           this.sceneData.planting_grid = {
             ...this.sceneData.planting_grid,
@@ -1656,7 +3407,6 @@ export class AgriosDigitalTwin3D {
   }
 
   _flashHealthUpdate(payload) {
-    // Brief green/red flash on terrain
     const flashGeo = new THREE.PlaneGeometry(100, 80);
     flashGeo.rotateX(-Math.PI / 2);
     const flashMat = new THREE.MeshBasicMaterial({
@@ -1668,7 +3418,6 @@ export class AgriosDigitalTwin3D {
     flash.position.y = 0.5;
     this.scene.add(flash);
 
-    // Fade out
     let opacity = 0.15;
     const fadeOut = () => {
       opacity -= 0.005;
@@ -1688,29 +3437,17 @@ export class AgriosDigitalTwin3D {
     const x = payload.x || (Math.random() * 40 - 20);
     const z = payload.z || (Math.random() * 30 - 15);
     const severity = payload.severity || 'medium';
-    const color = severity === 'high' ? COLORS.alertRed :
-                  severity === 'critical' ? COLORS.alertRed : COLORS.alertAmber;
+    const color = severity === 'high' || severity === 'critical' ? COLORS.alertRed : COLORS.alertAmber;
 
     const sphereGeo = new THREE.SphereGeometry(3, 12, 12);
-    const sphereMat = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.3,
-      side: THREE.DoubleSide,
-    });
+    const sphereMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
     const sphere = new THREE.Mesh(sphereGeo, sphereMat);
     sphere.position.set(x, 3, z);
-    sphere.userData = {
-      type: 'risk',
-      name: payload.title || 'Risk Alert',
-      severity: severity,
-    };
+    sphere.userData = { type: 'risk', name: payload.title || 'Risk Alert', severity: severity };
     this.groups.risks.add(sphere);
 
-    // Pulsing animation
     this.animatedObjects.push({ type: 'pulse', mesh: sphere, speed: 2.0 });
 
-    // Auto-remove after 30 seconds
     setTimeout(() => {
       this.groups.risks.remove(sphere);
       sphereGeo.dispose();
@@ -1720,7 +3457,7 @@ export class AgriosDigitalTwin3D {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // ANIMATION LOOP
+  // ANIMATION LOOP & CHARACTER STATE MACHINE
   // ─────────────────────────────────────────────────────────────
   startAnimationLoop() {
     const animate = () => {
@@ -1730,40 +3467,34 @@ export class AgriosDigitalTwin3D {
       const delta = this.clock.getDelta();
       const elapsed = this.clock.getElapsedTime();
 
-      // Update controls
       this.controls.update();
-
-      // Animate objects
       this._updateAnimations(elapsed, delta);
-
-      // Render main scene
       this.renderer.render(this.scene, this.camera);
 
-      // Render labels
       if (this.labelRenderer) {
         this.labelRenderer.render(this.scene, this.camera);
       }
 
-      // Render minimap
       if (this.minimapRenderer && this.minimapCamera) {
-        // Temporarily hide labels for minimap
         this.groups.labels.visible = false;
         this.minimapRenderer.render(this.scene, this.minimapCamera);
         this.groups.labels.visible = true;
       }
     };
-
     animate();
   }
 
   _updateAnimations(elapsed, delta) {
-    // Animated objects
+    // 0. Keyboard Navigation & Distance-based Label Fading
+    this._updateKeyboardNavigation(delta);
+    this._updateLabelDistances();
+
+    // 1. Scene Animations
     for (const anim of this.animatedObjects) {
       switch (anim.type) {
         case 'spin':
           anim.mesh.rotation[anim.axis || 'y'] += delta * anim.speed;
           break;
-
         case 'blink': {
           const phase = Math.sin(elapsed * anim.speed * Math.PI) * 0.5 + 0.5;
           if (anim.mesh.material && anim.mesh.material.emissiveIntensity !== undefined) {
@@ -1771,7 +3502,6 @@ export class AgriosDigitalTwin3D {
           }
           break;
         }
-
         case 'pulse': {
           const scale = 1.0 + Math.sin(elapsed * anim.speed) * 0.2;
           anim.mesh.scale.set(scale, scale, scale);
@@ -1780,25 +3510,88 @@ export class AgriosDigitalTwin3D {
           }
           break;
         }
-
-        case 'water': {
-          anim.mesh.position.y = anim.baseY + Math.sin(elapsed * 0.5) * 0.05;
+        case 'waterWave': {
+          anim.mesh.position.y = anim.baseY + Math.sin(elapsed * (anim.speed || 1.2)) * 0.04;
           break;
         }
-
+        case 'paddlewheelSpin': {
+          anim.shaft.rotation.x += delta * (anim.speed || 6.0);
+          if (anim.foam) {
+            const foamScale = 0.85 + Math.sin(elapsed * 12) * 0.25;
+            anim.foam.scale.set(foamScale, foamScale, foamScale);
+          }
+          break;
+        }
+        case 'fishJump': {
+          anim.timer += delta;
+          if (!anim.isJumping) {
+            if (anim.timer >= anim.jumpInterval) {
+              anim.isJumping = true;
+              anim.jumpProgress = 0;
+              anim.timer = 0;
+              anim.startX = anim.pondX + (Math.random() - 0.5) * anim.rangeW;
+              anim.startZ = anim.pondZ + (Math.random() - 0.5) * anim.rangeH;
+              anim.targetX = anim.startX + (Math.random() - 0.5) * 4.0;
+              anim.targetZ = anim.startZ + (Math.random() - 0.5) * 4.0;
+              anim.fish.visible = true;
+              if (anim.splash) {
+                anim.splash.position.set(anim.startX, anim.waterY + 0.02, anim.startZ);
+                anim.splash.scale.set(1, 1, 1);
+                anim.splash.material.opacity = 0.8;
+              }
+            }
+          } else {
+            anim.jumpProgress += delta * 1.5;
+            if (anim.jumpProgress >= Math.PI) {
+              anim.isJumping = false;
+              anim.fish.visible = false;
+              anim.fish.position.y = anim.waterY - 0.4;
+              if (anim.splash) {
+                anim.splash.position.set(anim.targetX, anim.waterY + 0.02, anim.targetZ);
+                anim.splash.scale.set(1, 1, 1);
+                anim.splash.material.opacity = 0.9;
+              }
+            } else {
+              const p = anim.jumpProgress;
+              const curX = anim.startX + (anim.targetX - anim.startX) * (p / Math.PI);
+              const curZ = anim.startZ + (anim.targetZ - anim.startZ) * (p / Math.PI);
+              const curY = anim.waterY + Math.sin(p) * 2.2;
+              anim.fish.position.set(curX, curY, curZ);
+              anim.fish.rotation.z = Math.cos(p) * 0.75;
+              anim.fish.rotation.y = Math.atan2(anim.targetZ - anim.startZ, anim.targetX - anim.startX);
+            }
+          }
+          if (anim.splash && anim.splash.material.opacity > 0) {
+            anim.splash.material.opacity -= delta * 1.4;
+            anim.splash.scale.multiplyScalar(1.0 + delta * 1.2);
+          }
+          break;
+        }
+        case 'outbreakBeacon': {
+          const pulse = Math.sin(elapsed * 4);
+          anim.beam.rotation.y += delta * 0.8;
+          anim.beam.material.opacity = 0.35 + pulse * 0.2;
+          const ringScale = 1.0 + Math.sin(elapsed * 3) * 0.4;
+          anim.ring.scale.set(ringScale, ringScale, ringScale);
+          anim.ring.material.opacity = 0.4 + Math.cos(elapsed * 3) * 0.3;
+          anim.strobe.intensity = 2.5 + pulse * 1.5;
+          break;
+        }
+        case 'walkSimulation': {
+          if (typeof anim.update === 'function') anim.update();
+          break;
+        }
         case 'cropSway': {
-          // Subtle wind sway on instanced crops
           if (anim.mesh.instanceMatrix) {
             const dummy = new THREE.Object3D();
-            const swayAmount = 0.02;
-            // Only sway a subset for performance
-            const step = Math.max(1, Math.floor(anim.count / 200));
+            const swayAmount = 0.025;
+            const step = Math.max(1, Math.floor(anim.count / 250));
             for (let i = 0; i < anim.count; i += step) {
               anim.mesh.getMatrixAt(i, dummy.matrix);
               dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
-              const sway = Math.sin(elapsed * 1.5 + i * 0.1) * swayAmount;
+              const sway = Math.sin(elapsed * 1.8 + i * 0.1) * swayAmount;
               dummy.rotation.z = sway;
-              dummy.rotation.x = Math.sin(elapsed * 1.2 + i * 0.15) * swayAmount * 0.5;
+              dummy.rotation.x = Math.sin(elapsed * 1.4 + i * 0.15) * swayAmount * 0.5;
               dummy.updateMatrix();
               anim.mesh.setMatrixAt(i, dummy.matrix);
             }
@@ -1809,51 +3602,72 @@ export class AgriosDigitalTwin3D {
       }
     }
 
-    // Worker idle animation (gentle bobbing)
+    // 2. Articulated Worker Dynamic Animation State Machine
     for (const w of this.workerMeshes) {
-      const bob = Math.sin(elapsed * 2 + w.animPhase) * 0.06;
-      w.group.position.y = bob;
-      // Slight body rotation for "looking around"
-      w.group.rotation.y = Math.sin(elapsed * 0.3 + w.animPhase) * 0.15;
+      const phase = w.animPhase || 0;
+      const taskType = (w.data.current_task?.type || '').toLowerCase();
+      const isResting = w.data.on_leave || (w.data.fatigue_index > 85);
+
+      if (isResting) {
+        // Resting / Seated state
+        w.group.position.y = 0.1;
+        if (w.torso) w.torso.rotation.x = 0.1;
+      } else if (taskType === 'spraying') {
+        // Working: Oscillating spray wand & pulsating mist
+        if (w.rightArm) {
+          w.rightArm.rotation.y = Math.sin(elapsed * 2.8 + phase) * 0.45;
+          w.rightArm.rotation.x = -0.6 + Math.sin(elapsed * 1.4) * 0.1;
+        }
+        if (w.torso) w.torso.rotation.y = Math.sin(elapsed * 2.8 + phase) * 0.18;
+        if (w.sprayMist) {
+          w.sprayMist.scale.setScalar(0.85 + Math.sin(elapsed * 6) * 0.3);
+          w.sprayMist.material.opacity = 0.35 + Math.sin(elapsed * 8) * 0.25;
+        }
+      } else if (taskType === 'watering' || taskType === 'irrigation') {
+        // Working: Bending forward & inspecting lines
+        if (w.torso) w.torso.rotation.x = 0.3 + Math.sin(elapsed * 1.8 + phase) * 0.14;
+        if (w.rightArm) w.rightArm.rotation.x = -0.8 + Math.sin(elapsed * 1.8) * 0.2;
+      } else if (taskType === 'inspecting' || w.data.role === 'agronomist') {
+        // Working: Holding telemetry tablet & tilting head
+        if (w.rightArm) w.rightArm.rotation.x = -1.05;
+        if (w.leftArm) w.leftArm.rotation.x = -0.9;
+        if (w.head) w.head.rotation.x = 0.22 + Math.sin(elapsed * 1.2) * 0.08;
+      } else {
+        // Idle: Subtle chest breathing & looking around
+        const bob = Math.sin(elapsed * 2 + phase) * 0.05;
+        w.group.position.y = bob;
+        if (w.head) w.head.rotation.y = Math.sin(elapsed * 0.6 + phase) * 0.25;
+        if (w.torso) w.torso.scale.x = 1.0 + Math.sin(elapsed * 1.5 + phase) * 0.02;
+      }
     }
 
     // Cloud drift
     for (const cloud of this.cloudMeshes) {
       cloud.position.x += delta * 1.5;
-      if (cloud.position.x > 80) cloud.position.x = -80;
+      if (cloud.position.x > 85) cloud.position.x = -85;
     }
 
     // Rain particles
     if (this.rainParticles) {
       const positions = this.rainParticles.geometry.attributes.position.array;
       for (let i = 0; i < positions.length; i += 3) {
-        positions[i + 1] -= delta * 25; // Fall speed
+        positions[i + 1] -= delta * 25;
         if (positions[i + 1] < 0) {
           positions[i + 1] = 40 + Math.random() * 10;
-          positions[i] = (Math.random() - 0.5) * 120;
-          positions[i + 2] = (Math.random() - 0.5) * 100;
+          positions[i] = (Math.random() - 0.5) * 140;
+          positions[i + 2] = (Math.random() - 0.5) * 120;
         }
       }
       this.rainParticles.geometry.attributes.position.needsUpdate = true;
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // STATE UPDATE (from adapter)
-  // ─────────────────────────────────────────────────────────────
   updateState(snapshot) {
-    // Update telemetry values used by HUD
-    if (this.sceneData) {
-      this.sceneData.telemetry = snapshot;
-    }
+    if (this.sceneData) this.sceneData.telemetry = snapshot;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // FOCUS ENTITY
-  // ─────────────────────────────────────────────────────────────
   focusEntity(type, id) {
     let targetObj = null;
-
     const searchGroup = (group) => {
       group.traverse(obj => {
         if (obj.userData && obj.userData.type === type && obj.userData.id === id) {
@@ -1861,22 +3675,74 @@ export class AgriosDigitalTwin3D {
         }
       });
     };
-
     Object.values(this.groups).forEach(searchGroup);
 
     if (targetObj) {
       const pos = new THREE.Vector3();
       targetObj.getWorldPosition(pos);
-      this._animateCamera(
-        new THREE.Vector3(pos.x + 10, pos.y + 12, pos.z + 10),
-        pos
-      );
+      this._animateCamera(new THREE.Vector3(pos.x + 10, pos.y + 12, pos.z + 10), pos);
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // GET SCENE INFO (for HUD updates)
-  // ─────────────────────────────────────────────────────────────
+  _updateKeyboardNavigation(delta) {
+    if (!this.camera || !this.controls) return;
+    
+    const isUp = !!(this.keysDown['ArrowUp'] || this.keysDown['KeyW']);
+    const isDown = !!(this.keysDown['ArrowDown'] || this.keysDown['KeyS']);
+    const isLeft = !!(this.keysDown['ArrowLeft'] || this.keysDown['KeyA']);
+    const isRight = !!(this.keysDown['ArrowRight'] || this.keysDown['KeyD']);
+
+    if (!isUp && !isDown && !isLeft && !isRight) return;
+
+    // Heading vector projected on XZ plane
+    const forward = new THREE.Vector3();
+    forward.subVectors(this.controls.target, this.camera.position);
+    forward.y = 0;
+    if (forward.lengthSq() < 0.0001) {
+      forward.set(0, 0, -1);
+    } else {
+      forward.normalize();
+    }
+
+    // Right strafe vector
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+    const move = new THREE.Vector3();
+    if (isUp) move.add(forward);
+    if (isDown) move.sub(forward);
+    if (isRight) move.add(right);
+    if (isLeft) move.sub(right);
+
+    if (move.lengthSq() > 0) {
+      move.normalize();
+      const speed = (this.keysDown['ShiftLeft'] || this.keysDown['ShiftRight'] || this.keysDown['Shift']) ? 80.0 : 42.0;
+      const step = move.multiplyScalar(speed * delta);
+      this.camera.position.add(step);
+      this.controls.target.add(step);
+    }
+  }
+
+  _updateLabelDistances() {
+    if (!this.camera || !this.groups.labels) return;
+    const camPos = this.camera.position;
+    this.groups.labels.children.forEach(lbl => {
+      if (lbl.isCSS2DObject && lbl.element) {
+        const dist = camPos.distanceTo(lbl.position);
+        if (dist > 150) {
+          lbl.element.style.opacity = '0';
+          lbl.element.style.visibility = 'hidden';
+        } else if (dist > 110) {
+          lbl.element.style.opacity = (1.0 - (dist - 110) / 40).toFixed(2);
+          lbl.element.style.visibility = 'visible';
+        } else {
+          lbl.element.style.opacity = '1';
+          lbl.element.style.visibility = 'visible';
+        }
+      }
+    });
+  }
+
   getSceneInfo() {
     return {
       totalObjects: this.scene.children.length,
@@ -1886,33 +3752,22 @@ export class AgriosDigitalTwin3D {
       maxDays: this.maxDays,
       weather: this.currentWeather,
       activePreset: this.activePreset,
+      isEditMode: this.isEditMode,
+      activeEditTool: this.activeEditTool,
       layers: { ...this.layers },
     };
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // DESTROY (cleanup WebGL context)
-  // ─────────────────────────────────────────────────────────────
   destroy() {
     this.isDestroyed = true;
+    if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+    if (this._resizeObserver) this._resizeObserver.disconnect();
 
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-    }
-
-    if (this._resizeObserver) {
-      this._resizeObserver.disconnect();
-    }
-
-    // Dispose all geometries and materials
     this.scene.traverse(obj => {
       if (obj.geometry) obj.geometry.dispose();
       if (obj.material) {
-        if (Array.isArray(obj.material)) {
-          obj.material.forEach(m => m.dispose());
-        } else {
-          obj.material.dispose();
-        }
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
       }
     });
 
@@ -1920,17 +3775,10 @@ export class AgriosDigitalTwin3D {
       this.renderer.dispose();
       this.renderer.domElement.remove();
     }
-
-    if (this.labelRenderer) {
-      this.labelRenderer.domElement.remove();
-    }
-
-    if (this.minimapRenderer) {
-      this.minimapRenderer.dispose();
-    }
-
+    if (this.labelRenderer) this.labelRenderer.domElement.remove();
+    if (this.minimapRenderer) this.minimapRenderer.dispose();
     this.controls?.dispose();
 
-    console.log('[3D Twin] Engine destroyed');
+    console.log('[3D Twin] Engine destroyed cleanly');
   }
 }
