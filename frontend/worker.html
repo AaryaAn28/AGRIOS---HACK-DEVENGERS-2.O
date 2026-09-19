@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGRIOS — Field Worker & Krishi Sakhi Portal</title>
+  <link rel="stylesheet" href="css/agrios.css">
+</head>
+<body>
+  <div id="navbar-container"></div>
+
+  <main class="app-container">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Krishi Sakhi Field Operations</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+          Sunita Devi • Senior Field Extension Worker • Jandiali Zone (3 Assigned Farms)
+        </p>
+      </div>
+      <div class="glass-panel" style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+        <span class="beacon-dot"></span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">GPS Geotagging & Field Telemetry Active</span>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="grid-metrics">
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Today's Field Tasks</span>
+          <span class="metric-icon">📋</span>
+        </div>
+        <div class="metric-value" id="worker-tasks-pending">2 Pending</div>
+        <div class="metric-sub trend-up">
+          <span>⚡</span> <span>1 Yellow Rust Biosecurity Inspection</span>
+        </div>
+      </div>
+
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Farms Covered This Week</span>
+          <span class="metric-icon">🏡</span>
+        </div>
+        <div class="metric-value">3 / 3</div>
+        <div class="metric-sub">
+          <span>📍</span> <span>100% Ground Truth Coverage</span>
+        </div>
+      </div>
+
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">AI Vision Scans Logged</span>
+          <span class="metric-icon">📸</span>
+        </div>
+        <div class="metric-value" id="worker-scans-count">12</div>
+        <div class="metric-sub trend-up">
+          <span>✅</span> <span>Validated by Dr. Priya (Agronomist)</span>
+        </div>
+      </div>
+
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Offline Sync Status</span>
+          <span class="metric-icon">📶</span>
+        </div>
+        <div class="metric-value" style="color: var(--accent-neon); font-size: 1.6rem;">Synced</div>
+        <div class="metric-sub">
+          <span>☁️</span> <span>Local queue clear • Realtime connected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Split -->
+    <div class="section-split">
+      <!-- Left: Assigned Tasks & Verification Checklist -->
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Today's Work Plan & Verification Checklist</span>
+          <span class="badge badge-warning" id="task-badge">Assigned to You</span>
+        </div>
+        <div id="worker-task-list"></div>
+      </div>
+
+      <!-- Right: AI Crop Photo Scanner & Diagnostic Tool -->
+      <div>
+        <div class="glass-panel glass-panel-glow" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+          <div class="card-title">
+            <span>🔬 AI Crop Photo Scanner</span>
+            <span class="badge badge-optimal">Vision AI</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+            Capture crop leaf photo on-site. Edge AI detects pathogens and notifies Agronomist in real time.
+          </p>
+
+          <div style="background: rgba(0,0,0,0.3); border: 2px dashed var(--border-emerald); border-radius: var(--radius-sm); padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📷</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Sample Leaf Image: Wheat Rust Suspect</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Puccinia striiformis specimen (Field 1)</div>
+            <button class="btn btn-primary" onclick="runAIScan()" style="margin-top: 1rem; width: 100%;">
+              ⚡ Run Diagnostic Analysis
+            </button>
+          </div>
+
+          <div id="scan-result-card" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--border-emerald); border-radius: var(--radius-sm); padding: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <div class="glass-panel" style="padding: 1.5rem;">
+          <div class="card-title">
+            <span>Assigned Farm Network</span>
+          </div>
+          <div id="assigned-farms-list"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/realtime.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    let currentFarms = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Krishi Sakhi Portal", "worker");
+      await loadWorkerData();
+
+      window.addEventListener("agrios:event", (e) => {
+        console.log("[Worker Portal] Live event:", e.detail.event_type);
+        loadWorkerData();
+      });
+    });
+
+    async function loadWorkerData() {
+      try {
+        currentFarms = await AgriosAPI.getFarms();
+        const primaryFarm = currentFarms[0];
+
+        // Load tasks assigned to worker
+        const tasks = await AgriosAPI.getTasks({ assigned_role: "worker" });
+        renderWorkerTasks(tasks);
+
+        // Render Assigned Farms
+        const farmsListMount = document.getElementById("assigned-farms-list");
+        farmsListMount.innerHTML = currentFarms.map(f => `
+          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:0.85rem; margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <strong style="font-size:0.85rem;">${f.name}</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${f.village}, ${f.district} • ${f.total_area_acres} Acres</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="badge ${f.health_score >= 80 ? 'badge-optimal' : 'badge-warning'}">${f.health_score}% Health</span>
+            </div>
+          </div>
+        `).join("");
+
+      } catch (err) {
+        console.error("Worker load error:", err);
+      }
+    }
+
+    function renderWorkerTasks(tasks) {
+      const mount = document.getElementById("worker-task-list");
+      if (!tasks || tasks.length === 0) {
+        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem;">No tasks assigned for today.</div>`;
+        document.getElementById("worker-tasks-pending").textContent = "0 Pending";
+        return;
+      }
+
+      const pending = tasks.filter(t => t.status !== "completed");
+      document.getElementById("worker-tasks-pending").textContent = `${pending.length} Pending`;
+
+      mount.innerHTML = tasks.map(t => {
+        const isDone = t.status === "completed";
+        return `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid ${isDone ? 'var(--border-emerald)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <strong style="font-size:0.95rem;">${t.title}</strong>
+              <span class="badge ${isDone ? 'badge-optimal' : 'badge-warning'}">${t.status.toUpperCase()}</span>
+            </div>
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">${t.description || 'Routine field operation'}</p>
+            
+            <div style="margin-bottom: 1rem;">
+              ${(t.checklist || []).map((step, idx) => `
+                <div class="checklist-item ${step.done ? 'done' : ''}" onclick="toggleWorkerStep('${t.id}', ${idx})">
+                  <div class="custom-checkbox">${step.done ? '✓' : ''}</div>
+                  <span class="check-title" style="font-size:0.8rem;">${step.step}</span>
+                </div>
+              `).join("")}
+            </div>
+
+            ${!isDone ? `
+              <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-primary" onclick="markComplete('${t.id}')" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
+                  ✓ Sign-Off & Complete Task
+                </button>
+              </div>
+            ` : `<div style="font-size:0.75rem; color:var(--text-emerald);">✓ Signed off with GPS coordinates (30.9010° N, 75.8573° E)</div>`}
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function toggleWorkerStep(taskId, stepIndex) {
+      try {
+        await AgriosAPI.toggleChecklist(taskId, stepIndex);
+        loadWorkerData();
+      } catch (err) {
+        AgriosUI.showToast("Update Failed", err.message, "❌");
+      }
+    }
+
+    async function markComplete(taskId) {
+      try {
+        await AgriosAPI.updateTaskStatus(taskId, "completed", "Field inspection completed by Krishi Sakhi Sunita Devi with GPS check.", 2.0);
+        AgriosUI.showToast("Task Completed", "Work logged into canonical ledger. Farm health rewarded.", "✅");
+        loadWorkerData();
+      } catch (err) {
+        AgriosUI.showToast("Action Failed", err.message, "❌");
+      }
+    }
+
+    async function runAIScan() {
+      if (!currentFarms.length) return;
+      try {
+        AgriosUI.showToast("Vision AI Inference", "Scanning leaf multispectral signatures...", "🔬");
+        const res = await AgriosAPI.scanCropPhoto({
+          crop_id: "crop-wheat-01",
+          farm_id: currentFarms[0].id,
+          disease_detected: "Early Yellow Rust (Puccinia striiformis)",
+          pest_risk: "Moderate",
+          severity: 0.38,
+          diagnosis_notes: "Foliar yellow-orange uredinial pustules observed along leaf veins. Spore concentration: 18 pustules/cm².",
+          remedy_recommended: "Recommend 200 ml Nativo 75 WG in 200L water per acre. Suspend nitrogen top-dressing immediately."
+        });
+
+        const card = document.getElementById("scan-result-card");
+        card.style.display = "block";
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong style="color:var(--accent-neon); font-size:0.9rem;">Pathogen: ${res.disease_detected}</strong>
+            <span class="badge badge-warning">Severity: ${Math.round(res.severity * 100)}%</span>
+          </div>
+          <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.5rem;">${res.diagnosis_notes}</p>
+          <div style="font-size:0.75rem; color:var(--text-emerald); background:rgba(0,0,0,0.3); padding:0.4rem 0.6rem; border-radius:4px;">
+            💊 <strong>Treatment:</strong> ${res.remedy_recommended}
+          </div>
+          <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--text-muted);">
+            Dispatched to Dr. Priya Sharma (Agronomist) for prescription validation.
+          </div>
+        `;
+
+        AgriosUI.showToast("AI Diagnosis Generated", "Alert and diagnostic dispatched across all portals.", "🌱");
+      } catch (err) {
+        AgriosUI.showToast("Scan Error", err.message, "❌");
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+import os
+import traceback
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+
+from app.config import settings
+from app.database import engine, Base
+from app.seed_agrios import seed_database
+
+# Import all routers
+from app.routes.auth import router as auth_router
+from app.routes.farms import router as farms_router
+from app.routes.crops import router as crops_router
+from app.routes.tasks import router as tasks_router
+from app.routes.resources import router as resources_router
+from app.routes.risks import router as risks_router
+from app.routes.finance import router as finance_router
+from app.routes.schemes import router as schemes_router
+from app.routes.communications import router as communications_router
+from app.routes.digital_twin import router as digital_twin_router
+from app.routes.simulator import router as simulator_router
+from app.routes.websockets import router as websockets_router
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print(f"[Lifespan] Initializing {settings.PROJECT_NAME}...")
+    # 1. Create DB tables
+    Base.metadata.create_all(bind=engine)
+    # 2. Seed initial canonical data
+    seed_database()
+    print(f"[Lifespan] AGRIOS startup completed. Ready for demo.")
+    yield
+    print(f"[Lifespan] Shutting down AGRIOS...")
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version="2.0.0",
+    description="Unified Living Agricultural Operating System with 4 Portals, God Database and Realtime Event Stream",
+    lifespan=lifespan
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global error handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    err_tb = traceback.format_exc()
+    print(f"[ERROR 500] {request.method} {request.url.path}: {exc}\n{err_tb}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}", "type": type(exc).__name__}
+    )
+
+# Register all Routers
+app.include_router(websockets_router)
+app.include_router(auth_router)
+app.include_router(farms_router)
+app.include_router(crops_router)
+app.include_router(tasks_router)
+app.include_router(resources_router)
+app.include_router(risks_router)
+app.include_router(finance_router)
+app.include_router(schemes_router)
+app.include_router(communications_router)
+app.include_router(digital_twin_router)
+app.include_router(simulator_router)
+
+@app.get("/api/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "system": "AGRIOS Living Agricultural OS",
+        "version": "2.0.0",
+        "environment": settings.ENVIRONMENT
+    }
+
+# Mount frontend directory for SPA
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

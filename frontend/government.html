@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGRIOS — Agricultural Command Center</title>
+  <link rel="stylesheet" href="css/agrios.css">
+</head>
+<body>
+  <div id="navbar-container"></div>
+
+  <main class="app-container">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Punjab State Agricultural Command Center</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+          Dr. Vikramaditya Sen • Deputy Director of Agriculture • Regional Food Security & Subsidy Authority
+        </p>
+      </div>
+      <div class="glass-panel" style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+        <span class="beacon-dot"></span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">Statewide Macro-Telemetry & DBT Pipeline Connected</span>
+      </div>
+    </div>
+
+    <!-- Macro Metrics -->
+    <div class="grid-metrics">
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">State Wheat Target Progress</span>
+          <span class="metric-icon">🌾</span>
+        </div>
+        <div class="metric-value">12.4 MT</div>
+        <div class="metric-sub trend-up">
+          <span>▲ 104%</span> <span>Of state central pool target</span>
+        </div>
+      </div>
+
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">DBT Subsidy Disbursed</span>
+          <span class="metric-icon">💳</span>
+        </div>
+        <div class="metric-value" style="color: var(--text-emerald);">₹148.5 Cr</div>
+        <div class="metric-sub trend-up">
+          <span>⚡</span> <span>PM-KISAN & SMAM Drone Subsidies</span>
+        </div>
+      </div>
+
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Registered Model Farms</span>
+          <span class="metric-icon">🏡</span>
+        </div>
+        <div class="metric-value">48,200</div>
+        <div class="metric-sub">
+          <span>📍</span> <span>99.4% Georeferenced parcels</span>
+        </div>
+      </div>
+
+      <div class="glass-panel metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Regional Biosecurity Threat</span>
+          <span class="metric-icon">🛡️</span>
+        </div>
+        <div class="metric-value" style="color: var(--accent-neon);">Contained</div>
+        <div class="metric-sub">
+          <span>🔍</span> <span>Early containment protocol active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Split Grid: Subsidy Pipeline & Regional Farms -->
+    <div class="section-split">
+      <!-- Subsidy DBT Approval Table -->
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Direct Benefit Transfer (DBT) Subsidy Pipeline</span>
+          <span class="badge badge-optimal">Realtime Verification</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Scheme Code</th>
+              <th>Applicant</th>
+              <th>Claim Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="gov-subsidy-table">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Regional Farm Health & Fertilizer Buffer -->
+      <div>
+        <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+          <div class="card-title">
+            <span>District Fertilizer Strategic Reserve</span>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.2rem;">
+              <span>Urea 46% (IFFCO Hub)</span>
+              <strong>14,200 MT / 18,000 MT (78%)</strong>
+            </div>
+            <div style="width:100%; height:8px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
+              <div style="width:78%; height:100%; background:var(--accent-emerald);"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.2rem;">
+              <span>DAP Fertilizer (KRIBHCO)</span>
+              <strong>8,400 MT / 12,000 MT (70%)</strong>
+            </div>
+            <div style="width:100%; height:8px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
+              <div style="width:70%; height:100%; background:var(--accent-cyan);"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel" style="padding: 1.5rem;">
+          <div class="card-title">
+            <span>State Agro-Climatic Warning Desk</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+            Automatic regional advisory broadcast system for canal water schedule releases and weather contingencies.
+          </p>
+          <button class="btn btn-primary" onclick="broadcastCanalRelease()" style="width:100%;">
+            🌊 Broadcast Canal Release Schedule (48h Notice)
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/realtime.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Command Center", "government");
+      await loadGovData();
+
+      window.addEventListener("agrios:event", (e) => {
+        console.log("[Command Center] Live event:", e.detail.event_type);
+        loadGovData();
+      });
+    });
+
+    async function loadGovData() {
+      try {
+        const apps = await AgriosAPI.getApplications();
+        renderGovSubsidies(apps);
+      } catch (err) {
+        console.error("Gov data load error:", err);
+      }
+    }
+
+    function renderGovSubsidies(apps) {
+      const tbody = document.getElementById("gov-subsidy-table");
+      if (!apps || apps.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted);">No pending subsidy claims in queue.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = apps.map(app => `
+        <tr>
+          <td><span class="badge badge-optimal">${app.scheme_code || 'PM-KISAN'}</span></td>
+          <td><strong>Balwinder Singh</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Green Valley Farm</span></td>
+          <td><strong>₹${app.applied_amount.toLocaleString()}</strong></td>
+          <td><span class="badge ${app.status === 'disbursed' ? 'badge-optimal' : 'badge-warning'}">${app.status.toUpperCase()}</span></td>
+          <td>
+            ${app.status !== 'disbursed' ? `
+              <button class="btn btn-primary" onclick="disburseClaim('${app.id}', ${app.applied_amount})" style="padding:0.3rem 0.6rem; font-size:0.75rem;">
+                ✓ Approve & Disburse
+              </button>
+            ` : `<span style="font-size:0.75rem; color:var(--text-emerald);">Disbursed via PFMS</span>`}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function disburseClaim(appId, amount) {
+      try {
+        await AgriosAPI.approveApplication(appId, amount);
+        AgriosUI.showToast("Subsidy Disbursed", `₹${amount.toLocaleString()} credited to farmer account via PFMS direct transfer.`, "💳");
+        loadGovData();
+      } catch (err) {
+        AgriosUI.showToast("Disbursement Failed", err.message, "❌");
+      }
+    }
+
+    async function broadcastCanalRelease() {
+      try {
+        await AgriosAPI.sendMessage({
+          subject: "CANAL RELEASE SCHEDULE: Sirhind Feeder Canal",
+          body: "Department of Irrigation will release 3,200 cusecs starting 06:00 tomorrow for 72 continuous hours. All downstream model farms prepare storage ponds.",
+          advisory_type: "general",
+          priority: "urgent"
+        });
+        AgriosUI.showToast("State Advisory Broadcast", "Canal release notification dispatched to all portals.", "🌊");
+      } catch (err) {
+        AgriosUI.showToast("Broadcast Failed", err.message, "❌");
+      }
+    }
+  </script>
+</body>
+</html>

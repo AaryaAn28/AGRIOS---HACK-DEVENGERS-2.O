@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGRIOS — The Living Agricultural Operating System</title>
+  <link rel="stylesheet" href="css/agrios.css">
+  <style>
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+    }
+    .hero-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+      filter: blur(50px);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .login-card {
+      position: relative;
+      z-index: 10;
+      max-width: 480px;
+      width: 100%;
+      padding: 2.5rem;
+    }
+    .persona-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .persona-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-align: left;
+    }
+    .persona-card:hover {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: var(--border-emerald);
+      transform: translateY(-2px);
+    }
+    .persona-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .persona-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-wrapper">
+    <div class="hero-glow"></div>
+
+    <div class="glass-panel glass-panel-glow login-card">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div class="logo-badge" style="margin: 0 auto 1rem; width: 54px; height: 54px; font-size: 1.8rem;">🌿</div>
+        <h1 class="logo-text" style="font-size: 2rem;">AGRIOS</h1>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem;">
+          Unified Living Agricultural Operating System
+        </p>
+        <div class="live-beacon" style="margin-top: 0.75rem;">
+          <span class="beacon-dot"></span>
+          <span>Canonical God Database Active</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">
+          One-Click Persona Login (Instant Demo)
+        </label>
+        <div class="persona-grid">
+          <div class="persona-card" onclick="quickLogin('farmer', 'farmer.html')">
+            <div class="persona-title">🌾 Farmer Portal</div>
+            <div class="persona-sub">Balwinder Singh (Green Valley)</div>
+          </div>
+          <div class="persona-card" onclick="quickLogin('worker', 'worker.html')">
+            <div class="persona-title">👩‍🌾 Krishi Sakhi</div>
+            <div class="persona-sub">Sunita Devi (Field Extension)</div>
+          </div>
+          <div class="persona-card" onclick="quickLogin('agronomist', 'agronomist.html')">
+            <div class="persona-title">🔬 Agronomist</div>
+            <div class="persona-sub">Dr. Priya Sharma (Crop Sci)</div>
+          </div>
+          <div class="persona-card" onclick="quickLogin('government', 'government.html')">
+            <div class="persona-title">🏛️ Command Center</div>
+            <div class="persona-sub">Dr. Sen (Deputy Director)</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 1.25rem 0; position: relative;">
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle);">
+        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--bg-card); padding: 0 0.8rem; font-size: 0.75rem; color: var(--text-muted);">
+          OR CREDENTIALS
+        </span>
+      </div>
+
+      <form id="login-form" onsubmit="handleManualLogin(event)">
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Email</label>
+          <input type="email" id="login-email" value="farmer@agrios.in" required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: rgba(0,0,0,0.3); color: #fff;">
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Password</label>
+          <input type="password" id="login-password" value="Admin@123" required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: rgba(0,0,0,0.3); color: #fff;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem;">Access Operating System</button>
+      </form>
+
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="simulator.html" style="font-size: 0.85rem; color: var(--accent-neon); text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600;">
+          🎮 Open Judge Simulator Controller →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/realtime.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    async function quickLogin(role, targetPage) {
+      try {
+        AgriosUI.showToast("Authenticating Persona", `Logging in as ${role}...`, "🔑");
+        await AgriosAPI.quickLogin(role);
+        window.location.href = targetPage;
+      } catch (err) {
+        AgriosUI.showToast("Authentication Failed", err.message, "❌");
+      }
+    }
+
+    async function handleManualLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const pass = document.getElementById("login-password").value;
+      try {
+        const res = await AgriosAPI.login(email, pass);
+        const role = res.user.role;
+        AgriosUI.showToast("Login Successful", `Welcome back, ${res.user.full_name}`, "🌱");
+        if (role === "farmer") window.location.href = "farmer.html";
+        else if (role === "worker") window.location.href = "worker.html";
+        else if (role === "agronomist") window.location.href = "agronomist.html";
+        else if (role === "government") window.location.href = "government.html";
+        else window.location.href = "farmer.html";
+      } catch (err) {
+        AgriosUI.showToast("Login Failed", err.message, "❌");
+      }
+    }
+  </script>
+</body>
+</html>
