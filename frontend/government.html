@@ -23,127 +23,87 @@
     <!-- Dashboard Body -->
     <div class="dashboard-body">
 
-      <!-- Welcome Row -->
-      <div class="welcome-row">
-        <div class="welcome-text">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <span style="font-size:1.1rem;">🏛️</span>
-            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;">
-              Department of Agriculture • Government of Punjab
-            </span>
-          </div>
-          <h2>State Agricultural Command Center</h2>
-          <p>Macro-level crop intelligence, agronomist deployment, strategic buffer reserves, and DBT claim settlements.</p>
-        </div>
-        <div class="welcome-actions">
-          <button class="btn-secondary" onclick="exportStateReport()">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export Digest
-          </button>
-          <button class="btn-primary" onclick="openRegisterAgronomistModal()">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            + Appoint Regional Agronomist
-          </button>
-        </div>
-      </div>
-
-      <!-- VIZITOR Summary Grid Cards -->
-      <div class="summary-grid">
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Commissioned Agronomists</span>
-            <div class="card-icon-container card-icon-green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="stat-agronomist-count">0</div>
-            <span class="card-badge badge-success" id="stat-agronomist-badge">Clean Slate</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Monitored Farmland</span>
-            <div class="card-icon-container card-icon-blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="stat-acres-count">0 <span style="font-size:1rem; font-weight:500; color:#64748b;">Acres</span></div>
-            <span class="card-badge badge-neutral">Calibrated</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">DBT Subsidy Pipeline</span>
-            <div class="card-icon-container card-icon-amber">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="stat-dbt-value">₹4.82 <span style="font-size:1rem; font-weight:500; color:#64748b;">Cr</span></div>
-            <span class="card-badge badge-warning">Awaiting PFMS</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Grain Buffer Reserves</span>
-            <div class="card-icon-container card-icon-rose">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value">1.48 <span style="font-size:1rem; font-weight:500; color:#64748b;">Lakh MT</span></div>
-            <span class="card-badge badge-success">Optimal</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="vizitor-tabs" style="flex-wrap: wrap;">
-        <button class="vizitor-tab-btn active" onclick="switchTab('overview')">
-          🏛️ Overview & Agronomists
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('subsidies')">
-          💳 DBT & Insurance Claims
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('foodsecurity')">
-          🌾 Grain Buffer Reserves
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('fertilizers')">
-          🚚 Fertilizer Rakes & Stocks
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('telemetry')">
-          🛰️ Satellite Telemetry
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('directives')">
-          🛡️ Disaster Directives
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('cropintel')">
-          📊 Crop Intelligence
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('workforce')">
-          👥 Workforce Registry
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('finance')">
-          💰 Financial Oversight
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('infrastructure')">
-          🏗️ Infrastructure & IoT
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('compliance')">
-          📋 Compliance & Audit
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('reports')">
-          📄 Reports & Export
-        </button>
-      </div>
-
       <!-- TAB 1: Overview & Regional Agronomists -->
       <div id="tab-overview" class="vizitor-tab-content active">
+
+        <!-- Welcome Row (Command Center Header) -->
+        <div class="welcome-row">
+          <div class="welcome-text">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="font-size:1.1rem;">🏛️</span>
+              <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;">
+                Department of Agriculture • Government of Punjab
+              </span>
+            </div>
+            <h2>State Agricultural Command Center</h2>
+            <p>Macro-level crop intelligence, agronomist deployment, strategic buffer reserves, and DBT claim settlements.</p>
+          </div>
+          <div class="welcome-actions">
+            <button class="btn-secondary" onclick="exportStateReport()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Digest
+            </button>
+            <button class="btn-primary" onclick="openRegisterAgronomistModal()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Appoint Regional Agronomist
+            </button>
+          </div>
+        </div>
+
+        <!-- VIZITOR Summary Grid Cards -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Commissioned Agronomists</span>
+              <div class="card-icon-container card-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="stat-agronomist-count">0</div>
+              <span class="card-badge badge-success" id="stat-agronomist-badge">Clean Slate</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Monitored Farmland</span>
+              <div class="card-icon-container card-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="stat-acres-count">0 <span style="font-size:1rem; font-weight:500; color:#64748b;">Acres</span></div>
+              <span class="card-badge badge-neutral">Calibrated</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">DBT Subsidy Pipeline</span>
+              <div class="card-icon-container card-icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="stat-dbt-value">₹4.82 <span style="font-size:1rem; font-weight:500; color:#64748b;">Cr</span></div>
+              <span class="card-badge badge-warning">Awaiting PFMS</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Grain Buffer Reserves</span>
+              <div class="card-icon-container card-icon-rose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value">1.48 <span style="font-size:1rem; font-weight:500; color:#64748b;">Lakh MT</span></div>
+              <span class="card-badge badge-success">Optimal</span>
+            </div>
+          </div>
+        </div>
         <div class="card-panel">
           <div class="panel-header">
             <div>
@@ -688,16 +648,42 @@
 
   function switchTab(tabId) {
     activeTab = tabId;
-    document.querySelectorAll(".vizitor-tab-btn").forEach(btn => btn.classList.remove("active"));
     document.querySelectorAll(".vizitor-tab-content").forEach(c => c.classList.remove("active"));
 
-    const btn = Array.from(document.querySelectorAll(".vizitor-tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(tabId));
-    if (btn) btn.classList.add("active");
-
     const content = document.getElementById(`tab-${tabId}`);
-    if (content) content.classList.add("active");
+    if (content) {
+      content.classList.add("active");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     renderNavigation();
+
+    // Trigger tab-specific loaders dynamically
+    if (tabId === "overview") {
+      loadAgronomists();
+      loadGovKPIs();
+    } else if (tabId === "subsidies") {
+      loadGovSubsidies();
+      loadGovKPIs();
+    } else if (tabId === "foodsecurity") {
+      loadGovFoodSecurity();
+    } else if (tabId === "fertilizers") {
+      loadGovFertilizers();
+    } else if (tabId === "telemetry") {
+      loadGovTelemetry();
+    } else if (tabId === "directives") {
+      loadGovDirectives();
+    } else if (tabId === "cropintel") {
+      loadCropIntel();
+    } else if (tabId === "workforce") {
+      loadWorkforceRegistry();
+    } else if (tabId === "finance") {
+      loadFinancialOverview();
+    } else if (tabId === "infrastructure") {
+      loadInfrastructureStatus();
+    } else if (tabId === "compliance") {
+      loadComplianceAudit();
+    }
   }
 
   async function loadAgronomists() {

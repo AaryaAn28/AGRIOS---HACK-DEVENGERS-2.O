@@ -38,119 +38,85 @@
     <!-- Dashboard Body -->
     <div class="dashboard-body">
 
-      <!-- Welcome Row -->
-      <div class="welcome-row">
-        <div class="welcome-text">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <span style="font-size:1.1rem;">👩‍🌾</span>
-            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;" id="worker-code-badge">
-              Krishi Sakhi • Extension Cadre
-            </span>
-          </div>
-          <h2 id="worker-full-name">Krishi Sakhi Field Operations</h2>
-          <p id="worker-sub-text">Ground-truth verification, mobile diagnostic scanning, bio-input application, and task execution.</p>
-        </div>
-        <div class="welcome-actions">
-          <button class="btn-secondary" onclick="logAttendance()">
-            📍 GPS Geotag Attendance
-          </button>
-          <button class="btn-primary" onclick="switchTab('fieldcamera')">
-            📷 Open Leaf Scanner
-          </button>
-        </div>
-      </div>
-
-      <!-- Summary Grid Cards -->
-      <div class="summary-grid">
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Pending Tasks</span>
-            <div class="card-icon-container card-icon-green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="worker-pending-count">1</div>
-            <span class="card-badge badge-warning">High Priority</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Completed Today</span>
-            <div class="card-icon-container card-icon-blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="worker-completed-count">2</div>
-            <span class="card-badge badge-success">Verified</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Workload Status</span>
-            <div class="card-icon-container card-icon-amber">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="worker-status-text" style="font-size:1.3rem; color:#059669;">AVAILABLE</div>
-            <span class="card-badge badge-success" id="worker-status-badge">Fit for Duty</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Assigned Farms</span>
-            <div class="card-icon-container card-icon-rose">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
-            </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value">1 Farm</div>
-            <span class="card-badge badge-neutral">14.5 Acres</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="vizitor-tabs" style="flex-wrap: wrap;">
-        <button class="vizitor-tab-btn active" onclick="switchTab('overview')">
-          📋 Today's Work Plan
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('scanner')">
-          📷 Mobile Leaf Scanner
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('groundtruth')">
-          📡 Ground Truth Logs
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('equipment')">
-          🧰 Field Kit & Tools
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('advisory')">
-          💬 Agronomist Hotline
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('logbook')">
-          📖 Attendance & Logbook
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('training')">
-          🎓 Training & Certs
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('leave')">
-          🏖️ Leave & Welfare
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('performance')">
-          📊 Performance
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('emergency')">
-          🚨 Emergency Protocols
-        </button>
-      </div>
-
-      <!-- TAB 1: FIELD TASKS QUEUE -->
+      <!-- TAB 1: FIELD TASKS QUEUE (OVERVIEW) -->
       <div id="tab-overview" class="vizitor-tab-content active">
+
+        <!-- Welcome Row -->
+        <div class="welcome-row">
+          <div class="welcome-text">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="font-size:1.1rem;">👩‍🌾</span>
+              <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;" id="worker-code-badge">
+                Krishi Sakhi • Extension Cadre
+              </span>
+            </div>
+            <h2 id="worker-full-name">Krishi Sakhi Field Operations</h2>
+            <p id="worker-sub-text">Ground-truth verification, mobile diagnostic scanning, bio-input application, and task execution.</p>
+          </div>
+          <div class="welcome-actions">
+            <button class="btn-secondary" onclick="logAttendance()">
+              📍 GPS Geotag Attendance
+            </button>
+            <button class="btn-primary" onclick="switchTab('scanner')">
+              📷 Open Leaf Scanner
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Grid Cards -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Pending Tasks</span>
+              <div class="card-icon-container card-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="worker-pending-count">1</div>
+              <span class="card-badge badge-warning">High Priority</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Completed Today</span>
+              <div class="card-icon-container card-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="worker-completed-count">2</div>
+              <span class="card-badge badge-success">Verified</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Workload Status</span>
+              <div class="card-icon-container card-icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="worker-status-text" style="font-size:1.3rem; color:#059669;">AVAILABLE</div>
+              <span class="card-badge badge-success" id="worker-status-badge">Fit for Duty</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Assigned Farms</span>
+              <div class="card-icon-container card-icon-rose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value">1 Farm</div>
+              <span class="card-badge badge-neutral">14.5 Acres</span>
+            </div>
+          </div>
+        </div>
         <div class="card-panel">
           <div class="panel-header">
             <div>
@@ -340,7 +306,7 @@
       </div>
 
       <!-- TAB 8: LEAVE & WELFARE -->
-      <div id="tab-leave" class="vizitor-tab-content">
+      <div id="tab-leaves" class="vizitor-tab-content">
         <div class="card-panel">
           <div class="panel-header">
             <div>
@@ -548,17 +514,39 @@
 
   function switchTab(tabId) {
     if (tabId === "fieldcamera") tabId = "scanner";
+    if (tabId === "leave") tabId = "leaves";
     activeTab = tabId;
-    document.querySelectorAll(".vizitor-tab-btn").forEach(btn => btn.classList.remove("active"));
     document.querySelectorAll(".vizitor-tab-content").forEach(c => c.classList.remove("active"));
 
-    const btn = Array.from(document.querySelectorAll(".vizitor-tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(tabId));
-    if (btn) btn.classList.add("active");
-
     const content = document.getElementById(`tab-${tabId}`);
-    if (content) content.classList.add("active");
+    if (content) {
+      content.classList.add("active");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     renderNavigation();
+
+    // Trigger tab-specific loaders dynamically
+    if (tabId === "overview") {
+      loadWorkerProfile();
+      loadWorkerTasks();
+    } else if (tabId === "scanner") {
+      // scanner ready
+    } else if (tabId === "logbook") {
+      loadAttendanceHistory();
+    } else if (tabId === "groundtruth") {
+      loadGroundTruth();
+    } else if (tabId === "equipment") {
+      loadWorkerKit();
+    } else if (tabId === "training") {
+      loadTrainingModules();
+    } else if (tabId === "leaves") {
+      loadLeaveHistory();
+    } else if (tabId === "performance") {
+      loadPerformanceMetrics();
+    } else if (tabId === "emergency") {
+      loadEmergencyProtocols();
+    }
   }
 
   async function loadWorkerProfile() {

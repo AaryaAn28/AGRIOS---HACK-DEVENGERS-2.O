@@ -87,139 +87,108 @@
     <!-- Dashboard Body -->
     <div class="dashboard-body">
 
-      <!-- Welcome Row -->
-      <div class="welcome-row">
-        <div class="welcome-text">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <span style="font-size:1.1rem;">🔬</span>
-            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;" id="agro-persona-badge">
-              Punjab Central Division
-            </span>
-          </div>
-          <h2>Agronomy Intelligence & Diagnostic Lab</h2>
-          <p id="agro-doctor-name">Senior Crop Scientist • ICAR / PAU Advisory Fellow • Overseeing Agricultural Zoning & Diagnostics</p>
-        </div>
-        <div class="welcome-actions">
-          <button class="btn-secondary" onclick="openOnboardingWizard()">
-            ⚙️ 11-Pillar Configuration
-          </button>
-          <button class="btn-primary" onclick="switchTab('fieldcalibration')">
-            🚶 Walk & Calibrate 3D Farm
-          </button>
-        </div>
-      </div>
+      <!-- TAB 1: OVERVIEW -->
+      <div id="tab-overview" class="vizitor-tab-content active">
 
-      <!-- Active Profile / Clean-Slate Progress Banner -->
-      <div class="card-panel" style="border-left:4px solid #10b981; background:#ffffff; padding:1.25rem 1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-          <div>
-            <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;">
-              Agricultural Operating Status
+        <!-- Welcome Row -->
+        <div class="welcome-row">
+          <div class="welcome-text">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="font-size:1.1rem;">🔬</span>
+              <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;" id="agro-persona-badge">
+                Punjab Central Division
+              </span>
             </div>
-            <div style="font-size:0.95rem; font-weight:700; color:#0f172a; margin-top:2px;" id="profile-summary-text">
-              Pristine Baseline • Awaiting Crop Configuration & Field Boundary Calibration
-            </div>
-            <div style="font-size:0.8rem; color:#64748b; margin-top:4px;" id="profile-sub-text">
-              Configure crop parameters $\to$ Walk and calibrate field $\to$ Master crop growing plan is auto-synthesized $\to$ Assign farmers and workers.
-            </div>
+            <h2>Agronomy Intelligence & Diagnostic Lab</h2>
+            <p id="agro-doctor-name">Senior Crop Scientist • ICAR / PAU Advisory Fellow • Overseeing Agricultural Zoning & Diagnostics</p>
           </div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <span class="card-badge badge-success" id="profile-badge-status">Step 1: Configuration</span>
-            <button class="btn-primary" onclick="openOnboardingWizard()" style="height:34px; font-size:0.8rem;">
-              Open Wizard
+          <div class="welcome-actions">
+            <button class="btn-secondary" onclick="openOnboardingWizard()">
+              ⚙️ 11-Pillar Configuration
+            </button>
+            <button class="btn-primary" onclick="switchTab('fieldcalibration')">
+              🚶 Walk & Calibrate 3D Farm
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- Summary Grid Cards -->
-      <div class="summary-grid">
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Calibrated Farmland</span>
-            <div class="card-icon-container card-icon-green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+        <!-- Active Profile / Clean-Slate Progress Banner -->
+        <div class="card-panel" style="border-left:4px solid #10b981; background:#ffffff; padding:1.25rem 1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.05em;">
+                Agricultural Operating Status
+              </div>
+              <div style="font-size:0.95rem; font-weight:700; color:#0f172a; margin-top:2px;" id="profile-summary-text">
+                Pristine Baseline • Awaiting Crop Configuration & Field Boundary Calibration
+              </div>
+              <div style="font-size:0.8rem; color:#64748b; margin-top:4px;" id="profile-sub-text">
+                Configure crop parameters $\to$ Walk and calibrate field $\to$ Master crop growing plan is auto-synthesized $\to$ Assign farmers and workers.
+              </div>
             </div>
-          </div>
-          <div class="card-value-row">
-            <div class="card-value" id="card-calibrated-acres">0 <span style="font-size:1rem; font-weight:500; color:#64748b;">Acres</span></div>
-            <span class="card-badge badge-neutral" id="card-calibrated-badge">Uncalibrated</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="card-badge badge-success" id="profile-badge-status">Step 1: Configuration</span>
+              <button class="btn-primary" onclick="openOnboardingWizard()" style="height:34px; font-size:0.8rem;">
+                Open Wizard
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Selected Crop & Plan</span>
-            <div class="card-icon-container card-icon-blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+        <!-- Summary Grid Cards -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Calibrated Farmland</span>
+              <div class="card-icon-container card-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="card-calibrated-acres">0 <span style="font-size:1rem; font-weight:500; color:#64748b;">Acres</span></div>
+              <span class="card-badge badge-neutral" id="card-calibrated-badge">Uncalibrated</span>
             </div>
           </div>
-          <div class="card-value-row">
-            <div class="card-value" id="card-crop-name" style="font-size:1.4rem;">Pending</div>
-            <span class="card-badge badge-neutral" id="card-duration-badge">0 Days</span>
-          </div>
-        </div>
 
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Supervised Farmers</span>
-            <div class="card-icon-container card-icon-amber">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Selected Crop & Plan</span>
+              <div class="card-icon-container card-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="card-crop-name" style="font-size:1.4rem;">Pending</div>
+              <span class="card-badge badge-neutral" id="card-duration-badge">0 Days</span>
             </div>
           </div>
-          <div class="card-value-row">
-            <div class="card-value" id="card-farmer-count">0</div>
-            <span class="card-badge badge-neutral" id="card-worker-badge">0 Workers</span>
-          </div>
-        </div>
 
-        <div class="summary-card">
-          <div class="card-header-row">
-            <span class="card-title">Active Field Tasks</span>
-            <div class="card-icon-container card-icon-green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Supervised Farmers</span>
+              <div class="card-icon-container card-icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="card-farmer-count">0</div>
+              <span class="card-badge badge-neutral" id="card-worker-badge">0 Workers</span>
             </div>
           </div>
-          <div class="card-value-row">
-            <div class="card-value" id="card-task-count">0</div>
-            <span class="card-badge badge-success">Released</span>
+
+          <div class="summary-card">
+            <div class="card-header-row">
+              <span class="card-title">Active Field Tasks</span>
+              <div class="card-icon-container card-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>
+              </div>
+            </div>
+            <div class="card-value-row">
+              <div class="card-value" id="card-task-count">0</div>
+              <span class="card-badge badge-success">Released</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="vizitor-tabs">
-        <button class="vizitor-tab-btn active" onclick="switchTab('overview')">
-          🔬 Agronomy Lab
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('cropplan')">
-          📅 Master Crop Plan
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('fieldcalibration')">
-          🚶 3D Farm & Calibrate
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('subordinates')">
-          👩‍🌾 Assign Farmers & Team
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('surveillance')">
-          🛰️ Pest Surveillance
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('quarantine')">
-          🛡️ Containment Zones
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('diagnostics')">
-          🌿 Pathogen AI Lab
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('prescriptions')">
-          💊 Rx Spray Ledger
-        </button>
-        <button class="vizitor-tab-btn" onclick="switchTab('circulars')">
-          📡 Broadcast Advisories
-        </button>
-      </div>
-
-      <!-- TAB 1: OVERVIEW -->
-      <div id="tab-overview" class="vizitor-tab-content active">
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem;">
           <div class="card-panel">
             <div class="panel-header">
@@ -877,16 +846,37 @@
 
   function switchTab(tabId) {
     activeTab = tabId;
-    document.querySelectorAll(".vizitor-tab-btn").forEach(btn => btn.classList.remove("active"));
     document.querySelectorAll(".vizitor-tab-content").forEach(c => c.classList.remove("active"));
 
-    const btn = Array.from(document.querySelectorAll(".vizitor-tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(tabId));
-    if (btn) btn.classList.add("active");
-
     const content = document.getElementById(`tab-${tabId}`);
-    if (content) content.classList.add("active");
+    if (content) {
+      content.classList.add("active");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     renderNavigation();
+
+    // Trigger tab-specific loaders dynamically
+    if (tabId === "overview") {
+      loadAgronomistProfile();
+      loadSoilAnalysis();
+      loadCropRotationAdvice();
+    } else if (tabId === "cropplan") {
+      loadCropPlanPreview(activeCropPlan ? activeCropPlan.crop_name : "Wheat");
+    } else if (tabId === "subordinates") {
+      loadSubordinates();
+    } else if (tabId === "diagnostics") {
+      loadCameraObservations();
+    } else if (tabId === "prescriptions") {
+      loadPrescriptions();
+      loadSprayWeatherCheck();
+    } else if (tabId === "surveillance") {
+      loadSurveillance();
+    } else if (tabId === "quarantine") {
+      loadQuarantineZones();
+    } else if (tabId === "circulars") {
+      loadBroadcastHistory();
+    }
   }
 
   async function loadAgronomistProfile() {
