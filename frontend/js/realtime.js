@@ -141,6 +141,26 @@ class AgriosRealtimeClient {
       title = "Farm Health Recalibrated";
       desc = `Health score shifted to ${eventData.payload.health_score}% (${eventData.payload.status})`;
       icon = "💚";
+    } else if (type === "EMERGENCY_SOS_TRIGGERED") {
+      title = "🚨 EMERGENCY DISTRESS BEACON ACTIVE";
+      desc = `${eventData.payload?.worker_name || "Field Worker"} triggered emergency beacon! Ambulance & Agronomist dispatched.`;
+      icon = "🚨";
+    } else if (type === "GROUND_TRUTH_LOGGED") {
+      title = "📋 Ground Truth Telemetry Logged";
+      desc = `Parcel: ${eventData.payload?.field_parcel || "Field"} | Stress Score: ${eventData.payload?.stress_score || 0}/100 (${eventData.payload?.classification || "Normal"})`;
+      icon = "📋";
+    } else if (type === "HOTLINE_MESSAGE_SENT") {
+      title = "💬 Agronomist Hotline Update";
+      desc = `Inquiry processed by AI Triage: ${eventData.payload?.urgency || "NORMAL"} Priority`;
+      icon = "💬";
+    } else if (type === "WORKER_CERTIFIED") {
+      title = "🎓 PAU-ICAR Certification Earned!";
+      desc = `Worker accredited in ${eventData.payload?.module_title || "Field Agronomy"} (${eventData.payload?.grade || "Passed"})`;
+      icon = "🎓";
+    } else if (type === "EQUIPMENT_DAMAGE_REPORTED") {
+      title = "🔧 Tool Maintenance Ticket Raised";
+      desc = `Ticket for ${eventData.payload?.tool_name || "Field Tool"}. KVK Depot notified.`;
+      icon = "🔧";
     }
 
     if (window.AgriosUI) {
@@ -150,6 +170,38 @@ class AgriosRealtimeClient {
 }
 
 window.agriosRealtime = new AgriosRealtimeClient();
+
+// Unified cross-tab and local window event broadcaster
+window.broadcastAgriosEvent = function(ev) {
+  if (!ev) return;
+  // 1. Show immediate toast in current window
+  if (window.agriosRealtime) {
+    window.agriosRealtime.showEventToast(ev);
+  }
+  // 2. Dispatch local DOM custom event
+  window.dispatchEvent(new CustomEvent("agrios:event", { detail: ev }));
+
+  // 3. Immediately refresh notifications and active task views
+  if (window.AgriosNotifications && typeof window.AgriosNotifications.loadNotifications === "function") {
+    window.AgriosNotifications.loadNotifications();
+  }
+  if (typeof window.loadWorkerTasks === "function") {
+    window.loadWorkerTasks();
+  }
+  if (typeof window.loadTodayDirectives === "function") {
+    window.loadTodayDirectives();
+  }
+
+  // 4. Propagate to all other open tabs/windows via localStorage
+  try {
+    localStorage.setItem("agrios_broadcast_event", JSON.stringify({
+      ...ev,
+      _broadcast_id: Date.now() + "_" + Math.random()
+    }));
+  } catch (err) {
+    console.warn("[Realtime] LocalStorage broadcast failed:", err);
+  }
+};
 
 // Cross-tab broadcast listener (for multi-tab / role-switching workflows)
 window.addEventListener("storage", (e) => {
@@ -165,6 +217,9 @@ window.addEventListener("storage", (e) => {
       }
       if (typeof window.loadWorkerTasks === "function") {
         window.loadWorkerTasks();
+      }
+      if (typeof window.loadTodayDirectives === "function") {
+        window.loadTodayDirectives();
       }
     } catch (err) {
       console.warn("[Realtime] Failed to parse cross-tab event:", err);

@@ -11,6 +11,7 @@ from app.routes.simulator import trigger_simulation, undo_last_simulation_event,
 
 def test_register_subordinate_agronomist():
     db = SessionLocal()
+    created_id = None
     try:
         gov = db.query(User).filter(User.role == "government").first()
         req = RegisterSubordinateRequest(
@@ -20,10 +21,14 @@ def test_register_subordinate_agronomist():
             registered_by_id=gov.id if gov else None
         )
         res = register_subordinate(req, db)
+        created_id = res.get("id")
         assert res["persona_code"].startswith("AGRONOMIST-")
         assert res["default_password"] == "Admin@123"
         assert res["has_completed_onboarding"] is False
     finally:
+        if created_id:
+            db.query(User).filter(User.id == created_id).delete()
+            db.commit()
         db.close()
 
 def test_onboarding_profile_save_and_retrieve():

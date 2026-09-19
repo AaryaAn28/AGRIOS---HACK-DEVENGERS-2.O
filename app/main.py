@@ -30,6 +30,7 @@ from app.routes.onboarding import router as onboarding_router
 from app.routes.farm_structures import router as farm_structures_router
 from app.routes.crop_plans import router as crop_plans_router
 from app.routes.agrios_ecosystem import router as ecosystem_router
+from app.routes.workforce_operations import router as workforce_ops_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -87,6 +88,7 @@ app.include_router(onboarding_router)
 app.include_router(farm_structures_router)
 app.include_router(crop_plans_router)
 app.include_router(ecosystem_router)
+app.include_router(workforce_ops_router)
 
 @app.get("/health")
 @app.get("/api/health")

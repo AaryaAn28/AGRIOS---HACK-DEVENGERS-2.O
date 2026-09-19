@@ -14,6 +14,7 @@ from app.models.camera import Camera, CameraObservation
 from app.models.workforce import WorkerProfile, LeaveRequest
 from app.models.agricultural_profile import AgriculturalProfile
 from app.models.farm_structure import FarmStructureVersion
+from app.models.biosecurity import PestOutbreakHotspot, BiosecurityBufferZone, IPMProtocolRecord
 
 __all__ = [
     "Base",
@@ -44,4 +45,7 @@ __all__ = [
     "LeaveRequest",
     "AgriculturalProfile",
     "FarmStructureVersion",
+    "PestOutbreakHotspot",
+    "BiosecurityBufferZone",
+    "IPMProtocolRecord",
 ]

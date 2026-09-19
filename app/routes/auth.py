@@ -41,7 +41,12 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 def quick_login(role: str, db: Session = Depends(get_db)):
     """One-click instant authentication for hackathon presentation and portal switching."""
     normalized_role = role.lower().strip()
-    user = db.query(User).filter(User.role == normalized_role).first()
+    if normalized_role == "agronomist":
+        user = db.query(User).filter(User.role == "agronomist", User.email == "agronomist@agrios.in").first()
+        if not user:
+            user = db.query(User).filter(User.role == "agronomist").first()
+    else:
+        user = db.query(User).filter(User.role == normalized_role).first()
     if not user:
         user = db.query(User).first()
     if not user:
@@ -70,10 +75,16 @@ def quick_login_user(user_id: str, db: Session = Depends(get_db)):
 
 @router.get("/quick-personas")
 def get_quick_personas(db: Session = Depends(get_db)):
-    """Returns all available login personas, including dynamically registered ones."""
+    """Returns all available login personas, ensuring Dr. Priya Sharma is the sole agronomist."""
     users = db.query(User).order_by(User.created_at.asc()).all()
     personas = []
+    seen_priya = False
     for u in users:
+        # Enforce exactly one agronomist: Dr. Priya Sharma
+        if u.role == "agronomist":
+            if u.email != "agronomist@agrios.in" or seen_priya:
+                continue
+            seen_priya = True
         p_dict = u.to_dict()
         p_dict["password_hint"] = "Admin@123"
         personas.append(p_dict)

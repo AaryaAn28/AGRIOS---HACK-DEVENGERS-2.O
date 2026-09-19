@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Optional
 
 from app.database import get_db
@@ -14,7 +15,14 @@ router = APIRouter(prefix="/api/communications", tags=["Communications & Advisor
 def list_messages(farm_id: Optional[str] = None, current_user: Optional[User] = Depends(get_optional_user), db: Session = Depends(get_db)):
     query = db.query(AdvisoryMessage)
     if farm_id:
-        query = query.filter(AdvisoryMessage.farm_id == farm_id)
+        query = query.filter(
+            or_(
+                AdvisoryMessage.farm_id == farm_id,
+                AdvisoryMessage.farm_id == None,
+                AdvisoryMessage.farm_id == "default",
+                AdvisoryMessage.farm_id == "farm-pb-001"
+            )
+        )
     return [m.to_dict() for m in query.order_by(AdvisoryMessage.created_at.desc()).all()]
 
 @router.post("")
@@ -54,7 +62,14 @@ def mark_message_read(message_id: str, db: Session = Depends(get_db)):
 def mark_all_read(farm_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(AdvisoryMessage)
     if farm_id:
-        query = query.filter(AdvisoryMessage.farm_id == farm_id)
+        query = query.filter(
+            or_(
+                AdvisoryMessage.farm_id == farm_id,
+                AdvisoryMessage.farm_id == None,
+                AdvisoryMessage.farm_id == "default",
+                AdvisoryMessage.farm_id == "farm-pb-001"
+            )
+        )
     query.update({AdvisoryMessage.is_read: True}, synchronize_session=False)
     db.commit()
     return {"status": "success", "message": "All notifications marked as read"}

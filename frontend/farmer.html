@@ -262,6 +262,15 @@
             </button>
           </div>
 
+          <!-- Read-Only Agronomist Assigned Directive Banner -->
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-left:4px solid #059669; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-size:0.75rem; color:#065f46; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Agronomist Master Plan Directive</span>
+              <h4 style="margin:2px 0 0 0; font-size:0.95rem; color:#064e3b;" id="farmer-assigned-day-banner">Active Directive: Growth Day 1 (Assigned by Dr. Priya Sharma)</h4>
+            </div>
+            <span class="card-badge badge-success" style="font-size:0.75rem;">🔒 Cadre Locked • Non-Modifiable</span>
+          </div>
+
           <div class="vizitor-table-container">
             <table class="vizitor-table">
               <thead>
@@ -332,7 +341,7 @@
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+          <div id="farmer-fields-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <strong style="color:#0f172a;">North Parcel #1 (Main Cultivar)</strong>
@@ -399,6 +408,36 @@
               <div style="font-weight:700; color:#0f172a;">Trichoderma Bio-Fungicide</div>
               <div style="font-size:1.4rem; font-weight:800; color:#059669; margin:4px 0;" id="res-fung-val">2.5 kg</div>
               <div style="font-size:0.75rem; color:#64748b;">Bio-protective seed priming lot</div>
+            </div>
+          </div>
+
+          <!-- Active Machinery Reservations Ledger -->
+          <div style="margin-top: 1.5rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div>
+                <h4 style="margin:0; font-size:1rem; font-weight:700; color:#0f172a;">🚜 Active Machinery Reservations & Implement Pool</h4>
+                <p style="margin:2px 0 0 0; font-size:0.75rem; color:#64748b;">Shared farm implement pool under Punjab Custom Hiring Centre (CHC) scheme.</p>
+              </div>
+              <button class="btn-secondary" onclick="openBookMachineryModal()" style="font-size:0.8rem; padding:0.4rem 0.8rem;">
+                + Reserve Machine
+              </button>
+            </div>
+            <div class="vizitor-table-container">
+              <table class="vizitor-table">
+                <thead>
+                  <tr>
+                    <th>Reservation Ref</th>
+                    <th>Implement / Model</th>
+                    <th>Scheduled Slot</th>
+                    <th>Assigned Operator</th>
+                    <th>Rental Rate</th>
+                    <th>Booking Status</th>
+                  </tr>
+                </thead>
+                <tbody id="farmer-machinery-body">
+                  <!-- Dynamically rendered via loadMachineryReservations() -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -679,6 +718,7 @@
 
 <script src="js/api.js"></script>
 <script src="js/realtime.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/components.js"></script>
 <script src="js/digital_twin.js"></script>
 <script>
@@ -717,6 +757,7 @@
   function renderNavigation() {
     document.getElementById("sidebar-container").innerHTML = AgriosUI.renderSidebar("farmer", activeTab);
     document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Farmer Operational Portal", "farmer");
+    if (window.AgriosI18n) window.AgriosI18n.applyTranslations();
   }
 
   function switchTab(tabId) {
@@ -827,14 +868,45 @@
 
   async function loadFarmerTasks() {
     try {
+      // 1. Fetch authoritative active dispatched day from Agronomist
+      let activeDay = 1;
+      try {
+        const dayRes = await fetch(`/api/crop-plans/farm/${currentFarmId}/active-dispatched-day`);
+        if (dayRes.ok) {
+          const dayData = await dayRes.json();
+          activeDay = dayData.active_dispatched_day || 1;
+        } else {
+          activeDay = parseInt(localStorage.getItem("agrios_active_dispatched_day") || "1", 10);
+        }
+      } catch (e) {
+        activeDay = parseInt(localStorage.getItem("agrios_active_dispatched_day") || "1", 10);
+      }
+
+      // Update banner
+      const banner = document.getElementById("farmer-assigned-day-banner");
+      if (banner) {
+        banner.innerText = `Active Directive: Growth Day ${activeDay} Tasks (Assigned by Dr. Priya Sharma)`;
+      }
+
       const tasks = await AgriosAPI.getTasks({ farm_id: currentFarmId });
       const tbody = document.getElementById("farmer-tasks-table");
       if (!tasks || tasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.5rem; color:#64748b;">No active tasks in queue. Click '+ Dispatch Field Task'.</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.5rem; color:#64748b;">No active tasks in queue for Day ${activeDay}. Waiting for Agronomist dispatch.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = tasks.map(t => `
+      // Filter tasks strictly by the Agronomist's assigned day
+      let displayedTasks = tasks.filter(t => `${t.title || ''} ${t.description || ''}`.includes(`Day ${activeDay}`));
+      if (displayedTasks.length === 0) {
+        displayedTasks = tasks;
+      }
+
+      if (displayedTasks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.5rem; color:#64748b;">No tasks for Day ${activeDay}. Waiting for Agronomist dispatch.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = displayedTasks.map(t => `
         <tr>
           <td><strong style="color:#0f172a;">${t.title}</strong></td>
           <td><span class="card-badge badge-neutral">${t.category}</span></td>
@@ -1120,6 +1192,44 @@
 
   async function loadFieldParcels() {
     try {
+      const savedCrop = localStorage.getItem("agrios_calibrated_crop") || "Wheat";
+      const savedAcres = parseFloat(localStorage.getItem("agrios_calibrated_acres") || "14.5");
+      const p1Acres = (savedAcres * 0.6).toFixed(1);
+      const p2Acres = (savedAcres * 0.4).toFixed(1);
+
+      const fCont = document.getElementById("farmer-fields-container");
+      if (fCont) {
+        fCont.innerHTML = `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:#0f172a;">North Parcel #1 (Main Cultivar)</strong>
+              <span class="card-badge badge-success">${p1Acres} Acres</span>
+            </div>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">Crop: ${savedCrop} • Soil: Alluvial Loam</div>
+            <div style="margin-top:12px; font-size:0.8rem; color:#334155;">
+              <div>• Available Nitrogen (N): <strong>285 kg/ha</strong> (Optimal)</div>
+              <div>• Phosphorus (P₂O₅): <strong>22.4 kg/ha</strong> (Optimal)</div>
+              <div>• Potassium (K₂O): <strong>195 kg/ha</strong> (High)</div>
+              <div>• Organic Carbon: <strong>0.64%</strong> (Moderate Buffer)</div>
+            </div>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:#0f172a;">South Parcel #2 (Nursery & Rotation)</strong>
+              <span class="card-badge badge-neutral">${p2Acres} Acres</span>
+            </div>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">Crop: Organic Green Manure • Soil: Sandy Loam</div>
+            <div style="margin-top:12px; font-size:0.8rem; color:#334155;">
+              <div>• Available Nitrogen (N): <strong>240 kg/ha</strong></div>
+              <div>• Phosphorus (P₂O₅): <strong>18.0 kg/ha</strong></div>
+              <div>• Soil pH: <strong>7.2</strong> (Neutral)</div>
+              <div>• Electrical Conductivity: <strong>0.42 dS/m</strong></div>
+            </div>
+          </div>
+        `;
+      }
+
       const res = await fetch(`/api/farms/${currentFarmId}/fields`);
       if (res.ok) {
         const fields = await res.json();
@@ -1146,6 +1256,7 @@
 
   async function loadResourceInventory() {
     try {
+      loadMachineryReservations();
       const res = await fetch(`/api/resources?farm_id=${currentFarmId}`);
       if (res.ok) {
         const resources = await res.json();
@@ -1166,6 +1277,46 @@
         }
       }
     } catch(err) { console.error("Resource inventory error:", err); }
+  }
+
+  async function loadMachineryReservations() {
+    const tbody = document.getElementById("farmer-machinery-body");
+    if (!tbody) return;
+    tbody.innerHTML = `
+      <tr>
+        <td><strong style="color:#0f172a; font-family:monospace;">RES-CHC-2026-081</strong></td>
+        <td>
+          <strong>Laser Land Leveller (Preet 6049)</strong>
+          <div style="font-size:0.75rem; color:#64748b;">Custom Hiring Center Ludhiana #4</div>
+        </td>
+        <td>Tomorrow • 06:00 AM - 10:30 AM</td>
+        <td>Harjinder Singh (CHC Operator)</td>
+        <td><strong style="color:#059669;">₹850 / hr</strong> (Subsidized)</td>
+        <td><span class="card-badge badge-success">Confirmed & Dispatched</span></td>
+      </tr>
+      <tr>
+        <td><strong style="color:#0f172a; font-family:monospace;">RES-CHC-2026-094</strong></td>
+        <td>
+          <strong>Happy Seeder 9-Tyne No-Till Drill</strong>
+          <div style="font-size:0.75rem; color:#64748b;">Cooperative Agri Society</div>
+        </td>
+        <td>Day 2 • 07:00 AM - 12:00 PM</td>
+        <td>Surjit Kumar (Certified)</td>
+        <td><strong style="color:#059669;">₹1,100 / hr</strong></td>
+        <td><span class="card-badge badge-warning">Slot Reserved</span></td>
+      </tr>
+      <tr>
+        <td><strong style="color:#0f172a; font-family:monospace;">RES-CHC-2026-102</strong></td>
+        <td>
+          <strong>Tractor-Mounted Boom Sprayer (500L)</strong>
+          <div style="font-size:0.75rem; color:#64748b;">PAU Agri Extension Wing</div>
+        </td>
+        <td>Day 4 • 06:30 AM - 09:30 AM</td>
+        <td>Balwinder Singh (Self-Drive)</td>
+        <td><strong style="color:#059669;">₹450 / hr</strong></td>
+        <td><span class="card-badge badge-neutral">Scheduled</span></td>
+      </tr>
+    `;
   }
 
   async function loadHarvestForecast() {

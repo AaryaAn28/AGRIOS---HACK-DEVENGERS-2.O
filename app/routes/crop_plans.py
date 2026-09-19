@@ -12,11 +12,13 @@ from app.models.agricultural_profile import AgriculturalProfile
 from app.core.events import EventBus, DomainEvent
 from app.models.user import User
 from app.models.communication import AdvisoryMessage
+import uuid
 
 router = APIRouter(prefix="/api/crop-plans", tags=["Crop Growing Plans"])
 
 # In-memory store for active farm crop plans
 _FARM_CROP_PLANS: Dict[str, Dict[str, Any]] = {}
+_ACTIVE_DISPATCHED_DAY: Dict[str, int] = {"default": 1, "global": 1}
 
 @router.post("/generate-and-calibrate")
 def generate_and_calibrate_precision_engine(survey_data: Dict[str, Any], db: Session = Depends(get_db)):
@@ -131,6 +133,35 @@ def modify_crop_stage(farm_id: str, payload: Dict[str, Any], db: Session = Depen
             "adaptation_protocol": adaptation_protocol
         }
     ))
+
+    # If weather adaptation protocol was applied, create urgent AdvisoryMessage for workforce & farmers
+    if adaptation_protocol:
+        try:
+            adv_msg = AdvisoryMessage(
+                id=str(uuid.uuid4()),
+                sender_id="agronomist_001",
+                sender_role="agronomist",
+                target_role="all",
+                subject=f"⚠️ Weather Safeguard Protocol: {adaptation_protocol[:60]}",
+                body=f"Agronomist Dr. Priya Sharma activated emergency agronomic safeguard: '{adaptation_protocol}'. Field operations, foliar sprays, and irrigation shifts have been realigned immediately.",
+                priority="urgent"
+            )
+            db.add(adv_msg)
+            db.commit()
+
+            EventBus.publish(DomainEvent(
+                event_type="NOTIFICATION_RECEIVED",
+                actor_role="agronomist",
+                payload={
+                    "id": adv_msg.id,
+                    "title": adv_msg.subject,
+                    "message": adv_msg.body,
+                    "priority": "urgent",
+                    "target_role": "all"
+                }
+            ))
+        except Exception as ex:
+            db.rollback()
 
     return {
         "status": "SUCCESS",
@@ -315,6 +346,11 @@ def dispatch_day_tasks(req: DispatchDayTasksRequest, db: Session = Depends(get_d
             producer="Pathogen_AI_Lab"
         ))
 
+    # Save active dispatched day for worker and farmer portals
+    _ACTIVE_DISPATCHED_DAY[actual_farm_id] = req.day_number
+    _ACTIVE_DISPATCHED_DAY["default"] = req.day_number
+    _ACTIVE_DISPATCHED_DAY["global"] = req.day_number
+
     return {
         "status": "SUCCESS",
         "day_number": req.day_number,
@@ -325,6 +361,15 @@ def dispatch_day_tasks(req: DispatchDayTasksRequest, db: Session = Depends(get_d
         "dispatched_count": len(created_tasks),
         "dispatched_tasks": created_tasks,
         "message": f"Day {req.day_number} tasks successfully circulated across cadre. Farmer and Worker portals notified."
+    }
+
+@router.get("/farm/{farm_id}/active-dispatched-day")
+def get_active_dispatched_day(farm_id: str):
+    """Returns the most recent growth day assigned/dispatched by the Agronomist."""
+    day = _ACTIVE_DISPATCHED_DAY.get(farm_id) or _ACTIVE_DISPATCHED_DAY.get("default") or _ACTIVE_DISPATCHED_DAY.get("global") or 1
+    return {
+        "farm_id": farm_id,
+        "active_dispatched_day": day
     }
 
 @router.get("/day-context/{farm_id}/{day_number}")

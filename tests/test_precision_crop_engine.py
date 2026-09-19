@@ -115,6 +115,13 @@ def test_google_auth_with_role_preservation():
     assert data_agro["user"]["role"] == "agronomist"
     assert data_agro["user"]["email"] == "dr.priya.agro@agrios.in"
     assert "access_token" in data_agro
+    # Clean up test user to preserve single agronomist cadre in DB
+    db = SessionLocal()
+    try:
+        db.query(User).filter(User.email == "dr.priya.agro@agrios.in").delete()
+        db.commit()
+    finally:
+        db.close()
 
 def test_pisciculture_master_plan_and_day_schedules():
     farm_id = "test-farm-aqua-001"

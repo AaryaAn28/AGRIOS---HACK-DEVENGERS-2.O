@@ -120,6 +120,188 @@ class AgriosDigitalTwinAdapter {
       angle += 0.003;
       const tilt = 0.55;
 
+      const activeCrop = localStorage.getItem("agrios_calibrated_crop") || "Wheat";
+
+      const drawBotanicalPlant = (ctx, px, py, crop, sway, scale = 0.75) => {
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(scale, scale);
+
+        const cLower = crop.toLowerCase();
+        if (cLower.includes("rice") || cLower.includes("paddy")) {
+          // Rice: slender emerald stem, arching leaves, nodding golden-green grain panicles
+          ctx.strokeStyle = "#16a34a";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(sway * 3, -12, sway * 6, -24);
+          ctx.stroke();
+
+          // Drooping panicle with grains
+          ctx.strokeStyle = "#ca8a04";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(sway * 6, -24);
+          ctx.quadraticCurveTo(sway * 6 + 6, -22, sway * 6 + 10, -16);
+          ctx.stroke();
+
+          ctx.fillStyle = "#eab308";
+          for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.arc(sway * 6 + 4 + i * 1.5, -22 + i * 1.8, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Blade leaves
+          ctx.fillStyle = "#22c55e";
+          ctx.beginPath();
+          ctx.moveTo(0, -6);
+          ctx.quadraticCurveTo(-10 + sway, -14, -14 + sway, -8);
+          ctx.quadraticCurveTo(-8 + sway, -6, 0, -4);
+          ctx.fill();
+
+        } else if (cLower.includes("tomato")) {
+          // Tomato: bushy branching stems, green foliage, bright red tomato fruits
+          ctx.strokeStyle = "#15803d";
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(sway * 2, -10, sway * 4, -20);
+          ctx.stroke();
+
+          // Foliage cluster
+          ctx.fillStyle = "#16a34a";
+          ctx.beginPath();
+          ctx.arc(sway * 2 - 6, -12, 5, 0, Math.PI * 2);
+          ctx.arc(sway * 4 + 4, -18, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Red ripe tomatoes
+          ctx.fillStyle = "#ef4444";
+          ctx.beginPath();
+          ctx.arc(sway * 2 - 4, -8, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(sway * 4 + 3, -13, 3.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Yellow blossom
+          ctx.fillStyle = "#facc15";
+          ctx.beginPath();
+          ctx.arc(sway * 4, -22, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (cLower.includes("maize") || cLower.includes("corn")) {
+          // Maize: thick tall stalk, broad leaves, golden ear with silk
+          ctx.strokeStyle = "#15803d";
+          ctx.lineWidth = 2.8;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(sway * 4, -30);
+          ctx.stroke();
+
+          // Broad arching leaves
+          ctx.fillStyle = "#22c55e";
+          ctx.beginPath();
+          ctx.moveTo(0, -10);
+          ctx.quadraticCurveTo(-12 + sway, -16, -18 + sway, -8);
+          ctx.quadraticCurveTo(-10 + sway, -8, 0, -8);
+          ctx.fill();
+
+          // Ear of corn
+          ctx.fillStyle = "#eab308";
+          ctx.beginPath();
+          ctx.ellipse(sway * 2 + 5, -16, 3.5, 7, Math.PI / 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Tassel top
+          ctx.strokeStyle = "#ca8a04";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sway * 4, -30);
+          ctx.lineTo(sway * 4 - 3, -35);
+          ctx.moveTo(sway * 4, -30);
+          ctx.lineTo(sway * 4 + 3, -35);
+          ctx.stroke();
+
+        } else if (cLower.includes("potato")) {
+          // Potato: leafy dark green bush, small white/lilac flowers
+          ctx.fillStyle = "#166534";
+          ctx.beginPath();
+          ctx.arc(0 + sway, -10, 8, 0, Math.PI * 2);
+          ctx.arc(-7 + sway, -12, 6, 0, Math.PI * 2);
+          ctx.arc(7 + sway, -11, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // White blossom
+          ctx.fillStyle = "#f8fafc";
+          ctx.beginPath();
+          ctx.arc(sway, -19, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#facc15";
+          ctx.beginPath();
+          ctx.arc(sway, -19, 1, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (cLower.includes("cotton")) {
+          // Cotton: branching shrub, lobed leaves, fluffy white cotton bolls
+          ctx.strokeStyle = "#78350f";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(sway * 2, -18);
+          ctx.stroke();
+
+          ctx.fillStyle = "#15803d";
+          ctx.beginPath();
+          ctx.arc(sway * 2 - 5, -12, 5, 0, Math.PI * 2);
+          ctx.arc(sway * 2 + 5, -14, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // White fluffy cotton bolls
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(sway * 2 - 4, -18, 4, 0, Math.PI * 2);
+          ctx.arc(sway * 2 + 4, -20, 3.8, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else {
+          // Default: Wheat (golden spike, awn bristles, linear blade)
+          ctx.strokeStyle = "#84cc16";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(sway * 2, -12, sway * 5, -25);
+          ctx.stroke();
+
+          // Wheat spike head
+          ctx.fillStyle = "#eab308";
+          ctx.beginPath();
+          ctx.ellipse(sway * 5, -25, 3, 9, sway * 0.1, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Awn bristles
+          ctx.strokeStyle = "#ca8a04";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(sway * 5, -34);
+          ctx.lineTo(sway * 5 - 3, -40);
+          ctx.moveTo(sway * 5, -34);
+          ctx.lineTo(sway * 5 + 3, -40);
+          ctx.stroke();
+
+          // Foliage leaf
+          ctx.strokeStyle = "#22c55e";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(0, -6);
+          ctx.quadraticCurveTo(-10 + sway, -14, -12 + sway, -8);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      };
+
       for (let r = -gridRows / 2; r < gridRows / 2; r++) {
         for (let c = -gridCols / 2; c < gridCols / 2; c++) {
           const isoX = (c - r) * cellW * 0.8;
@@ -139,15 +321,12 @@ class AgriosDigitalTwinAdapter {
           ctx.lineWidth = 1;
           ctx.fill();
           ctx.stroke();
+
+          // Render living botanical crop illustration on tile
+          const plantSway = Math.sin(angle * 2.5 + c * 0.5 + r * 0.5) * 1.8;
+          drawBotanicalPlant(ctx, isoX, isoY - wave + (cellH * tilt), activeCrop, plantSway, 0.7);
         }
       }
-
-      const nodeX = Math.sin(angle) * 80;
-      const nodeY = Math.cos(angle) * 40;
-      ctx.beginPath();
-      ctx.arc(nodeX, nodeY - 15, 6, 0, Math.PI * 2);
-      ctx.fillStyle = "#10b981";
-      ctx.fill();
 
       ctx.restore();
       this.animationFrameId = requestAnimationFrame(render);
@@ -676,12 +855,99 @@ class AgriosDigitalTwinAdapter {
       }
 
       gridEl.innerHTML = statsHTML;
+
+      // Append actionable 3D Twin Dispatch Button
+      let actionsEl = panel.querySelector('.dt3d-inspector-actions');
+      if (!actionsEl) {
+        actionsEl = document.createElement('div');
+        actionsEl.className = 'dt3d-inspector-actions';
+        actionsEl.style.cssText = 'margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.15); display:flex; flex-direction:column; gap:6px;';
+        gridEl.parentElement.appendChild(actionsEl);
+      }
+
+      const entityLabel = entityData.name || entityData.type || 'Field Entity';
+      if (entityData.type === 'risk') {
+        actionsEl.innerHTML = `
+          <button class="btn-primary" onclick="window.dispatchInspectorIntervention('${entityLabel.replace(/'/g, "\\'")}', 'risk')" style="width:100%; background:#ef4444; color:white; border:none; height:32px; font-size:0.75rem; font-weight:700; border-radius:6px; cursor:pointer;">
+            🚨 Dispatch Containment Task
+          </button>
+        `;
+      } else if (entityData.type === 'worker') {
+        actionsEl.innerHTML = `
+          <button class="btn-primary" onclick="window.dispatchInspectorIntervention('${entityLabel.replace(/'/g, "\\'")}', 'worker')" style="width:100%; background:#059669; color:white; border:none; height:32px; font-size:0.75rem; font-weight:700; border-radius:6px; cursor:pointer;">
+            📋 Assign Field Directive
+          </button>
+        `;
+      } else if (entityData.type === 'field' || entityData.type === 'crops') {
+        actionsEl.innerHTML = `
+          <button class="btn-primary" onclick="window.dispatchInspectorIntervention('${entityLabel.replace(/'/g, "\\'")}', 'field')" style="width:100%; background:#10b981; color:white; border:none; height:32px; font-size:0.75rem; font-weight:700; border-radius:6px; cursor:pointer;">
+            🌱 Dispatch Irrigation & Canopy Inspection
+          </button>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button class="btn-secondary" onclick="window.dispatchInspectorIntervention('${entityLabel.replace(/'/g, "\\'")}', 'sensor')" style="width:100%; background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.2); height:30px; font-size:0.75rem; font-weight:600; border-radius:6px; cursor:pointer;">
+            ⚙️ Run Diagnostic Latch
+          </button>
+        `;
+      }
     }
 
     // Fire callback
     if (this._interactionCallback) {
       this._interactionCallback({ action: 'inspect', entity: entityData });
     }
+  }
+
+  // Global 3D Inspector Task Dispatch Action
+  static initInspectorActions() {
+    if (typeof window === 'undefined') return;
+    window.dispatchInspectorIntervention = async function(entityName, type) {
+      try {
+        const activeFarm = localStorage.getItem("agrios_active_farm_id") || "default";
+        let title = `[3D Twin Dispatch] Targeted Action on ${entityName}`;
+        let category = "operations";
+        let priority = "high";
+
+        if (type === "risk") {
+          title = `[Phytosanitary Buffer] Emergency Containment: ${entityName}`;
+          category = "plant_protection";
+          priority = "URGENT";
+        } else if (type === "worker") {
+          title = `[Directive] Field Reassignment for ${entityName}`;
+          category = "operations";
+          priority = "high";
+        } else if (type === "field") {
+          title = `[Parcel Care] Irrigation & Foliar Audit for ${entityName}`;
+          category = "irrigation";
+          priority = "medium";
+        }
+
+        if (window.AgriosAPI && typeof AgriosAPI.createTask === "function") {
+          await AgriosAPI.createTask({
+            farm_id: activeFarm,
+            title: title,
+            category: category,
+            priority: priority,
+            description: `Direct task triggered from 3D Digital Twin World Inspector targeting ${entityName}. Verified coordinates latched.`
+          });
+        }
+
+        if (window.AgriosUI && typeof AgriosUI.showToast === "function") {
+          AgriosUI.showToast("Task Dispatched", `Released directive for ${entityName} to workforce queue.`, "🚀");
+        }
+
+        try {
+          localStorage.setItem("agrios_broadcast_event", JSON.stringify({
+            event_type: "TASK_CREATED",
+            payload: { title: title, target: entityName, timestamp: Date.now() }
+          }));
+        } catch(e) {}
+      } catch(err) {
+        console.error("Inspector dispatch error:", err);
+        if (window.AgriosUI) AgriosUI.showToast("Dispatch Failed", err.message, "❌");
+      }
+    };
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -727,3 +993,4 @@ class AgriosDigitalTwinAdapter {
 
 // Export to global scope for non-module access
 window.AgriosDigitalTwinAdapter = AgriosDigitalTwinAdapter;
+AgriosDigitalTwinAdapter.initInspectorActions();
