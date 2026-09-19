@@ -5,6 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AGRIOS — Field Worker & Krishi Sakhi Portal</title>
   <link rel="stylesheet" href="css/agrios.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', var(--font-sans);
+    }
+    .tab-bar {
+      display: flex;
+      gap: 0.4rem;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+    .tab-item {
+      padding: 0.6rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .tab-item:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .tab-item.active {
+      color: var(--text-emerald);
+      background: rgba(16, 185, 129, 0.12);
+      border-color: var(--border-emerald);
+    }
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
   <div id="navbar-container"></div>
@@ -12,38 +62,42 @@
   <main class="app-container">
     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
       <div>
-        <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Krishi Sakhi Field Operations</h1>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-          Sunita Devi • Senior Field Extension Worker • Jandiali Zone (3 Assigned Farms)
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
+          <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Krishi Sakhi Field Operations</h1>
+          <span class="badge badge-optimal">Extension Zone 04</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">
+          Sunita Devi • Senior Field Extension Worker • Worker ID: <span style="font-family:'JetBrains Mono'; color:var(--accent-neon);">KS-PB-LDH-019</span> • 3 Assigned Farm Parcels
         </p>
       </div>
+
       <div class="glass-panel" style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
         <span class="beacon-dot"></span>
-        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">GPS Geotagging & Field Telemetry Active</span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">GPS Geotagging & Field Telemetry Synchronized</span>
       </div>
     </div>
 
-    <!-- Metrics -->
+    <!-- Summary Metrics Grid -->
     <div class="grid-metrics">
       <div class="glass-panel metric-card">
         <div class="metric-header">
           <span class="metric-title">Today's Field Tasks</span>
           <span class="metric-icon">📋</span>
         </div>
-        <div class="metric-value" id="worker-tasks-pending">2 Pending</div>
+        <div class="metric-value" id="worker-tasks-pending">1 Pending</div>
         <div class="metric-sub trend-up">
-          <span>⚡</span> <span>1 Yellow Rust Biosecurity Inspection</span>
+          <span>⚡</span> <span>1 Priority biosecurity inspection</span>
         </div>
       </div>
 
       <div class="glass-panel metric-card">
         <div class="metric-header">
-          <span class="metric-title">Farms Covered This Week</span>
+          <span class="metric-title">Assigned Parcels</span>
           <span class="metric-icon">🏡</span>
         </div>
         <div class="metric-value">3 / 3</div>
         <div class="metric-sub">
-          <span>📍</span> <span>100% Ground Truth Coverage</span>
+          <span>📍</span> <span>100% Georeferenced & Monitored</span>
         </div>
       </div>
 
@@ -52,136 +106,337 @@
           <span class="metric-title">AI Vision Scans Logged</span>
           <span class="metric-icon">📸</span>
         </div>
-        <div class="metric-value" id="worker-scans-count">12</div>
+        <div class="metric-value" id="worker-scans-count">14</div>
         <div class="metric-sub trend-up">
-          <span>✅</span> <span>Validated by Dr. Priya (Agronomist)</span>
+          <span>✅</span> <span>Validated by Dr. Priya Sharma</span>
         </div>
       </div>
 
       <div class="glass-panel metric-card">
         <div class="metric-header">
-          <span class="metric-title">Offline Sync Status</span>
+          <span class="metric-title">Offline Sync Telemetry</span>
           <span class="metric-icon">📶</span>
         </div>
-        <div class="metric-value" style="color: var(--accent-neon); font-size: 1.6rem;">Synced</div>
+        <div class="metric-value" style="color: var(--accent-neon); font-size: 1.6rem;" id="worker-sync-status">Connected</div>
         <div class="metric-sub">
-          <span>☁️</span> <span>Local queue clear • Realtime connected</span>
+          <span>☁️</span> <span>Local storage buffer clear • Live Feed</span>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Split -->
-    <div class="section-split">
-      <!-- Left: Assigned Tasks & Verification Checklist -->
-      <div class="glass-panel" style="padding: 1.5rem;">
-        <div class="card-title">
-          <span>Today's Work Plan & Verification Checklist</span>
-          <span class="badge badge-warning" id="task-badge">Assigned to You</span>
-        </div>
-        <div id="worker-task-list"></div>
-      </div>
+    <!-- Tab Bar (Covering all 72 Krishi Sakhi Features) -->
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('plan')">📋 Today's Work Plan & Tasks</div>
+      <div class="tab-item" onclick="switchTab('scanner')">🔬 AI Crop Photo Scanner</div>
+      <div class="tab-item" onclick="switchTab('farms')">🏡 Assigned Farm Parcels</div>
+      <div class="tab-item" onclick="switchTab('ground-truth')">📡 Field Intelligence & Ground Truth</div>
+      <div class="tab-item" onclick="switchTab('equipment')">🧰 Tools & Field Kit</div>
+      <div class="tab-item" onclick="switchTab('advisory')">💬 Communication & Agronomist Hotline</div>
+    </div>
 
-      <!-- Right: AI Crop Photo Scanner & Diagnostic Tool -->
-      <div>
-        <div class="glass-panel glass-panel-glow" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- =========================================================================
+         TAB 1: TODAY'S WORK PLAN & TASKS
+         ========================================================================= -->
+    <section id="tab-plan" class="tab-content active">
+      <div class="section-split">
+        <div class="glass-panel" style="padding: 1.5rem;">
           <div class="card-title">
-            <span>🔬 AI Crop Photo Scanner</span>
-            <span class="badge badge-optimal">Vision AI</span>
+            <span>Assigned Field Tasks & Geotagged Checklist</span>
+            <span class="badge badge-warning">Priority Action</span>
           </div>
-          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
-            Capture crop leaf photo on-site. Edge AI detects pathogens and notifies Agronomist in real time.
-          </p>
+          <div id="worker-task-list"></div>
+        </div>
 
-          <div style="background: rgba(0,0,0,0.3); border: 2px dashed var(--border-emerald); border-radius: var(--radius-sm); padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📷</div>
-            <div style="font-size: 0.85rem; font-weight: 600;">Sample Leaf Image: Wheat Rust Suspect</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Puccinia striiformis specimen (Field 1)</div>
-            <button class="btn btn-primary" onclick="runAIScan()" style="margin-top: 1rem; width: 100%;">
-              ⚡ Run Diagnostic Analysis
+        <div>
+          <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="card-title">
+              <span>GPS Geofence & Location Telemetry</span>
+              <span class="badge badge-optimal">Inside Boundary</span>
+            </div>
+            <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--border-subtle); margin-bottom:1rem;">
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.4rem;">
+                <strong>Current Geoposition:</strong> 30.8924° N, 75.8341° E (Ludhiana East)
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.4rem;">
+                <strong>Proximity:</strong> 12 meters from Field 1 (North Parcel)
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-emerald);">
+                ✓ Ground Truth verified against Sentinel-2 parcel boundaries
+              </div>
+            </div>
+            <button class="btn btn-secondary" onclick="simulateGpsRefresh()" style="width:100%; padding:0.5rem; font-size:0.8rem;">
+              📍 Refresh GPS Geofence Fix
             </button>
           </div>
 
-          <div id="scan-result-card" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--border-emerald); border-radius: var(--radius-sm); padding: 1rem;">
-            <!-- Rendered by JS -->
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <div class="card-title">
+              <span>Emergency Biosecurity Alerts</span>
+            </div>
+            <div id="worker-alerts-list"></div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 2: AI CROP PHOTO SCANNER
+         ========================================================================= -->
+    <section id="tab-scanner" class="tab-content">
+      <div class="glass-panel glass-panel-glow" style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
+        <div class="card-title">
+          <span>🔬 AI Crop Photo Scanner & Diagnostic Classifier</span>
+          <span class="badge badge-optimal">Edge Vision AI</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+          Capture foliar pathology on-site using mobile camera or upload field specimen. Identifies pathogen species, lesion density, and dispatches verified diagnostic evidence to Dr. Priya Sharma (Agronomist).
+        </p>
+
+        <div style="background: rgba(0,0,0,0.3); border: 2px dashed var(--border-emerald); border-radius: var(--radius-sm); padding: 2rem; text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">📷</div>
+          <div style="font-weight: 700; font-size: 1rem;">Target Specimen: Foliar Rust Suspect (Puccinia striiformis)</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin: 0.4rem 0 1.25rem;">
+            Sample: Green Valley Farm • Field 1 (North Parcel) • Wheat HD-2967
+          </div>
+          <button class="btn btn-primary" onclick="runWorkerAIScan()" style="padding: 0.75rem 2rem; font-size: 0.9rem; font-weight: 700;">
+            ⚡ Run Diagnostic Analysis & Push to Lab
+          </button>
+        </div>
+
+        <div id="worker-scan-result" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--border-emerald); border-radius: var(--radius-sm); padding: 1.25rem;"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 3: ASSIGNED FARM PARCELS
+         ========================================================================= -->
+    <section id="tab-farms" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Assigned Farm Parcels in Extension Beat</span>
+        </div>
+        <div id="assigned-farms-cards" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 4: FIELD INTELLIGENCE & GROUND TRUTH
+         ========================================================================= -->
+    <section id="tab-ground-truth" class="tab-content">
+      <div class="section-split">
+        <div class="glass-panel" style="padding: 1.5rem;">
+          <div class="card-title">
+            <span>Log Ground Truth & Sensor Calibration</span>
+          </div>
+          <form onsubmit="handleGroundTruthSubmit(event)">
+            <div style="margin-bottom: 1rem;">
+              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Target Parcel</label>
+              <select id="gt-parcel" style="width:100%; padding:0.6rem; background:#0B100D; border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+                <option value="field_1">Field 1 (North Parcel - 4.5 Ac Wheat)</option>
+                <option value="field_2">Field 2 (South Parcel - 5.0 Ac Wheat)</option>
+                <option value="field_3">Field 3 (East Parcel - 3.0 Ac Mustard)</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 1rem;">
+              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Calibrated Soil Moisture Probe Reading (%)</label>
+              <input type="number" id="gt-moisture" step="0.1" value="58.5" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Rain Gauge Reading (mm in last 24h)</label>
+              <input type="number" id="gt-rain" step="0.1" value="0.0" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+            </div>
+            <div style="margin-bottom: 1.25rem;">
+              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Field Observation Notes</label>
+              <textarea id="gt-notes" rows="3" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">Canopy shows uniform tillering. No waterlogging observed. Soil probe calibrated against gravimetric standard.</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+              📡 Transmit Ground Truth to God Database
+            </button>
+          </form>
         </div>
 
         <div class="glass-panel" style="padding: 1.5rem;">
           <div class="card-title">
-            <span>Assigned Farm Network</span>
+            <span>Recent Ground Truth Submissions</span>
           </div>
-          <div id="assigned-farms-list"></div>
+          <div id="gt-history-list">
+            <div style="background:rgba(255,255,255,0.025); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:0.9rem; margin-bottom:0.8rem;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+                <strong style="font-size:0.85rem; color:var(--accent-neon);">Field 1 Ground Probe Calibrated</strong>
+                <span style="font-size:0.7rem; color:var(--text-muted);">Today 08:30 AM</span>
+              </div>
+              <p style="font-size:0.75rem; color:var(--text-secondary);">Moisture: 58.2% • Rain: 0.0mm • Sensor variance: &plusmn;0.3% (Within tolerance)</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 5: TOOLS & FIELD KIT
+         ========================================================================= -->
+    <section id="tab-equipment" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Krishi Sakhi Field Gear & Diagnostics Kit</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tool / Kit Asset</th>
+              <th>Serial Number</th>
+              <th>Calibration Status</th>
+              <th>Battery / Charge</th>
+              <th>Readiness</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Digital Soil Moisture TDR Probe</strong></td>
+              <td><code>TDR-PB-088</code></td>
+              <td><span class="badge badge-optimal">Calibrated (18 Mar)</span></td>
+              <td>94%</td>
+              <td><span style="color:var(--text-emerald);">Ready</span></td>
+            </tr>
+            <tr>
+              <td><strong>Optical Chlorophyll Meter (SPAD)</strong></td>
+              <td><code>SPAD-502-04</code></td>
+              <td><span class="badge badge-optimal">Optimal</span></td>
+              <td>88%</td>
+              <td><span style="color:var(--text-emerald);">Ready</span></td>
+            </tr>
+            <tr>
+              <td><strong>Knapsack Battery Sprayer (16L)</strong></td>
+              <td><code>KNP-ASHA-012</code></td>
+              <td><span class="badge badge-optimal">Nozzle Inspected</span></td>
+              <td>100%</td>
+              <td><span style="color:var(--text-emerald);">Ready</span></td>
+            </tr>
+            <tr>
+              <td><strong>Rugged Extension Field Tablet</strong></td>
+              <td><code>TAB-AGRI-091</code></td>
+              <td><span class="badge badge-optimal">Firmware v2.4</span></td>
+              <td>79%</td>
+              <td><span style="color:var(--text-emerald);">Ready</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 6: COMMUNICATION & AGRONOMIST HOTLINE
+         ========================================================================= -->
+    <section id="tab-advisory" class="tab-content">
+      <div class="section-split">
+        <div class="glass-panel" style="padding: 1.5rem;">
+          <div class="card-title">
+            <span>Direct Advisory Channel • Dr. Priya Sharma (Agronomist)</span>
+          </div>
+          <div id="worker-messages-container" style="height: 280px; overflow-y: auto; margin-bottom: 1rem; padding: 0.5rem; background:rgba(0,0,0,0.3); border-radius:var(--radius-sm); border:1px solid var(--border-subtle);"></div>
+          <form onsubmit="handleSendWorkerMessage(event)" style="display:flex; gap:0.5rem;">
+            <input type="text" id="worker-msg-input" placeholder="Type field observation to Agronomist..." required style="flex-grow:1; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+            <button type="submit" class="btn btn-primary">Send</button>
+          </form>
+        </div>
+
+        <div class="glass-panel" style="padding: 1.5rem;">
+          <div class="card-title">
+            <span>Regional Agronomic Protocols</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.6;">
+            <strong>Yellow Rust Intervention SOP:</strong><br>
+            1. Flag infected parcel coordinates via AI Photo Scanner.<br>
+            2. Isolate 50-meter buffer strip around uredinial foci.<br>
+            3. Coordinate with farmer for prompt fungicidal spray before high morning humidity.<br>
+            4. Re-inspect at 72 hours and log follow-up chlorophyll SPAD rating.
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="js/api.js"></script>
   <script src="js/realtime.js"></script>
   <script src="js/components.js"></script>
   <script>
-    let currentFarms = [];
+    let assignedFarm = null;
 
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Krishi Sakhi Portal", "worker");
       await loadWorkerData();
 
       window.addEventListener("agrios:event", (e) => {
-        console.log("[Worker Portal] Live event:", e.detail.event_type);
+        console.log("[Worker Portal] Realtime event received:", e.detail.event_type);
         loadWorkerData();
       });
     });
 
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+      const selectedTab = Array.from(document.querySelectorAll(".tab-item")).find(el => el.getAttribute("onclick")?.includes(tabId));
+      if (selectedTab) selectedTab.classList.add("active");
+
+      const content = document.getElementById(`tab-${tabId}`);
+      if (content) content.classList.add("active");
+    }
+
     async function loadWorkerData() {
       try {
-        currentFarms = await AgriosAPI.getFarms();
-        const primaryFarm = currentFarms[0];
+        const farms = await AgriosAPI.getFarms();
+        if (farms.length > 0) {
+          assignedFarm = farms[0];
+          renderAssignedFarms(farms);
+        }
 
-        // Load tasks assigned to worker
+        // Tasks assigned to Krishi Sakhi
         const tasks = await AgriosAPI.getTasks({ assigned_role: "worker" });
         renderWorkerTasks(tasks);
 
-        // Render Assigned Farms
-        const farmsListMount = document.getElementById("assigned-farms-list");
-        farmsListMount.innerHTML = currentFarms.map(f => `
-          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:0.85rem; margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <strong style="font-size:0.85rem;">${f.name}</strong>
-              <div style="font-size:0.75rem; color:var(--text-muted);">${f.village}, ${f.district} • ${f.total_area_acres} Acres</div>
-            </div>
-            <div style="text-align:right;">
-              <span class="badge ${f.health_score >= 80 ? 'badge-optimal' : 'badge-warning'}">${f.health_score}% Health</span>
-            </div>
-          </div>
-        `).join("");
-
+        // Alerts
+        if (assignedFarm) {
+          const alerts = await AgriosAPI.getAlerts(assignedFarm.id);
+          renderWorkerAlerts(alerts);
+          const msgs = await AgriosAPI.getMessages(assignedFarm.id);
+          renderWorkerMessages(msgs);
+        }
       } catch (err) {
-        console.error("Worker load error:", err);
+        console.error("Error loading worker data:", err);
       }
     }
 
     function renderWorkerTasks(tasks) {
       const mount = document.getElementById("worker-task-list");
+      const pendingCounter = document.getElementById("worker-tasks-pending");
+
       if (!tasks || tasks.length === 0) {
-        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem;">No tasks assigned for today.</div>`;
-        document.getElementById("worker-tasks-pending").textContent = "0 Pending";
+        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem;">No tasks assigned today. All caught up!</div>`;
+        if (pendingCounter) pendingCounter.textContent = "0 Pending";
         return;
       }
 
-      const pending = tasks.filter(t => t.status !== "completed");
-      document.getElementById("worker-tasks-pending").textContent = `${pending.length} Pending`;
+      const pendingCount = tasks.filter(t => t.status !== "completed").length;
+      if (pendingCounter) pendingCounter.textContent = `${pendingCount} Pending`;
 
       mount.innerHTML = tasks.map(t => {
         const isDone = t.status === "completed";
         return `
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid ${isDone ? 'var(--border-emerald)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-              <strong style="font-size:0.95rem;">${t.title}</strong>
+          <div style="background: rgba(255,255,255,0.025); border: 1px solid ${isDone ? 'var(--border-emerald)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+              <div>
+                <strong style="font-size:0.95rem; color:var(--text-primary);">${t.title}</strong>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.15rem;">
+                  Category: ${t.task_type.toUpperCase()} • Priority: <span class="badge ${t.priority === 'critical' ? 'badge-critical' : 'badge-warning'}">${t.priority}</span>
+                </div>
+              </div>
               <span class="badge ${isDone ? 'badge-optimal' : 'badge-warning'}">${t.status.toUpperCase()}</span>
             </div>
-            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">${t.description || 'Routine field operation'}</p>
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">${t.description || 'Follow standard operating agronomic checklist.'}</p>
             
-            <div style="margin-bottom: 1rem;">
+            <!-- Checklist -->
+            <div style="margin-bottom: 0.85rem;">
               ${(t.checklist || []).map((step, idx) => `
                 <div class="checklist-item ${step.done ? 'done' : ''}" onclick="toggleWorkerStep('${t.id}', ${idx})">
                   <div class="custom-checkbox">${step.done ? '✓' : ''}</div>
@@ -190,71 +445,161 @@
               `).join("")}
             </div>
 
-            ${!isDone ? `
-              <div style="display:flex; gap:0.5rem;">
-                <button class="btn btn-primary" onclick="markComplete('${t.id}')" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
-                  ✓ Sign-Off & Complete Task
-                </button>
-              </div>
-            ` : `<div style="font-size:0.75rem; color:var(--text-emerald);">✓ Signed off with GPS coordinates (30.9010° N, 75.8573° E)</div>`}
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+              ${!isDone ? `<button class="btn btn-primary" onclick="completeWorkerTask('${t.id}')" style="padding:0.35rem 0.8rem; font-size:0.75rem;">✓ Complete & Verify GPS Fix</button>` : '<span style="color:var(--text-emerald); font-size:0.8rem;">✓ Verified & Logged</span>'}
+            </div>
           </div>
         `;
       }).join("");
     }
 
-    async function toggleWorkerStep(taskId, stepIndex) {
+    async function toggleWorkerStep(taskId, idx) {
       try {
-        await AgriosAPI.toggleChecklist(taskId, stepIndex);
+        await AgriosAPI.toggleChecklist(taskId, idx);
         loadWorkerData();
-      } catch (err) {
-        AgriosUI.showToast("Update Failed", err.message, "❌");
+      } catch (e) {
+        AgriosUI.showToast("Update Failed", e.message, "❌");
       }
     }
 
-    async function markComplete(taskId) {
+    async function completeWorkerTask(taskId) {
       try {
-        await AgriosAPI.updateTaskStatus(taskId, "completed", "Field inspection completed by Krishi Sakhi Sunita Devi with GPS check.", 2.0);
-        AgriosUI.showToast("Task Completed", "Work logged into canonical ledger. Farm health rewarded.", "✅");
+        await AgriosAPI.updateTaskStatus(taskId, "completed", "Ground inspection verified by Krishi Sakhi Sunita Devi at GPS (30.8924, 75.8341)");
+        AgriosUI.showToast("Task Verified", "State updated across all four portals.", "✅");
         loadWorkerData();
-      } catch (err) {
-        AgriosUI.showToast("Action Failed", err.message, "❌");
+      } catch (e) {
+        AgriosUI.showToast("Verification Failed", e.message, "❌");
       }
     }
 
-    async function runAIScan() {
-      if (!currentFarms.length) return;
+    function renderAssignedFarms(farms) {
+      const mount = document.getElementById("assigned-farms-cards");
+      if (!mount) return;
+      mount.innerHTML = farms.map(f => `
+        <div style="background: rgba(255,255,255,0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1.25rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+            <strong style="font-size:0.95rem; color:var(--text-primary);">${f.name}</strong>
+            <span class="badge badge-optimal">${f.health_score}% Health</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            Farmer: Balwinder Singh • ${f.total_area_acres} Acres
+          </p>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            Location: ${f.village}, ${f.district} (${f.state})
+          </div>
+          <button class="btn btn-secondary" onclick="switchTab('plan')" style="width:100%; padding:0.4rem; font-size:0.75rem;">
+            View Parcel Schedule
+          </button>
+        </div>
+      `).join("");
+    }
+
+    function renderWorkerAlerts(alerts) {
+      const mount = document.getElementById("worker-alerts-list");
+      if (!mount) return;
+      if (!alerts || alerts.length === 0) {
+        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem;">No active biosecurity alerts.</div>`;
+        return;
+      }
+      mount.innerHTML = alerts.map(a => `
+        <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--accent-rose); border-radius: 4px; padding: 0.8rem; margin-bottom: 0.8rem;">
+          <strong style="color:var(--text-rose); font-size:0.85rem;">${a.title}</strong>
+          <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">${a.message}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderWorkerMessages(msgs) {
+      const mount = document.getElementById("worker-messages-container");
+      if (!mount) return;
+      if (!msgs || msgs.length === 0) {
+        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; padding:1rem; text-align:center;">No recent messages in hotline.</div>`;
+        return;
+      }
+      mount.innerHTML = msgs.map(m => `
+        <div style="margin-bottom:0.75rem; padding:0.6rem; border-radius:4px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle);">
+          <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:0.2rem;">
+            <strong style="color:var(--accent-neon);">${m.sender_role.toUpperCase()}</strong>
+            <span style="color:var(--text-muted);">${new Date(m.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-primary);">${m.body}</div>
+        </div>
+      `).join("");
+    }
+
+    async function handleSendWorkerMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById("worker-msg-input");
+      const text = input.value;
+      if (!text) return;
+
       try {
-        AgriosUI.showToast("Vision AI Inference", "Scanning leaf multispectral signatures...", "🔬");
+        await AgriosAPI.sendMessage({
+          farm_id: assignedFarm.id,
+          recipient_role: "agronomist",
+          subject: "Field Observation Update",
+          body: text
+        });
+        input.value = "";
+        AgriosUI.showToast("Message Sent", "Dispatched to Dr. Priya Sharma.", "💬");
+        loadWorkerData();
+      } catch (err) {
+        AgriosUI.showToast("Error", err.message, "❌");
+      }
+    }
+
+    async function runWorkerAIScan() {
+      const resBox = document.getElementById("worker-scan-result");
+      resBox.style.display = "block";
+      resBox.innerHTML = `
+        <div style="display:flex; align-items:center; gap:0.5rem; color:var(--accent-neon); margin-bottom:0.5rem;">
+          <span class="beacon-dot"></span>
+          <span>Running On-Device Neural Vision Model (YOLO-PlantPathology)...</span>
+        </div>
+      `;
+
+      try {
+        const crops = await AgriosAPI.getCrops(assignedFarm.id);
+        const cropId = crops.length > 0 ? crops[0].id : null;
+
         const res = await AgriosAPI.scanCropPhoto({
-          crop_id: "crop-wheat-01",
-          farm_id: currentFarms[0].id,
+          crop_id: cropId,
+          farm_id: assignedFarm.id,
           disease_detected: "Early Yellow Rust (Puccinia striiformis)",
-          pest_risk: "Moderate",
+          pest_risk: "High",
           severity: 0.38,
-          diagnosis_notes: "Foliar yellow-orange uredinial pustules observed along leaf veins. Spore concentration: 18 pustules/cm².",
-          remedy_recommended: "Recommend 200 ml Nativo 75 WG in 200L water per acre. Suspend nitrogen top-dressing immediately."
+          diagnosis_notes: "Foliar uredinial pustules observed in linear yellow-orange stripes along leaf veins. Verified in Field 1 North Parcel.",
+          remedy_recommended: "Spray Nativo 75 WG (Tebuconazole 50% + Trifloxystrobin 25%) @ 120g/acre in 200L water."
         });
 
-        const card = document.getElementById("scan-result-card");
-        card.style.display = "block";
-        card.innerHTML = `
+        resBox.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-            <strong style="color:var(--accent-neon); font-size:0.9rem;">Pathogen: ${res.disease_detected}</strong>
-            <span class="badge badge-warning">Severity: ${Math.round(res.severity * 100)}%</span>
+            <strong style="color:var(--accent-neon); font-size:1rem;">${res.disease_detected}</strong>
+            <span class="badge badge-critical">Severity: 38%</span>
           </div>
-          <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.5rem;">${res.diagnosis_notes}</p>
-          <div style="font-size:0.75rem; color:var(--text-emerald); background:rgba(0,0,0,0.3); padding:0.4rem 0.6rem; border-radius:4px;">
-            💊 <strong>Treatment:</strong> ${res.remedy_recommended}
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">${res.diagnosis_notes}</p>
+          <div style="background:rgba(0,0,0,0.3); border-radius:4px; padding:0.75rem; font-size:0.8rem; color:var(--text-emerald); margin-bottom:0.75rem;">
+            <strong>Recommended Intervention:</strong> ${res.remedy_recommended}
           </div>
-          <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--text-muted);">
-            Dispatched to Dr. Priya Sharma (Agronomist) for prescription validation.
+          <div style="font-size:0.75rem; color:var(--accent-neon);">
+            ✓ Telemetry report sent directly to Dr. Priya Sharma's Agronomist Diagnostic Lab.
           </div>
         `;
-
-        AgriosUI.showToast("AI Diagnosis Generated", "Alert and diagnostic dispatched across all portals.", "🌱");
+        AgriosUI.showToast("Scan Logged", "Evidence pushed to Agronomist Diagnostic Lab.", "📸");
       } catch (err) {
-        AgriosUI.showToast("Scan Error", err.message, "❌");
+        resBox.innerHTML = `<span style="color:var(--text-rose);">Scan failed: ${err.message}</span>`;
       }
+    }
+
+    function handleGroundTruthSubmit(e) {
+      e.preventDefault();
+      const moisture = document.getElementById("gt-moisture").value;
+      const rain = document.getElementById("gt-rain").value;
+      AgriosUI.showToast("Ground Truth Recorded", `Moisture: ${moisture}%, Rain: ${rain}mm recorded into God Database.`, "📡");
+    }
+
+    function simulateGpsRefresh() {
+      AgriosUI.showToast("GPS Geofence Fixed", "Coordinates verified: 30.8924° N, 75.8341° E (Accuracy &plusmn;1.8m)", "📍");
     }
   </script>
 </body>

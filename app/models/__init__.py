@@ -3,13 +3,15 @@ from app.models.user import User
 from app.models.farm import Farm, Field
 from app.models.crop import Crop, CropHealthLog
 from app.models.task import FarmTask, WorkLog
-from app.models.resource import FarmResource, FarmEquipment, EquipmentBooking
+from app.models.resource import FarmResource, FarmEquipment, EquipmentBooking, ResourceTransaction
 from app.models.risk import WeatherLog, RiskAlert
 from app.models.finance import ProduceInventory, MarketPrice, FinancialTransaction
 from app.models.scheme import GovScheme, SchemeApplication
 from app.models.communication import AdvisoryMessage
 from app.models.digital_twin import DigitalTwinSnapshot
 from app.models.audit import DomainEventLog
+from app.models.camera import Camera, CameraObservation
+from app.models.workforce import WorkerProfile, LeaveRequest
 
 __all__ = [
     "Base",
@@ -23,6 +25,7 @@ __all__ = [
     "FarmResource",
     "FarmEquipment",
     "EquipmentBooking",
+    "ResourceTransaction",
     "WeatherLog",
     "RiskAlert",
     "ProduceInventory",
@@ -33,4 +36,8 @@ __all__ = [
     "AdvisoryMessage",
     "DigitalTwinSnapshot",
     "DomainEventLog",
+    "Camera",
+    "CameraObservation",
+    "WorkerProfile",
+    "LeaveRequest",
 ]

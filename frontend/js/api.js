@@ -230,5 +230,57 @@ const AgriosAPI = {
       method: "POST",
       body: JSON.stringify({ event_name: scenarioName, farm_id: farmId })
     });
+  },
+
+  // Cameras & AI Vision (Guardrail 11)
+  async getCameras(farmId) {
+    return await this.request(`/api/cameras${farmId ? "?farm_id=" + farmId : ""}`);
+  },
+
+  async getCameraObservations(cameraId) {
+    return await this.request(`/api/cameras/${cameraId}/observations`);
+  },
+
+  async logCameraObservation(cameraId, data) {
+    return await this.request(`/api/cameras/${cameraId}/observations`, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async reviewObservation(obsId, reviewed = true) {
+    return await this.request(`/api/cameras/observations/${obsId}/review?reviewed=${reviewed}`, {
+      method: "PATCH"
+    });
+  },
+
+  // Workforce & Leave Management (Guardrail 13)
+  async getWorkerProfiles() {
+    return await this.request("/api/workforce/profiles");
+  },
+
+  async updateWorkerStatus(userId, statusData) {
+    return await this.request(`/api/workforce/profiles/${userId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify(statusData)
+    });
+  },
+
+  async getLeaveRequests() {
+    return await this.request("/api/workforce/leaves");
+  },
+
+  async requestLeave(data) {
+    return await this.request("/api/workforce/leaves", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async approveLeave(leaveId, approvalData) {
+    return await this.request(`/api/workforce/leaves/${leaveId}/approve`, {
+      method: "POST",
+      body: JSON.stringify(approvalData)
+    });
   }
 };

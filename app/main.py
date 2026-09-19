@@ -11,6 +11,7 @@ from app.database import engine, Base
 from app.seed_agrios import seed_database
 
 # Import all routers
+from fastapi.responses import FileResponse, JSONResponse
 from app.routes.auth import router as auth_router
 from app.routes.farms import router as farms_router
 from app.routes.crops import router as crops_router
@@ -23,6 +24,8 @@ from app.routes.communications import router as communications_router
 from app.routes.digital_twin import router as digital_twin_router
 from app.routes.simulator import router as simulator_router
 from app.routes.websockets import router as websockets_router
+from app.routes.cameras import router as cameras_router
+from app.routes.workforce import router as workforce_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -74,7 +77,10 @@ app.include_router(schemes_router)
 app.include_router(communications_router)
 app.include_router(digital_twin_router)
 app.include_router(simulator_router)
+app.include_router(cameras_router)
+app.include_router(workforce_router)
 
+@app.get("/health")
 @app.get("/api/health")
 def health_check():
     return {
@@ -84,7 +90,30 @@ def health_check():
         "environment": settings.ENVIRONMENT
     }
 
-# Mount frontend directory for SPA
+# Clean frontend routes without .html extension
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+
+@app.get("/farmer")
+def get_farmer_page():
+    return FileResponse(os.path.join(frontend_path, "farmer.html"))
+
+@app.get("/worker")
+def get_worker_page():
+    return FileResponse(os.path.join(frontend_path, "worker.html"))
+
+@app.get("/agronomist")
+def get_agronomist_page():
+    return FileResponse(os.path.join(frontend_path, "agronomist.html"))
+
+@app.get("/government")
+def get_government_page():
+    return FileResponse(os.path.join(frontend_path, "government.html"))
+
+@app.get("/simulator")
+def get_simulator_page():
+    return FileResponse(os.path.join(frontend_path, "simulator.html"))
+
+# Mount frontend directory for static assets
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+

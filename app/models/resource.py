@@ -19,19 +19,56 @@ class FarmResource(Base):
     status = Column(String(30), default="adequate")  # adequate, low, exhausted
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+    transactions = relationship("ResourceTransaction", back_populates="resource", cascade="all, delete-orphan")
+
     def to_dict(self):
         return {
             "id": self.id,
             "farm_id": self.farm_id,
+            "resource_name": self.name,
             "name": self.name,
             "category": self.category,
             "quantity": round(self.quantity, 1),
             "unit": self.unit,
             "reorder_threshold": self.reorder_threshold,
+            "min_threshold": self.reorder_threshold,
             "cost_per_unit": self.cost_per_unit,
             "supplier": self.supplier,
             "status": self.status,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class ResourceTransaction(Base):
+    """Transaction-Based Inventory & Procurement (Guardrail 14).
+    Tracks every purchase, consumption, batch number, unit cost, and links to financial ledger.
+    """
+    __tablename__ = "resource_transactions"
+
+    id = Column(String(64), primary_key=True, default=lambda: f"rtx_{uuid.uuid4().hex[:8]}")
+    resource_id = Column(String(64), ForeignKey("farm_resources.id"), nullable=False, index=True)
+    farm_id = Column(String(64), ForeignKey("farms.id"), nullable=False)
+    transaction_type = Column(String(32), default="consumption") # purchase, consumption, adjustment
+    quantity = Column(Float, nullable=False)
+    unit_cost = Column(Float, default=25.0)
+    total_cost = Column(Float, default=0.0)
+    batch_no = Column(String(64), default=lambda: f"BATCH-{datetime.now().strftime('%Y%m%d')}")
+    notes = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    resource = relationship("FarmResource", back_populates="transactions")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "resource_id": self.resource_id,
+            "farm_id": self.farm_id,
+            "transaction_type": self.transaction_type,
+            "quantity": self.quantity,
+            "unit_cost": self.unit_cost,
+            "total_cost": self.total_cost,
+            "batch_no": self.batch_no,
+            "notes": self.notes,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None
         }
 
 class FarmEquipment(Base):
@@ -61,6 +98,7 @@ class FarmEquipment(Base):
             "status": self.status,
             "operating_hours": round(self.operating_hours, 1),
             "fuel_pct": round(self.fuel_pct, 1),
+            "fuel_level_pct": round(self.fuel_pct, 1),
             "hourly_rate": self.hourly_rate,
             "location": self.location,
             "last_serviced": self.last_serviced.isoformat() if self.last_serviced else None

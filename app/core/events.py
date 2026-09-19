@@ -12,30 +12,45 @@ class DomainEvent:
         actor_role: Optional[str] = None,
         entity_name: Optional[str] = None,
         entity_id: Optional[str] = None,
+        aggregate_type: Optional[str] = None,
+        aggregate_id: Optional[str] = None,
         payload: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None
+        correlation_id: Optional[str] = None,
+        causation_id: Optional[str] = None,
+        previous_version: int = 1,
+        new_version: int = 2
     ):
         self.event_id = str(uuid.uuid4())
         self.event_type = event_type
-        self.actor_id = actor_id
-        self.actor_role = actor_role
-        self.entity_name = entity_name
-        self.entity_id = entity_id
+        self.actor_id = actor_id or "SYSTEM"
+        self.actor_role = actor_role or "system"
+        self.entity_name = entity_name or aggregate_type or "Entity"
+        self.entity_id = entity_id or aggregate_id or str(uuid.uuid4())
+        self.aggregate_type = aggregate_type or self.entity_name
+        self.aggregate_id = aggregate_id or self.entity_id
         self.payload = payload or {}
         self.correlation_id = correlation_id or str(uuid.uuid4())
+        self.causation_id = causation_id or self.correlation_id
+        self.previous_version = previous_version
+        self.new_version = new_version
         self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "event_id": self.event_id,
             "event_type": self.event_type,
+            "aggregate_type": self.aggregate_type,
+            "aggregate_id": self.aggregate_id,
             "actor_id": self.actor_id,
             "actor_role": self.actor_role,
             "entity_name": self.entity_name,
             "entity_id": self.entity_id,
-            "payload": self.payload,
             "correlation_id": self.correlation_id,
-            "timestamp": self.timestamp
+            "causation_id": self.causation_id,
+            "previous_version": self.previous_version,
+            "new_version": self.new_version,
+            "timestamp": self.timestamp,
+            "payload": self.payload
         }
 
 class EventBus:
@@ -59,7 +74,7 @@ class EventBus:
                 if asyncio.iscoroutine(res):
                     await res
             except Exception as e:
-                print(f"[EventBus] Global subscriber error: {e}")
+                print(f"[EventBus] Error in global subscriber {handler}: {e}")
 
         # 2. Dispatch to specific event subscribers
         if event.event_type in self._subscribers:
@@ -69,7 +84,7 @@ class EventBus:
                     if asyncio.iscoroutine(res):
                         await res
                 except Exception as e:
-                    print(f"[EventBus] Error in subscriber for {event.event_type}: {e}")
+                    print(f"[EventBus] Error in subscriber {handler} for {event.event_type}: {e}")
 
 # Global singleton event bus
 event_bus = EventBus()

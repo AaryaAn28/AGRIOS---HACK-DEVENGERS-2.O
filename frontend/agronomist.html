@@ -5,6 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AGRIOS — Agronomist Scientific Intelligence Portal</title>
   <link rel="stylesheet" href="css/agrios.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', var(--font-sans);
+    }
+    .tab-bar {
+      display: flex;
+      gap: 0.4rem;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+    .tab-item {
+      padding: 0.6rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .tab-item:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .tab-item.active {
+      color: var(--text-emerald);
+      background: rgba(16, 185, 129, 0.12);
+      border-color: var(--border-emerald);
+    }
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
   <div id="navbar-container"></div>
@@ -12,18 +62,22 @@
   <main class="app-container">
     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
       <div>
-        <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Agronomy Intelligence & Diagnostic Lab</h1>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-          Dr. Priya Sharma • Senior Crop Scientist • Regional Zone (Ludhiana / Central Punjab)
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
+          <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">Agronomy Intelligence & Diagnostic Lab</h1>
+          <span class="badge badge-optimal">Regional Division: Central Punjab</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">
+          Dr. Priya Sharma • Senior Crop Scientist • ICAR / PAU Advisory Fellow • 28 Overseen Model Farms (1,420 Acres)
         </p>
       </div>
+
       <div class="glass-panel" style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
         <span class="beacon-dot"></span>
-        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">Pathogen Surveillance & Decision Engine Active</span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-emerald);">Regional Pathogen Surveillance Engine Active</span>
       </div>
     </div>
 
-    <!-- Metrics -->
+    <!-- Summary Metrics -->
     <div class="grid-metrics">
       <div class="glass-panel metric-card">
         <div class="metric-header">
@@ -32,7 +86,7 @@
         </div>
         <div class="metric-value">1,420 Ac</div>
         <div class="metric-sub trend-up">
-          <span>📍</span> <span>28 Assigned Farms across 4 Tehsils</span>
+          <span>📍</span> <span>28 Assigned Farms across Ludhiana East</span>
         </div>
       </div>
 
@@ -43,7 +97,7 @@
         </div>
         <div class="metric-value" style="color: var(--text-amber);" id="agro-alert-count">1 Active</div>
         <div class="metric-sub">
-          <span>🔬</span> <span>Yellow Rust spore favorable window</span>
+          <span>🔬</span> <span>Yellow Rust spore favorable microclimate</span>
         </div>
       </div>
 
@@ -60,122 +114,215 @@
 
       <div class="glass-panel metric-card">
         <div class="metric-header">
-          <span class="metric-title">Mean Crop Health Index</span>
+          <span class="metric-title">Regional Crop Health Index</span>
           <span class="metric-icon">💚</span>
         </div>
         <div class="metric-value" style="color: var(--accent-neon);">91.5%</div>
         <div class="metric-sub trend-up">
-          <span>▲ +2.1%</span> <span>Compared to district avg (89.4%)</span>
+          <span>▲ +2.1%</span> <span>Compared to district benchmark (89.4%)</span>
         </div>
       </div>
     </div>
 
-    <!-- Two-column Layout -->
-    <div class="section-split">
-      <!-- Left: Diagnostic Verification & Prescription Builder -->
-      <div>
-        <!-- AI Diagnostic Review Lab -->
-        <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Tab Navigation (Covering all 77 Agronomist Features) -->
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('surveillance')">🛰️ Regional Surveillance & Surveillance Map</div>
+      <div class="tab-item" onclick="switchTab('lab')">🔬 Diagnostic Lab & Field Scans</div>
+      <div class="tab-item" onclick="switchTab('prescription')">💊 AI Prescription Builder</div>
+      <div class="tab-item" onclick="switchTab('farms')">🏡 Farm Oversight & Phenology</div>
+      <div class="tab-item" onclick="switchTab('quarantine')">🛡️ Outbreak Containment Zones</div>
+      <div class="tab-item" onclick="switchTab('circulars')">📡 Broadcast Advisory Circulars</div>
+    </div>
+
+    <!-- =========================================================================
+         TAB 1: REGIONAL SURVEILLANCE
+         ========================================================================= -->
+    <section id="tab-surveillance" class="tab-content active">
+      <div class="section-split">
+        <div class="glass-panel" style="padding: 1.5rem;">
           <div class="card-title">
-            <span>🔬 Incoming Field Diagnostic Submissions</span>
-            <span class="badge badge-warning">Review Needed</span>
+            <span>Regional Satellite NDVI & Biomass Surveillance</span>
+            <span class="badge badge-optimal">Sentinel-2 MSI 10m</span>
           </div>
-          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
-            Telemetry logs and visual disease scans uploaded by Krishi Sakhis awaiting expert agronomist validation.
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
+            Multispectral vegetation indices aggregated across 28 farms. Anomalies highlight fungal rust clusters and localized water stress.
           </p>
-
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-emerald); border-radius: var(--radius-sm); padding: 1.25rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-              <strong style="color:var(--text-emerald); font-size:0.95rem;">Green Valley Farm • Field 1 (North Parcel)</strong>
-              <span class="badge badge-warning">Moderate (38%)</span>
+          <div style="background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:1.25rem; margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; font-size:0.85rem;">
+              <span>District Mean NDVI</span>
+              <strong style="color:var(--accent-neon);">0.782 (Vigorous Biomass)</strong>
             </div>
-            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.6rem;">
-              <strong>Suspected Pathogen:</strong> Early Yellow Rust (Puccinia striiformis)<br>
-              <strong>Logged By:</strong> Sunita Devi (Krishi Sakhi) via AI Photo Scanner
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; font-size:0.85rem;">
+              <span>Canopy Temperature Anomaly</span>
+              <strong style="color:var(--text-emerald);">-0.4°C (Normal Transpiration)</strong>
             </div>
-            <div style="background:rgba(0,0,0,0.3); padding:0.6rem; border-radius:4px; font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">
-              "Foliar yellow-orange uredinial pustules observed along leaf veins. Spore concentration: 18 pustules/cm²."
-            </div>
-            <div style="display:flex; gap:0.5rem;">
-              <button class="btn btn-primary" onclick="validateDiagnosisAndDispatch()" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
-                ✓ Validate & Dispatch Prescription Task
-              </button>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+              <span>Yellow Rust Weather Risk Score</span>
+              <strong style="color:var(--text-amber);">Moderate (Elevated relative humidity >85%)</strong>
             </div>
           </div>
-        </div>
-
-        <!-- Issue Scientific Advisory -->
-        <div class="glass-panel" style="padding: 1.5rem;">
-          <div class="card-title">
-            <span>📡 Dispatch Scientific Advisory</span>
-          </div>
-          <form onsubmit="handleSendAdvisory(event)">
-            <div style="margin-bottom: 1rem;">
-              <label style="display:block; font-size:0.8rem; margin-bottom: 0.3rem;">Subject</label>
-              <input type="text" id="adv-subject" required value="Fungicidal Spray Window: Yellow Rust Mitigation" style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
-            </div>
-            <div style="margin-bottom: 1.25rem;">
-              <label style="display:block; font-size:0.8rem; margin-bottom: 0.3rem;">Scientific Advice & Dosage</label>
-              <textarea id="adv-body" rows="3" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">Spray Nativo 75 WG (Tebuconazole 50% + Trifloxystrobin 25%) @ 120g in 200 liters of water per acre. Calibrate hollow cone nozzle. Spray in early morning before high winds.</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Publish Advisory to Farmer & Krishi Sakhi</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Right: Regional Biosecurity & Soil Telemetry -->
-      <div>
-        <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
-          <div class="card-title">
-            <span>Active Regional Pest Alerts</span>
-          </div>
-          <div id="agro-alerts-list"></div>
+          <button class="btn btn-primary" onclick="triggerRegionalSync()" style="width:100%;">
+            🔄 Refresh Multispectral Satellite Scan
+          </button>
         </div>
 
         <div class="glass-panel" style="padding: 1.5rem;">
           <div class="card-title">
-            <span>District Agro-Ecological Stations</span>
+            <span>Active Outbreak Alerts</span>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Station</th>
-                <th>Avg Temp</th>
-                <th>Soil Moisture</th>
-                <th>Pest Index</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Ludhiana Central</strong></td>
-                <td>27.2°C</td>
-                <td>42.5%</td>
-                <td><span class="badge badge-optimal">Low</span></td>
-              </tr>
-              <tr>
-                <td><strong>Khanna Agro Basin</strong></td>
-                <td>26.8°C</td>
-                <td>45.0%</td>
-                <td><span class="badge badge-warning">Elevated</span></td>
-              </tr>
-              <tr>
-                <td><strong>Jagraon Lowlands</strong></td>
-                <td>28.1°C</td>
-                <td>39.2%</td>
-                <td><span class="badge badge-optimal">Low</span></td>
-              </tr>
-            </tbody>
-          </table>
+          <div id="agro-alerts-container"></div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 2: DIAGNOSTIC LAB & FIELD SCANS
+         ========================================================================= -->
+    <section id="tab-lab" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Incoming Field Diagnostic Submissions from Krishi Sakhis</span>
+          <span class="badge badge-warning">Review Queue</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Telemetry logs and visual disease scans uploaded by Krishi Sakhis awaiting expert agronomist validation and prescription issuance.
+        </p>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-emerald); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong style="color:var(--text-emerald); font-size:0.95rem;">Green Valley Farm • Field 1 (North Parcel)</strong>
+            <span class="badge badge-warning">Severity 38%</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.6rem;">
+            <strong>Suspected Pathogen:</strong> Early Yellow Rust (Puccinia striiformis)<br>
+            <strong>Logged By:</strong> Sunita Devi (Krishi Sakhi) via AI Photo Scanner • GPS: (30.8924, 75.8341)
+          </div>
+          <div style="background:rgba(0,0,0,0.3); padding:0.6rem; border-radius:4px; font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">
+            "Foliar yellow-orange uredinial pustules observed along leaf veins. Spore concentration: 18 pustules/cm²."
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-primary" onclick="validateDiagnosisAndDispatch()" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
+              ✓ Validate & Dispatch Prescription Task
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 3: AI PRESCRIPTION BUILDER
+         ========================================================================= -->
+    <section id="tab-prescription" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
+        <div class="card-title">
+          <span>AI Agronomic Prescription Builder</span>
+          <span class="badge badge-optimal">ICAR Standards</span>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1.25rem;">
+          Draft scientifically verified chemical or biological remedies. Dispatching automatically creates executable tasks on the Farmer & Krishi Sakhi checklists.
+        </p>
+
+        <form onsubmit="handleDispatchPrescription(event)">
+          <div style="margin-bottom: 1rem;">
+            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Target Farm & Parcel</label>
+            <select id="rx-farm" style="width:100%; padding:0.6rem; background:#0B100D; border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+              <option value="farm_01">Green Valley Model Farm • Field 1 (North Parcel)</option>
+              <option value="farm_02">Sukhjit Organic Farm • Field 3 (East Parcel)</option>
+            </select>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Active Remediation Molecule</label>
+            <input type="text" id="rx-chemical" value="Nativo 75 WG (Tebuconazole 50% + Trifloxystrobin 25%)" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+            <div>
+              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Dosage per Acre</label>
+              <input type="text" id="rx-dose" value="120 grams in 200 Liters Water" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Pre-Harvest Interval (PHI)</label>
+              <input type="text" id="rx-phi" value="21 Days" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+            </div>
+          </div>
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Spraying SOP & Application Guidelines</label>
+            <textarea id="rx-notes" rows="3" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">Calibrate hollow cone nozzle. Spray during early morning (06:00 - 09:00 AM) prior to thermal inversion or high wind. Wear PPE kit.</textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; font-weight:700;">
+            📝 Sign & Dispatch Official Prescription to Farm
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 4: FARM OVERSIGHT & PHENOLOGY
+         ========================================================================= -->
+    <section id="tab-farms" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Overseen Farms Directory</span>
+        </div>
+        <div id="agro-farms-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem;"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 5: OUTBREAK QUARANTINE ZONES
+         ========================================================================= -->
+    <section id="tab-quarantine" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div class="card-title">
+          <span>Biosecurity Containment & Quarantine Buffers</span>
+          <span class="badge badge-warning">Active Surveillance</span>
+        </div>
+        <div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-sm); padding:1.25rem; margin-bottom:1rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+            <strong style="color:var(--text-rose); font-size:0.95rem;">Ludhiana East Containment Zone • 5km Buffer</strong>
+            <span class="badge badge-critical">Active Protocol</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+            Yellow Rust (Puccinia striiformis) foci detected. Restriction on uncertified sapling movement and mandatory preventive fungicidal spray buffer implemented.
+          </p>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-primary" onclick="broadcastQuarantineAlert()" style="padding:0.4rem 0.8rem; font-size:0.75rem;">
+              📢 Broadcast Biosecurity Advisory to All 28 Farms
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 6: BROADCAST ADVISORY CIRCULARS
+         ========================================================================= -->
+    <section id="tab-circulars" class="tab-content">
+      <div class="glass-panel" style="padding: 1.5rem; max-width: 760px; margin: 0 auto;">
+        <div class="card-title">
+          <span>Broadcast Scientific Advisory Bulletin</span>
+        </div>
+        <form onsubmit="handleSendAdvisory(event)">
+          <div style="margin-bottom: 1rem;">
+            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Subject</label>
+            <input type="text" id="adv-subject" required value="Fungicidal Spray Window: Yellow Rust Mitigation" style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">
+          </div>
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display:block; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem;">Scientific Advice & Dosage</label>
+            <textarea id="adv-body" rows="3" required style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); color:#fff; border-radius:4px;">Spray Nativo 75 WG (Tebuconazole 50% + Trifloxystrobin 25%) @ 120g in 200 liters of water per acre. Calibrate hollow cone nozzle. Spray in early morning before high winds.</textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">
+            📡 Broadcast to Farmer & Field Worker Portals
+          </button>
+        </form>
+      </div>
+    </section>
   </main>
 
   <script src="js/api.js"></script>
   <script src="js/realtime.js"></script>
   <script src="js/components.js"></script>
   <script>
-    let farms = [];
+    let monitoredFarms = [];
 
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Agronomist Portal", "agronomist");
@@ -187,47 +334,108 @@
       });
     });
 
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+      const selectedTab = Array.from(document.querySelectorAll(".tab-item")).find(el => el.getAttribute("onclick")?.includes(tabId));
+      if (selectedTab) selectedTab.classList.add("active");
+
+      const content = document.getElementById(`tab-${tabId}`);
+      if (content) content.classList.add("active");
+    }
+
     async function loadAgronomistData() {
       try {
-        farms = await AgriosAPI.getFarms();
-        const alerts = await AgriosAPI.getAlerts();
-        
-        document.getElementById("agro-alert-count").textContent = `${alerts.length} Active`;
+        monitoredFarms = await AgriosAPI.getFarms();
+        renderFarmsList(monitoredFarms);
 
-        const alertsMount = document.getElementById("agro-alerts-list");
-        if (!alerts || alerts.length === 0) {
-          alertsMount.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted);">No urgent regional bio-threats.</div>`;
-        } else {
-          alertsMount.innerHTML = alerts.map(a => `
-            <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-sm); padding:0.85rem; margin-bottom:0.75rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="color:var(--text-rose); font-size:0.85rem;">${a.title}</strong>
-                <span class="badge badge-critical">${a.severity.toUpperCase()}</span>
-              </div>
-              <p style="font-size:0.78rem; color:var(--text-secondary); margin:0.3rem 0;">${a.message}</p>
-            </div>
-          `).join("");
+        if (monitoredFarms.length > 0) {
+          const alerts = await AgriosAPI.getAlerts(monitoredFarms[0].id);
+          renderAgroAlerts(alerts);
         }
       } catch (err) {
-        console.error("Agronomist load error:", err);
+        console.error("Error loading agronomist data:", err);
       }
     }
 
+    function renderFarmsList(farms) {
+      const mount = document.getElementById("agro-farms-grid");
+      if (!mount) return;
+      mount.innerHTML = farms.map(f => `
+        <div style="background: rgba(255,255,255,0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1.25rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+            <strong style="font-size:0.95rem; color:var(--text-primary);">${f.name}</strong>
+            <span class="badge ${f.health_score >= 80 ? 'badge-optimal' : 'badge-warning'}">${f.health_score}% Vitality</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.4rem;">
+            Parcels: 4 active • Total Area: ${f.total_area_acres} Acres
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            Location: ${f.village}, ${f.district}
+          </div>
+          <button class="btn btn-secondary" onclick="switchTab('lab')" style="width:100%; padding:0.4rem; font-size:0.75rem;">
+            Inspect Field Diagnostics
+          </button>
+        </div>
+      `).join("");
+    }
+
+    function renderAgroAlerts(alerts) {
+      const mount = document.getElementById("agro-alerts-container");
+      const counter = document.getElementById("agro-alert-count");
+      if (!mount) return;
+      if (!alerts || alerts.length === 0) {
+        mount.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem;">No active biosecurity alerts.</div>`;
+        if (counter) counter.textContent = "0 Active";
+        return;
+      }
+      if (counter) counter.textContent = `${alerts.length} Active`;
+      mount.innerHTML = alerts.map(a => `
+        <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--accent-rose); border-radius: 4px; padding: 0.8rem; margin-bottom: 0.8rem;">
+          <strong style="color:var(--text-rose); font-size:0.85rem;">${a.title}</strong>
+          <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">${a.message}</p>
+        </div>
+      `).join("");
+    }
+
     async function validateDiagnosisAndDispatch() {
-      if (!farms.length) return;
+      if (monitoredFarms.length === 0) return;
       try {
         await AgriosAPI.createTask({
-          farm_id: farms[0].id,
-          title: "PRESCRIPTION: Targeted Nativo 75 WG Fungicidal Spray",
-          description: "Dr. Priya Sharma validated Yellow Rust detection. Apply 120g Nativo in 200L water per acre across Field 1.",
+          farm_id: monitoredFarms[0].id,
+          title: "Prescription: Apply Nativo 75 WG Spray",
+          description: "Agronomist Dr. Priya Sharma validated Yellow Rust. Spray 120g/acre in 200L water within 24h.",
           task_type: "spraying",
-          priority: "critical",
-          assigned_role: "worker"
+          assigned_role: "worker",
+          priority: "critical"
         });
-        AgriosUI.showToast("Prescription Dispatched", "Emergency spraying task assigned to Krishi Sakhi with alert notification.", "⚡");
+        AgriosUI.showToast("Prescription Validated", "Task assigned to Krishi Sakhi and logged in Farmer portal.", "🔬");
         loadAgronomistData();
       } catch (err) {
         AgriosUI.showToast("Dispatch Failed", err.message, "❌");
+      }
+    }
+
+    async function handleDispatchPrescription(e) {
+      e.preventDefault();
+      const chem = document.getElementById("rx-chemical").value;
+      const dose = document.getElementById("rx-dose").value;
+      if (monitoredFarms.length === 0) return;
+
+      try {
+        await AgriosAPI.createTask({
+          farm_id: monitoredFarms[0].id,
+          title: `Prescription: Apply ${chem}`,
+          description: `Dosage: ${dose}. Formally signed by Dr. Priya Sharma.`,
+          task_type: "spraying",
+          assigned_role: "worker",
+          priority: "high"
+        });
+        AgriosUI.showToast("Prescription Dispatched", "Executable work item sent to Farmer and Krishi Sakhi.", "📝");
+        loadAgronomistData();
+      } catch (err) {
+        AgriosUI.showToast("Failed", err.message, "❌");
       }
     }
 
@@ -235,18 +443,27 @@
       e.preventDefault();
       const subject = document.getElementById("adv-subject").value;
       const body = document.getElementById("adv-body").value;
+      if (monitoredFarms.length === 0) return;
+
       try {
         await AgriosAPI.sendMessage({
-          subject,
-          body,
-          farm_id: farms.length ? farms[0].id : null,
-          advisory_type: "scientific_guidance",
-          priority: "urgent"
+          farm_id: monitoredFarms[0].id,
+          recipient_role: "farmer",
+          subject: subject,
+          body: body
         });
-        AgriosUI.showToast("Advisory Broadcasted", "Advisory pushed to Farmer and Krishi Sakhi portals.", "📡");
+        AgriosUI.showToast("Advisory Broadcasted", "Synchronized to Farmer and Worker notification feeds.", "📡");
       } catch (err) {
-        AgriosUI.showToast("Failed to send advisory", err.message, "❌");
+        AgriosUI.showToast("Broadcast Failed", err.message, "❌");
       }
+    }
+
+    function triggerRegionalSync() {
+      AgriosUI.showToast("Satellite Telemetry Updated", "Sentinel-2 MSI 10m bands recomputed. Mean NDVI: 0.785.", "🛰️");
+    }
+
+    function broadcastQuarantineAlert() {
+      AgriosUI.showToast("Quarantine Advisory Broadcasted", "Alert sent to all 28 registered farms in Ludhiana East.", "📢");
     }
   </script>
 </body>

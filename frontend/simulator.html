@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AGRIOS — Hackathon Demo Controller (Judge Simulator)</title>
+  <title>AGRIOS — Judge Demo Controller & System Shock Simulator</title>
   <link rel="stylesheet" href="css/agrios.css">
   <style>
     .simulator-container {
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
       padding: 1.25rem;
     }
@@ -24,6 +24,7 @@
     .scenario-card:hover {
       border-color: var(--border-emerald);
       transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
     .scenario-header {
       display: flex;
@@ -42,8 +43,8 @@
     .scenario-desc {
       font-size: 0.8rem;
       color: var(--text-secondary);
-      margin-bottom: 1rem;
-      line-height: 1.4;
+      margin-bottom: 0.85rem;
+      line-height: 1.45;
     }
     .affected-portals {
       display: flex;
@@ -53,27 +54,29 @@
     }
     .affected-tag {
       font-size: 0.7rem;
-      padding: 0.15rem 0.45rem;
+      padding: 0.2rem 0.5rem;
       border-radius: 4px;
       background: rgba(255, 255, 255, 0.05);
       color: var(--text-muted);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .event-stream-box {
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.6);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       padding: 1rem;
-      height: 240px;
+      height: 280px;
       overflow-y: auto;
-      font-family: monospace;
+      font-family: 'Consolas', 'Courier New', monospace;
       font-size: 0.75rem;
       color: var(--text-emerald);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
     }
     .event-entry {
       margin-bottom: 0.6rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -81,147 +84,168 @@
   <div id="navbar-container"></div>
 
   <main class="simulator-container">
+    <!-- Header -->
     <div style="text-align: center; margin-bottom: 1.5rem;">
-      <div style="font-size: 2.5rem; margin-bottom: 0.3rem;">🎮</div>
-      <h1 style="font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em;">Judge Demo Controller</h1>
+      <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">🎮</div>
+      <h1 style="font-size: 1.65rem; font-weight: 800; letter-spacing: -0.02em;">Judge Demo Controller</h1>
       <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">
-        Trigger live environmental and operational shocks into the God Database to test real-time ripple propagation across all 4 portals.
+        Inject live environmental, biological, and operational shocks into the God Database to demonstrate instantaneous real-time ripple propagation across all 4 operational portals.
       </p>
-      <div class="live-beacon" style="margin-top: 0.6rem;">
-        <span class="beacon-dot"></span>
-        <span>WebSocket State Stream Active</span>
+      <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;">
+        <div class="live-beacon">
+          <span class="beacon-dot"></span>
+          <span id="connection-status">WebSocket State Stream Connected</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem;">
+          <span>⚡ Events Ingested:</span>
+          <strong id="events-count" style="color: var(--accent-emerald);">0</strong>
+        </div>
       </div>
     </div>
 
-    <!-- Quick Navigation to Portals -->
-    <div class="glass-panel" style="padding: 0.85rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-      <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Open Portal in Tab:</span>
-      <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-        <a href="farmer.html" target="_blank" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">🌾 Farmer</a>
-        <a href="worker.html" target="_blank" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">👩‍🌾 Krishi Sakhi</a>
-        <a href="agronomist.html" target="_blank" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">🔬 Agronomist</a>
-        <a href="government.html" target="_blank" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">🏛️ Gov</a>
+    <!-- Quick 1-Click Navigation to All 4 Portals -->
+    <div class="glass-panel" style="padding: 1rem; margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+          Launch Portal in New Tab:
+        </span>
+        <span style="font-size: 0.7rem; color: var(--accent-emerald);">Single Canonical State Across All</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem;">
+        <a href="farmer.html" target="_blank" class="btn btn-secondary" style="padding: 0.4rem; font-size: 0.75rem; text-align: center;">🌾 Farmer</a>
+        <a href="worker.html" target="_blank" class="btn btn-secondary" style="padding: 0.4rem; font-size: 0.75rem; text-align: center;">👩‍🌾 Krishi Sakhi</a>
+        <a href="agronomist.html" target="_blank" class="btn btn-secondary" style="padding: 0.4rem; font-size: 0.75rem; text-align: center;">🔬 Agronomist</a>
+        <a href="government.html" target="_blank" class="btn btn-secondary" style="padding: 0.4rem; font-size: 0.75rem; text-align: center;">🏛️ Gov Command</a>
       </div>
     </div>
 
-    <!-- SCENARIOS LIST -->
+    <!-- 6 AUTHORITATIVE SYSTEM SHOCKS -->
 
     <!-- Scenario 1: Pest Outbreak -->
     <div class="scenario-card" style="border-left: 4px solid var(--accent-rose);">
       <div class="scenario-header">
-        <div class="scenario-title">🦗 Biosecurity Shock: Severe Pest Outbreak</div>
-        <span class="badge badge-critical">HIGH IMPACT</span>
+        <div class="scenario-title">🦗 Shock 1: Severe Pest Outbreak (Yellow Rust)</div>
+        <span class="badge badge-critical">BIOSECURITY</span>
       </div>
       <div class="scenario-desc">
-        Injects critical Fall Armyworm / Yellow Rust outbreak. Drops Green Valley Farm health score, updates Digital Twin stress index, creates an urgent spraying task for Krishi Sakhi, and broadcasts alert across portals.
+        Injects Puccinia striiformis (Yellow Rust) infection on Field 1 Wheat. Crashes farm health vitality from 92% to 68%, elevates stress index in Digital Twin, creates high-priority fungicide spraying task for Krishi Sakhi Sunita Devi, and triggers an alert in Agronomist & Government Command Center.
       </div>
       <div class="affected-portals">
-        <span class="affected-tag" style="color:var(--accent-neon);">● Farmer</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Krishi Sakhi</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Agronomist</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Command Center</span>
+        <span class="affected-tag" style="color:var(--accent-rose);">● Farmer (Health Drops)</span>
+        <span class="affected-tag" style="color:var(--accent-rose);">● Krishi Sakhi (Spraying Task)</span>
+        <span class="affected-tag" style="color:var(--accent-rose);">● Agronomist (Quarantine Zone)</span>
+        <span class="affected-tag" style="color:var(--accent-rose);">● Gov (Biosecurity Warning)</span>
       </div>
       <button class="btn btn-danger" onclick="triggerScenario('pest_outbreak')" style="width: 100%;">
-        ⚡ Trigger Pest Outbreak Shock
+        ⚡ Trigger Yellow Rust Outbreak Shock
       </button>
     </div>
 
-    <!-- Scenario 2: Sudden Drought -->
+    <!-- Scenario 2: Heatwave & Drought -->
     <div class="scenario-card" style="border-left: 4px solid var(--accent-amber);">
       <div class="scenario-header">
-        <div class="scenario-title">☀️ Weather Shock: Sudden Drought & Heatwave</div>
-        <span class="badge badge-warning">HEAT SPIKE</span>
+        <div class="scenario-title">☀️ Shock 2: Sudden Heatwave & Acute Drought</div>
+        <span class="badge badge-warning">EXTREME CLIMATE</span>
       </div>
       <div class="scenario-desc">
-        Surges temperature to 42.4°C. Crashes root-zone soil moisture to 14.5%. Triggers acute water stress alert and assigns emergency nocturnal irrigation task.
+        Spikes daytime temperature to 42.4°C with zero precipitation. Crashes root-zone soil moisture from 44% down to 14.5%. Digital Twin flags water stress, activates night-time drip irrigation directive, and pushes canal water release demand to Government portal.
       </div>
       <div class="affected-portals">
-        <span class="affected-tag" style="color:var(--accent-neon);">● Farmer</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Command Center</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Digital Twin</span>
+        <span class="affected-tag" style="color:var(--accent-amber);">● Farmer (Soil Moisture Red)</span>
+        <span class="affected-tag" style="color:var(--accent-amber);">● Krishi Sakhi (Moisture Audit)</span>
+        <span class="affected-tag" style="color:var(--accent-amber);">● Gov (Canal Release Demand)</span>
+        <span class="affected-tag" style="color:var(--accent-amber);">● Digital Twin (VPD Spike)</span>
       </div>
       <button class="btn btn-primary" onclick="triggerScenario('sudden_drought')" style="width: 100%; background: linear-gradient(135deg, var(--accent-amber) 0%, #D97706 100%); color: #000;">
-        ⚡ Trigger Severe Heatwave & Drought
+        ⚡ Trigger Heatwave & Drought Shock
       </button>
     </div>
 
     <!-- Scenario 3: Equipment Breakdown -->
     <div class="scenario-card" style="border-left: 4px solid var(--accent-cyan);">
       <div class="scenario-header">
-        <div class="scenario-title">🚜 Machinery Shock: Tractor Breakdown</div>
-        <span class="badge badge-warning">EQUIPMENT</span>
+        <div class="scenario-title">🚜 Shock 3: Mahindra Tractor Hydraulic Breakdown</div>
+        <span class="badge badge-warning">MACHINERY</span>
       </div>
       <div class="scenario-desc">
-        Mahindra 575 DI tractor telemetry signals hydraulic pressure loss. Equipment is moved to maintenance status, warning upcoming farm plowing bookings.
+        Telemetric oil pressure drops to 12 PSI on the primary Mahindra 575 DI tractor. Status shifts to MAINTENANCE, blocking upcoming field tilling bookings, warning farmers in the cooperative hub, and dispatching a service request.
       </div>
       <div class="affected-portals">
-        <span class="affected-tag" style="color:var(--accent-neon);">● Farmer</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Agronomist</span>
+        <span class="affected-tag" style="color:var(--accent-cyan);">● Farmer (Equipment Unavailable)</span>
+        <span class="affected-tag" style="color:var(--accent-cyan);">● Krishi Sakhi (Machinery Log)</span>
+        <span class="affected-tag" style="color:var(--accent-cyan);">● Agronomist (Resource Alert)</span>
       </div>
       <button class="btn btn-secondary" onclick="triggerScenario('equipment_failure')" style="width: 100%; border-color: var(--accent-cyan);">
         ⚡ Trigger Tractor Breakdown
       </button>
     </div>
 
-    <!-- Scenario 4: Worker Completes Field Inspection -->
+    <!-- Scenario 4: Krishi Sakhi Ground Truth Sign-off -->
     <div class="scenario-card" style="border-left: 4px solid var(--accent-emerald);">
       <div class="scenario-header">
-        <div class="scenario-title">👩‍🌾 Workforce Action: Krishi Sakhi Completes Work</div>
-        <span class="badge badge-optimal">RESOLUTION</span>
+        <div class="scenario-title">👩‍🌾 Shock 4: Krishi Sakhi Executes Field Inspection</div>
+        <span class="badge badge-optimal">GROUND TRUTH</span>
       </div>
       <div class="scenario-desc">
-        Simulates Krishi Sakhi Sunita Devi performing ground truth inspection. Signs off all pending task checklist items with GPS verification, restoring farm health vitality.
+        Simulates Krishi Sakhi Sunita Devi performing GPS-verified on-site leaf swab and soil moisture test. Validates calibrated sensor readings, signs off inspection checklist items, and restores farm health index to 91%.
       </div>
       <div class="affected-portals">
-        <span class="affected-tag" style="color:var(--accent-neon);">● Krishi Sakhi</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Farmer</span>
+        <span class="affected-tag" style="color:var(--accent-emerald);">● Krishi Sakhi (Tasks Completed)</span>
+        <span class="affected-tag" style="color:var(--accent-emerald);">● Farmer (Health Restored)</span>
+        <span class="affected-tag" style="color:var(--accent-emerald);">● Agronomist (Lab Sample Verified)</span>
       </div>
       <button class="btn btn-primary" onclick="triggerScenario('task_completed')" style="width: 100%;">
         ✓ Execute Ground Truth Sign-off
       </button>
     </div>
 
-    <!-- Scenario 5: Bumper Harvest & Sale -->
+    <!-- Scenario 5: Bumper Harvest & Direct Mandi Sale -->
     <div class="scenario-card" style="border-left: 4px solid var(--accent-neon);">
       <div class="scenario-header">
-        <div class="scenario-title">🌾 Financial Event: Bumper Harvest & Direct Mandi Sale</div>
-        <span class="badge badge-optimal">REVENUE</span>
+        <div class="scenario-title">🌾 Shock 5: Bumper Harvest & Direct Mandi Sale</div>
+        <span class="badge badge-optimal">FINANCIAL FLOW</span>
       </div>
       <div class="scenario-desc">
-        Logs 6,200 kg certified Wheat harvest into Produce Inventory and credits ₹1.51 Lakhs revenue directly into the Farmer Financial Ledger.
+        Records 6,200 kg certified PBW-550 Wheat harvest into Produce Inventory and instantly executes APMC mandi sale at ₹2,275 MSP. Credits ₹1,51,000 revenue directly into the Farmer Financial Ledger and logs central pool procurement for Government.
       </div>
       <div class="affected-portals">
-        <span class="affected-tag" style="color:var(--accent-neon);">● Farmer</span>
-        <span class="affected-tag" style="color:var(--accent-neon);">● Command Center</span>
+        <span class="affected-tag" style="color:var(--accent-neon);">● Farmer (₹1.51L Credited)</span>
+        <span class="affected-tag" style="color:var(--accent-neon);">● Gov (Procurement Logged)</span>
+        <span class="affected-tag" style="color:var(--accent-neon);">● Digital Twin (Yield Recorded)</span>
       </div>
       <button class="btn btn-primary" onclick="triggerScenario('bumper_harvest')" style="width: 100%;">
-        💰 Log Bumper Harvest & Revenue
+        💰 Log Bumper Harvest & Mandi Revenue
       </button>
     </div>
 
-    <!-- Scenario 6: Reset Demo Baseline -->
+    <!-- Scenario 6: Reset to Pristine Baseline -->
     <div class="scenario-card">
       <div class="scenario-header">
-        <div class="scenario-title">🔄 Reset Demo to Optimal Baseline</div>
-        <span class="badge badge-optimal">CLEAN STATE</span>
+        <div class="scenario-title">🔄 Shock 6: Reset Demo to Pristine State</div>
+        <span class="badge badge-optimal">CLEAN BASELINE</span>
       </div>
       <div class="scenario-desc">
-        Restores farm health to 92.5%, normalizes moisture to 44%, clears severe alerts, and makes all farm equipment available.
+        Restores Green Valley Model Farm to 92.5% optimal vitality, resets soil moisture to 44%, clears severe outbreak flags, and re-enables all farm equipment.
       </div>
       <button class="btn btn-secondary" onclick="triggerScenario('reset_demo')" style="width: 100%;">
         🔄 Reset to Pristine Baseline
       </button>
     </div>
 
-    <!-- Live Event Stream Terminal -->
+    <!-- Live Canonical Event Bus Stream Terminal -->
     <div style="margin-top: 2rem;">
-      <div class="card-title">
-        <span>Live Canonical Domain Event Stream</span>
-        <span style="font-size:0.75rem; color:var(--text-muted);">Realtime /ws/live-feed</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <div class="card-title" style="margin-bottom: 0;">
+          <span>Live Canonical Domain Event Stream</span>
+          <span style="font-size:0.75rem; color:var(--text-muted); margin-left: 0.5rem;">/ws/live-feed</span>
+        </div>
+        <button class="btn btn-secondary" onclick="clearEventStream()" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
+          Clear Terminal
+        </button>
       </div>
       <div class="event-stream-box" id="event-stream-container">
         <div class="event-entry">
-          [System Ready] Subscribed to AGRIOS Canonical God Database Event Stream.
+          <span style="color:var(--text-muted);">[SYSTEM BOOT]</span> Subscribed to AGRIOS Canonical God Database Event Stream. Ready for scenario injection.
         </div>
       </div>
     </div>
@@ -231,18 +255,34 @@
   <script src="js/realtime.js"></script>
   <script src="js/components.js"></script>
   <script>
+    let eventsCount = 0;
+
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Judge Simulator", "simulator");
 
-      // Log events into terminal box
+      // Subscribe to real-time events
       window.addEventListener("agrios:event", (e) => {
+        eventsCount++;
+        document.getElementById("events-count").innerText = eventsCount;
+
         const ev = e.detail;
         const box = document.getElementById("event-stream-container");
         const entry = document.createElement("div");
         entry.className = "event-entry";
+        
+        let color = "var(--text-emerald)";
+        if (ev.event_type && ev.event_type.includes("outbreak")) color = "var(--accent-rose)";
+        if (ev.event_type && ev.event_type.includes("drought")) color = "var(--accent-amber)";
+        if (ev.event_type && ev.event_type.includes("maintenance")) color = "var(--accent-cyan)";
+
         entry.innerHTML = `
-          <div style="color:var(--text-muted); font-size:0.7rem;">${ev.timestamp} • [${ev.event_type}]</div>
-          <div>${JSON.stringify(ev.payload)}</div>
+          <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.7rem; margin-bottom:0.2rem;">
+            <span style="color:${color}; font-weight:700;">● ${ev.event_type}</span>
+            <span>${ev.timestamp || new Date().toISOString().slice(11, 19)}</span>
+          </div>
+          <div style="color:var(--text-primary); font-size:0.75rem; word-break:break-all;">
+            ${JSON.stringify(ev.payload)}
+          </div>
         `;
         box.prepend(entry);
       });
@@ -250,12 +290,22 @@
 
     async function triggerScenario(name) {
       try {
-        AgriosUI.showToast("Broadcasting Shock", `Injecting ${name} into God Database...`, "🎯");
+        AgriosUI.showToast("Broadcasting Shock", `Injecting [${name}] into God Database...`, "🎯");
         const res = await AgriosAPI.triggerSimulator(name);
-        AgriosUI.showToast("Scenario Injected", res.message || "State updated", "⚡");
+        AgriosUI.showToast("Scenario Propagated", res.message || "State updated across all portals", "⚡");
       } catch (err) {
         AgriosUI.showToast("Simulation Failed", err.message, "❌");
       }
+    }
+
+    function clearEventStream() {
+      document.getElementById("event-stream-container").innerHTML = `
+        <div class="event-entry">
+          <span style="color:var(--text-muted);">[CLEARED]</span> Listening for new canonical domain event packets...
+        </div>
+      `;
+      eventsCount = 0;
+      document.getElementById("events-count").innerText = "0";
     }
   </script>
 </body>
