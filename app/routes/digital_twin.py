@@ -57,3 +57,19 @@ def update_telemetry(
 ):
     snapshot = DigitalTwinService.update_telemetry(db, farm_id, canopy_pct, stress_index, ndvi)
     return snapshot.to_dict()
+
+@router.get("/scene-data/{farm_id}")
+def get_scene_data(farm_id: str, db: Session = Depends(get_db)):
+    # Call DigitalTwinService.get_scene_data(db, farm_id)
+    # Return the full scene payload
+    return DigitalTwinService.get_scene_data(db, farm_id)
+
+@router.get("/workers/{farm_id}")
+def get_workers(farm_id: str, db: Session = Depends(get_db)):
+    # Call DigitalTwinService.get_workers_for_scene(db, farm_id)
+    return DigitalTwinService.get_workers_for_scene(db, farm_id)
+
+@router.get("/weather-state/{farm_id}")
+def get_weather_state(farm_id: str, db: Session = Depends(get_db)):
+    # Call DigitalTwinService.get_weather_state(db, farm_id)
+    return DigitalTwinService.get_weather_state(db, farm_id)

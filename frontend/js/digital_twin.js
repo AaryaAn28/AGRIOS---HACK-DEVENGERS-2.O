@@ -1,105 +1,117 @@
-// AGRIOS Digital Twin Container & Future Claude Opus 3D Integration Adapter
+/**
+ * AGRIOS Digital Twin Adapter — Bridge between 3D Engine and AGRIOS Data Layer
+ * 
+ * This is the formal adapter interface that connects:
+ * - AgriosDigitalTwin3D (Three.js engine) 
+ * - AGRIOS REST APIs (scene data, telemetry, crop plans)
+ * - AGRIOS WebSocket events (real-time state changes)
+ * - AGRIOS UI (HUD, inspector panels, controls)
+ * 
+ * Interface Contract:
+ *   mount(containerId)           - Initialize and display 3D scene
+ *   destroy()                    - Clean up WebGL context
+ *   updateState(snapshot)        - Push telemetry data
+ *   applyEvent(domainEvent)      - Process WebSocket event
+ *   selectEntity(type, id)       - Highlight entity
+ *   focusEntity(type, id)        - Move camera to entity
+ *   setCamera(preset)            - Switch camera preset
+ *   setLayer(name, visible)      - Toggle layer visibility
+ *   setTimeDay(day)              - Set crop growth day
+ *   onUserInteraction(callback)  - Register interaction callback
+ */
+
 class AgriosDigitalTwinAdapter {
   constructor(canvasId, containerId) {
-    this.canvas = document.getElementById(canvasId);
-    this.container = document.getElementById(containerId);
-    this.snapshot = null;
-    this.orbitPreset = "isometric_farm_overview";
-    this.activeLayer = "ndvi"; // ndvi, moisture, thermal
+    this.canvasId = canvasId || null;
+    this.containerId = containerId || null;
+    this.canvas = canvasId ? document.getElementById(canvasId) : null;
+    this.container = containerId ? document.getElementById(containerId) : null;
+    this.engine = null;
+    this.farmId = null;
+    this.sceneData = null;
+    this.isInitialized = false;
+    this._eventListener = null;
+    this._interactionCallback = null;
     this.animationFrameId = null;
+    this.activeLayer = "ndvi";
+    this.orbitPreset = "isometric_farm_overview";
+    this.snapshot = null;
   }
 
+  /**
+   * Backwards compatible init() for 2D canvas mode (e.g. in farmer.html)
+   */
   async init(farmId) {
-    console.log("[Digital Twin Adapter] Initializing telemetry container for farm:", farmId);
-    try {
-      this.snapshot = await AgriosAPI.getDigitalTwinSnapshot(farmId);
-      this.renderHUD();
-      this.setupCanvas();
-      this.startSimulationLoop();
+    this.farmId = farmId || 'default';
+    this.canvas = this.canvas || (this.canvasId ? document.getElementById(this.canvasId) : null);
+    this.container = this.container || (this.containerId ? document.getElementById(this.containerId) : null);
 
-      // Listen for live realtime telemetry updates
-      window.addEventListener("agrios:event", (e) => {
-        const ev = e.detail;
-        if (ev.event_type === "DIGITAL_TWIN_TELEMETRY_UPDATED" || ev.event_type === "SIMULATION_TRIGGERED") {
-          console.log("[Digital Twin Adapter] Live Telemetry received:", ev);
-          this.refreshTelemetry(farmId);
+    // If a 2D canvas element is targeted (legacy/farmer portal mode)
+    if (this.canvas) {
+      console.log("[DT Adapter] Initializing in 2D canvas mode for farm:", farmId);
+      try {
+        if (window.AgriosAPI && typeof AgriosAPI.getDigitalTwinSnapshot === "function") {
+          this.snapshot = await AgriosAPI.getDigitalTwinSnapshot(farmId);
         }
-      });
-    } catch (err) {
-      console.error("[Digital Twin Adapter] Init failed:", err);
+        this._setupLegacyCanvas();
+        this._startLegacyLoop();
+
+        window.addEventListener("agrios:event", (e) => {
+          const ev = e.detail;
+          if (ev && (ev.event_type === "DIGITAL_TWIN_TELEMETRY_UPDATED" || ev.event_type === "SIMULATION_TRIGGERED")) {
+            this.refreshTelemetry(farmId);
+          }
+        });
+      } catch (err) {
+        console.warn("[DT Adapter] Legacy canvas init warning:", err);
+      }
+      return;
+    }
+
+    // Otherwise mount in full 3D mode
+    if (this.containerId) {
+      await this.mount(this.containerId, farmId);
     }
   }
 
   async refreshTelemetry(farmId) {
-    this.snapshot = await AgriosAPI.getDigitalTwinSnapshot(farmId);
-    this.renderHUD();
+    if (window.AgriosAPI && typeof AgriosAPI.getDigitalTwinSnapshot === "function") {
+      this.snapshot = await AgriosAPI.getDigitalTwinSnapshot(farmId);
+      this._updateHUD(this.snapshot);
+    }
   }
 
-  setLayer(layerName) {
-    this.activeLayer = layerName;
-    const btns = document.querySelectorAll(".twin-layer-btn");
-    btns.forEach(b => {
-      b.classList.toggle("active", b.dataset.layer === layerName);
-    });
+  resizeCanvas() {
+    if (this.canvas) {
+      const rect = this.canvas.parentElement ? this.canvas.parentElement.getBoundingClientRect() : { width: 400, height: 300 };
+      this.canvas.width = rect.width;
+      this.canvas.height = rect.height;
+    }
   }
 
-  setCameraPreset(preset) {
-    this.orbitPreset = preset;
-    console.log("[Digital Twin Adapter] Camera orbit set to:", preset);
-  }
-
-  renderHUD() {
-    if (!this.snapshot) return;
-    const hud = document.getElementById("twin-hud-overlay");
-    if (!hud) return;
-
-    hud.innerHTML = `
-      <div class="hud-pill">
-        <span>🛰️</span> <span>LAI: <strong>${this.snapshot.leaf_area_index}</strong></span>
-      </div>
-      <div class="hud-pill">
-        <span>🌱</span> <span>Canopy: <strong>${this.snapshot.canopy_coverage_pct}%</strong></span>
-      </div>
-      <div class="hud-pill">
-        <span>⚡</span> <span>Stress Index: <strong style="color: ${this.snapshot.stress_index > 0.3 ? 'var(--accent-rose)' : 'var(--accent-neon)'}">${this.snapshot.stress_index}</strong></span>
-      </div>
-      <div class="hud-pill">
-        <span>🛰️</span> <span>Mean NDVI: <strong style="color: var(--accent-neon)">${this.snapshot.ndvi_mean}</strong></span>
-      </div>
-    `;
-  }
-
-  setupCanvas() {
+  _setupLegacyCanvas() {
     if (!this.canvas) return;
-    const ctx = this.canvas.getContext("2d");
     this.resizeCanvas();
     window.addEventListener("resize", () => this.resizeCanvas());
   }
 
-  resizeCanvas() {
-    if (!this.canvas) return;
-    const rect = this.canvas.parentElement.getBoundingClientRect();
-    this.canvas.width = rect.width;
-    this.canvas.height = rect.height;
-  }
-
-  startSimulationLoop() {
+  _startLegacyLoop() {
     if (!this.canvas) return;
     const ctx = this.canvas.getContext("2d");
+    if (!ctx) return;
     let angle = 0;
 
     const render = () => {
+      if (!this.canvas) return;
       ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       const w = this.canvas.width;
       const h = this.canvas.height;
       const cx = w / 2;
       const cy = h / 2;
 
-      // Draw 3D-inspired Perspective Isometric Grid
       ctx.save();
       ctx.translate(cx, cy);
 
-      // Terrain Parcel Mesh
       const gridCols = 8;
       const gridRows = 6;
       const cellW = 55;
@@ -112,8 +124,6 @@ class AgriosDigitalTwinAdapter {
         for (let c = -gridCols / 2; c < gridCols / 2; c++) {
           const isoX = (c - r) * cellW * 0.8;
           const isoY = (c + r) * cellH * tilt;
-
-          // Compute NDVI/Moisture elevation wave
           const wave = Math.sin(angle + (c * 0.4) + (r * 0.4)) * 6;
 
           ctx.beginPath();
@@ -123,42 +133,405 @@ class AgriosDigitalTwinAdapter {
           ctx.lineTo(isoX - (cellW * 0.8), isoY + (cellH * tilt) - wave);
           ctx.closePath();
 
-          if (this.activeLayer === "ndvi") {
-            const ndvi = this.snapshot ? this.snapshot.ndvi_mean : 0.78;
-            ctx.fillStyle = `rgba(16, 185, 129, ${0.15 + (ndvi * 0.3) + (Math.sin(c) * 0.05)})`;
-            ctx.strokeStyle = "rgba(52, 211, 153, 0.3)";
-          } else if (this.activeLayer === "moisture") {
-            ctx.fillStyle = `rgba(6, 182, 212, ${0.2 + (Math.cos(r) * 0.1)})`;
-            ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
-          } else {
-            ctx.fillStyle = `rgba(245, 158, 11, ${0.2 + (Math.sin(c + r) * 0.1)})`;
-            ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
-          }
-
+          const ndvi = this.snapshot ? (this.snapshot.ndvi_mean || 0.78) : 0.78;
+          ctx.fillStyle = `rgba(16, 185, 129, ${0.15 + (ndvi * 0.3) + (Math.sin(c) * 0.05)})`;
+          ctx.strokeStyle = "rgba(52, 211, 153, 0.3)";
           ctx.lineWidth = 1;
           ctx.fill();
           ctx.stroke();
         }
       }
 
-      // Draw Simulated Crop Saplings / Telemetry Node Beacons
-      const nodeX = (Math.sin(angle) * 80);
-      const nodeY = (Math.cos(angle) * 40);
+      const nodeX = Math.sin(angle) * 80;
+      const nodeY = Math.cos(angle) * 40;
       ctx.beginPath();
       ctx.arc(nodeX, nodeY - 15, 6, 0, Math.PI * 2);
-      ctx.fillStyle = "var(--accent-neon)";
-      ctx.shadowColor = "var(--accent-neon)";
-      ctx.shadowBlur = 12;
+      ctx.fillStyle = "#10b981";
       ctx.fill();
-      ctx.shadowBlur = 0;
 
       ctx.restore();
-
       this.animationFrameId = requestAnimationFrame(render);
     };
 
     render();
   }
+
+  /**
+   * Mount the 3D Digital Twin into a DOM container
+   * @param {string} containerId - ID of the canvas container div
+   * @param {string} farmId - Farm ID to load scene data for
+   * @param {string} minimapCanvasId - ID of minimap canvas element
+   */
+  async mount(containerId, farmId, minimapCanvasId) {
+    this.containerId = containerId;
+    this.farmId = farmId || 'default';
+
+    try {
+      // Show loading state
+      this._showLoading(containerId);
+
+      // Dynamically import the 3D engine (ES module)
+      const { AgriosDigitalTwin3D } = await import('./digital_twin_3d.js');
+      
+      this.engine = new AgriosDigitalTwin3D();
+      this.engine.init(containerId, minimapCanvasId);
+
+      // Load scene data from backend
+      this.sceneData = await this._fetchSceneData(farmId);
+
+      // Build the 3D scene
+      await this.engine.buildScene(this.sceneData);
+
+      // Wire up interaction callbacks
+      this.engine.onEntityInspect = (entityData) => {
+        this._handleEntityInspect(entityData);
+      };
+
+      this.engine.onTelemetryUpdate = (payload) => {
+        this._updateHUD(payload);
+      };
+
+      this.engine.onSceneRebuildNeeded = () => {
+        this._rebuildScene();
+      };
+
+      // Start the animation loop
+      this.engine.startAnimationLoop();
+
+      // Listen for WebSocket events
+      this._eventListener = (e) => {
+        if (this.engine && !this.engine.isDestroyed) {
+          this.engine.applyEvent(e.detail);
+        }
+      };
+      window.addEventListener('agrios:event', this._eventListener);
+
+      // Initial HUD update
+      this._updateHUD(this.sceneData.telemetry);
+      this._updateWeatherBadge(this.sceneData.weather);
+
+      // Hide loading
+      this._hideLoading(containerId);
+
+      this.isInitialized = true;
+      console.log('[DT Adapter] Mounted successfully for farm:', farmId);
+
+    } catch (err) {
+      console.error('[DT Adapter] Mount failed:', err);
+      this._hideLoading(containerId);
+      this._showError(containerId, err.message);
+    }
+  }
+
+  /**
+   * Destroy the 3D scene and clean up resources
+   */
+  destroy() {
+    if (this._eventListener) {
+      window.removeEventListener('agrios:event', this._eventListener);
+      this._eventListener = null;
+    }
+
+    if (this.engine) {
+      this.engine.destroy();
+      this.engine = null;
+    }
+
+    this.isInitialized = false;
+    console.log('[DT Adapter] Destroyed');
+  }
+
+  /**
+   * Update scene state with new telemetry snapshot
+   */
+  updateState(snapshot) {
+    if (this.engine) {
+      this.engine.updateState(snapshot);
+      this._updateHUD(snapshot);
+    }
+  }
+
+  /**
+   * Apply a real-time WebSocket domain event
+   */
+  applyEvent(domainEvent) {
+    if (this.engine) {
+      this.engine.applyEvent(domainEvent);
+    }
+  }
+
+  /**
+   * Highlight a specific entity in the scene
+   */
+  selectEntity(type, id) {
+    if (this.engine) {
+      this.engine.focusEntity(type, id);
+    }
+  }
+
+  /**
+   * Move camera to focus on entity
+   */
+  focusEntity(type, id) {
+    if (this.engine) {
+      this.engine.focusEntity(type, id);
+    }
+  }
+
+  /**
+   * Switch camera to a preset view
+   * @param {'overview'|'field_focus'|'worker_focus'|'infrastructure'} preset
+   */
+  setCamera(preset) {
+    if (this.engine) {
+      this.engine.setCameraPreset(preset);
+    }
+    // Update camera button states
+    document.querySelectorAll('.dt3d-toolbar-btn[data-camera]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.camera === preset);
+    });
+  }
+
+  /**
+   * Toggle layer visibility
+   * @param {string} layerName - fields, crops, workers, infrastructure, risks
+   * @param {boolean} visible
+   */
+  setLayer(layerName, visible) {
+    if (this.engine) {
+      this.engine.setLayerVisibility(layerName, visible);
+    }
+    // Update layer button state
+    const btn = document.querySelector(`.dt3d-toolbar-btn[data-layer="${layerName}"]`);
+    if (btn) btn.classList.toggle('active', visible);
+  }
+
+  /**
+   * Set the crop growth simulation day
+   * @param {number} dayNumber
+   */
+  setTimeDay(dayNumber) {
+    if (this.engine) {
+      this.engine.setDay(dayNumber);
+    }
+    // Update day display
+    const dayLabel = document.getElementById('dt3d-day-label');
+    if (dayLabel) dayLabel.textContent = `Day ${dayNumber}`;
+  }
+
+  /**
+   * Set weather condition
+   * @param {'clear'|'cloudy'|'rain'|'heatwave'} condition
+   */
+  setWeather(condition) {
+    if (this.engine) {
+      this.engine.setWeather(condition);
+    }
+    this._updateWeatherBadge({ condition });
+  }
+
+  /**
+   * Register callback for user interactions
+   */
+  onUserInteraction(callback) {
+    this._interactionCallback = callback;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PRIVATE: Data Fetching
+  // ─────────────────────────────────────────────────────────────
+  async _fetchSceneData(farmId) {
+    try {
+      const res = await fetch(`/api/digital-twin/scene-data/${farmId}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('[DT Adapter] Scene data fetch failed, using defaults:', e);
+    }
+
+    // Fallback defaults
+    return {
+      farm: { name: 'AGRIOS Greenfield Model Farm', total_area_acres: 14.5 },
+      boundary: null,
+      spatial_objects: [],
+      planting_grid: { total_rows: 24, plants_per_row: 50, total_plants: 1200, healthy_plants: 1180, stressed_plants: 20, dead_plants: 0 },
+      telemetry: { canopy_coverage_pct: 72.5, leaf_area_index: 3.8, ndvi_mean: 0.78, stress_index: 0.12 },
+      crop_plan: { crop_type: 'Wheat', stages: [
+        { name: 'Sowing', start_day: 1, end_day: 7 },
+        { name: 'Germination', start_day: 8, end_day: 21 },
+        { name: 'Vegetative Growth', start_day: 22, end_day: 55 },
+        { name: 'Flowering', start_day: 56, end_day: 75 },
+        { name: 'Grain Fill', start_day: 76, end_day: 100 },
+        { name: 'Harvest Ready', start_day: 101, end_day: 120 },
+      ]},
+      workers: [],
+      weather: { condition: 'clear', temperature_c: 28.5, humidity_pct: 62, wind_speed_kmh: 8.2 },
+      risks: [],
+      cameras: [],
+    };
+  }
+
+  async _rebuildScene() {
+    if (!this.farmId) return;
+    this.sceneData = await this._fetchSceneData(this.farmId);
+    if (this.engine) {
+      await this.engine.buildScene(this.sceneData);
+      this._updateHUD(this.sceneData.telemetry);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PRIVATE: UI Updates
+  // ─────────────────────────────────────────────────────────────
+  _updateHUD(telemetry) {
+    if (!telemetry) return;
+    const hud = document.getElementById('dt3d-hud');
+    if (!hud) return;
+
+    const stressColor = (telemetry.stress_index || 0) > 0.3 ? '#EF4444' : '#34D399';
+
+    hud.innerHTML = `
+      <div class="dt3d-hud-pill"><span class="hud-icon">🛰️</span> LAI: <strong>${(telemetry.leaf_area_index || 3.8).toFixed(1)}</strong></div>
+      <div class="dt3d-hud-pill"><span class="hud-icon">🌱</span> Canopy: <strong>${(telemetry.canopy_coverage_pct || 72.5).toFixed(1)}%</strong></div>
+      <div class="dt3d-hud-pill"><span class="hud-icon">📊</span> NDVI: <strong>${(telemetry.ndvi_mean || 0.78).toFixed(2)}</strong></div>
+      <div class="dt3d-hud-pill"><span class="hud-icon">⚡</span> Stress: <strong style="color:${stressColor}">${(telemetry.stress_index || 0.12).toFixed(2)}</strong></div>
+    `;
+  }
+
+  _updateWeatherBadge(weather) {
+    if (!weather) return;
+    const badge = document.getElementById('dt3d-weather-badge');
+    if (!badge) return;
+
+    const icons = { clear: '☀️', cloudy: '☁️', rain: '🌧️', heatwave: '🌡️' };
+    const labels = { clear: 'Clear Sky', cloudy: 'Overcast', rain: 'Rainfall', heatwave: 'Heatwave' };
+    const condition = weather.condition || 'clear';
+
+    badge.innerHTML = `
+      <span>${icons[condition] || '☀️'}</span>
+      <span>${labels[condition] || 'Clear'}</span>
+      <span style="color:#94a3b8">|</span>
+      <span>${weather.temperature_c || 28}°C</span>
+    `;
+  }
+
+  _handleEntityInspect(entityData) {
+    const panel = document.getElementById('dt3d-inspector');
+    if (!panel) return;
+
+    if (!entityData) {
+      panel.classList.remove('visible');
+      return;
+    }
+
+    panel.classList.add('visible');
+
+    const titleEl = panel.querySelector('.dt3d-inspector-title');
+    const gridEl = panel.querySelector('.dt3d-inspector-grid');
+
+    if (titleEl) {
+      const typeIcons = {
+        worker: '👷', building: '🏗️', greenhouse: '🏛️', field: '🌾',
+        sensor: '📡', camera: '📷', water_source: '💧', road: '🛤️',
+        crops: '🌱', risk: '⚠️',
+      };
+      titleEl.textContent = `${typeIcons[entityData.type] || '📍'} ${entityData.name || entityData.type}`;
+    }
+
+    if (gridEl) {
+      let statsHTML = '';
+
+      if (entityData.type === 'worker') {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Role</label><span class="val">${entityData.role || 'N/A'}</span></div>
+          <div class="dt3d-inspector-stat"><label>Current Task</label><span class="val">${entityData.current_task?.title || 'Idle'}</span></div>
+          <div class="dt3d-inspector-stat"><label>Fatigue Index</label><span class="val">${entityData.fatigue_index || 0}%</span></div>
+        `;
+      } else if (entityData.type === 'field') {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Name</label><span class="val">${entityData.name}</span></div>
+          <div class="dt3d-inspector-stat"><label>Area</label><span class="val">${entityData.area_acres || '—'} acres</span></div>
+        `;
+      } else if (entityData.type === 'building' || entityData.type === 'greenhouse') {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Name</label><span class="val">${entityData.name}</span></div>
+          <div class="dt3d-inspector-stat"><label>Status</label><span class="val">${entityData.status || 'active'}</span></div>
+          <div class="dt3d-inspector-stat"><label>Area</label><span class="val">${entityData.area_sqm || '—'} sqm</span></div>
+        `;
+      } else if (entityData.type === 'water_source') {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Name</label><span class="val">${entityData.name}</span></div>
+          <div class="dt3d-inspector-stat"><label>Capacity</label><span class="val">${entityData.capacity_lph || entityData.capacity || '—'}</span></div>
+          <div class="dt3d-inspector-stat"><label>Status</label><span class="val">${entityData.status || 'active'}</span></div>
+        `;
+      } else if (entityData.type === 'sensor' || entityData.type === 'camera') {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Name</label><span class="val">${entityData.name}</span></div>
+          <div class="dt3d-inspector-stat"><label>Status</label><span class="val" style="color:#34D399">${entityData.status || 'online'}</span></div>
+          ${entityData.fov ? `<div class="dt3d-inspector-stat"><label>FOV</label><span class="val">${entityData.fov}</span></div>` : ''}
+        `;
+      } else if (entityData.type === 'risk') {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Alert</label><span class="val">${entityData.name}</span></div>
+          <div class="dt3d-inspector-stat"><label>Severity</label><span class="val" style="color:#EF4444">${entityData.severity || 'medium'}</span></div>
+        `;
+      } else {
+        statsHTML = `
+          <div class="dt3d-inspector-stat"><label>Type</label><span class="val">${entityData.type}</span></div>
+          <div class="dt3d-inspector-stat"><label>Name</label><span class="val">${entityData.name || '—'}</span></div>
+        `;
+      }
+
+      gridEl.innerHTML = statsHTML;
+    }
+
+    // Fire callback
+    if (this._interactionCallback) {
+      this._interactionCallback({ action: 'inspect', entity: entityData });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PRIVATE: Loading / Error states
+  // ─────────────────────────────────────────────────────────────
+  _showLoading(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const loading = document.createElement('div');
+    loading.className = 'dt3d-loading';
+    loading.id = 'dt3d-loading-overlay';
+    loading.innerHTML = `
+      <div class="dt3d-loading-spinner"></div>
+      <div>Initializing 3D Digital Twin...</div>
+      <div style="font-size:0.75rem;color:#64748b;margin-top:4px;">Loading Three.js engine & farm data</div>
+    `;
+    container.appendChild(loading);
+  }
+
+  _hideLoading(containerId) {
+    const el = document.getElementById('dt3d-loading-overlay');
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => el.remove(), 500);
+    }
+  }
+
+  _showError(containerId, message) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const errDiv = document.createElement('div');
+    errDiv.className = 'dt3d-loading';
+    errDiv.innerHTML = `
+      <div style="font-size:2rem;">⚠️</div>
+      <div style="color:#EF4444;font-weight:700;">3D Engine Error</div>
+      <div style="font-size:0.8rem;color:#94a3b8;max-width:400px;text-align:center;">${message}</div>
+      <button onclick="this.parentElement.remove()" style="margin-top:12px;padding:6px 16px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;">Dismiss</button>
+    `;
+    container.appendChild(errDiv);
+  }
 }
 
+// Export to global scope for non-module access
 window.AgriosDigitalTwinAdapter = AgriosDigitalTwinAdapter;

@@ -1,0 +1,413 @@
+/* 
+  AGRIOS 3D Digital Twin Viewport Styles
+  Prefix: dt3d- 
+*/
+
+/* --- Typography --- */
+.dt3d-viewport-wrapper {
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  width: 100%;
+}
+
+/* --- Viewport Container --- */
+.dt3d-canvas-container {
+  width: 100%;
+  height: 65vh;
+  min-height: 500px;
+  background-color: #0a1628; /* Dark for 3D scene */
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dt3d-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* --- Fullscreen Toggle --- */
+.dt3d-fullscreen .dt3d-canvas-container {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  z-index: 9999;
+  border-radius: 0;
+}
+
+/* --- HUD Overlay (top bar inside viewport) --- */
+.dt3d-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.dt3d-hud-pill {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.dt3d-hud-pill strong {
+  color: #34d399;
+}
+
+.dt3d-hud-pill .hud-icon {
+  font-size: 1rem;
+}
+
+/* --- Left Toolbar (floating vertical bar) --- */
+.dt3d-toolbar {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.dt3d-toolbar-btn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.dt3d-toolbar-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.dt3d-toolbar-btn.active {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+
+.dt3d-toolbar-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.2);
+  margin: 4px 0;
+}
+
+/* --- Layer Toggle Tooltips --- */
+.dt3d-toolbar-btn[title]::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 8px);
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.dt3d-toolbar-btn[title]:hover::after {
+  opacity: 1;
+}
+
+/* --- Right Panel (camera presets) --- */
+.dt3d-camera-panel {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* --- Bottom Inspector Panel --- */
+.dt3d-inspector {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  color: #ffffff;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(16, 185, 129, 0.3);
+  z-index: 10;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dt3d-inspector.visible {
+  transform: translateY(0);
+}
+
+.dt3d-inspector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.dt3d-inspector-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.dt3d-inspector-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.dt3d-inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.dt3d-inspector-stat {
+  display: block;
+}
+
+.dt3d-inspector-stat label {
+  display: block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.dt3d-inspector-stat value,
+.dt3d-inspector-stat span.val {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+/* --- Minimap --- */
+.dt3d-minimap {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 160px;
+  height: 120px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.dt3d-minimap canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.dt3d-minimap-label {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* --- Time Slider --- */
+.dt3d-time-control {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.dt3d-time-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dt3d-time-slider {
+  width: 200px;
+  appearance: none;
+  background: transparent;
+}
+
+.dt3d-time-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #334155;
+  border-radius: 2px;
+}
+
+.dt3d-time-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #10b981;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  margin-top: -5px; /* Center thumb on track (4px / 2 - 14px / 2 = -5px) */
+}
+
+.dt3d-time-slider::-webkit-slider-thumb:hover {
+  background: #34d399;
+}
+
+.dt3d-time-day {
+  font-size: 0.8rem;
+  color: #34d399;
+  font-weight: 700;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* --- Weather Badge --- */
+.dt3d-weather-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 8px 14px;
+  border-radius: 20px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Walk Calibrate Header Bar (above viewport) --- */
+.dt3d-calibrate-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dt3d-calibrate-bar h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.dt3d-calibrate-bar p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+/* --- Loading State --- */
+.dt3d-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 22, 40, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 20;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.dt3d-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #334155;
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: dt3d-spin 0.8s linear infinite;
+}
+
+@keyframes dt3d-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .dt3d-canvas-container {
+    height: 50vh;
+    min-height: 350px;
+  }
+  
+  .dt3d-minimap {
+    display: none;
+  }
+  
+  .dt3d-time-slider {
+    width: 120px;
+  }
+}

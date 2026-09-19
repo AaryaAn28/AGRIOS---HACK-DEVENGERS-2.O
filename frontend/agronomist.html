@@ -8,6 +8,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/vizitor-theme.css">
+  <link rel="stylesheet" href="css/digital-twin-3d.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+    }
+  }
+  </script>
   <style>
     /* Wizard & Stepper styles */
     .wizard-stepper {
@@ -305,91 +314,120 @@
         </div>
       </div>
 
-      <!-- TAB 3: WALK & CALIBRATE 3D FARM -->
+      <!-- TAB 3: 3D DIGITAL TWIN & FARM CALIBRATION -->
       <div id="tab-fieldcalibration" class="vizitor-tab-content">
-        <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:1.5rem;">
-          <!-- Walk & Calibrate Form -->
-          <div class="card-panel">
-            <div class="panel-header">
-              <div>
-                <h3 class="panel-title">Walk & Calibrate Field Boundary</h3>
-                <p class="panel-subtitle">Trace perimeter GPS points and place spatial infrastructure.</p>
-              </div>
-            </div>
 
-            <form onsubmit="handleWalkAndCalibrate(event)">
-              <div class="input-group">
-                <label for="calib-farm-name">Farm / Plot Designation</label>
-                <input type="text" id="calib-farm-name" required value="Greenfield Model Farm" class="form-control">
-              </div>
-
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                <div class="input-group">
-                  <label for="calib-acres">Surveyed Acreage</label>
-                  <input type="number" id="calib-acres" step="0.5" required value="14.5" class="form-control">
-                </div>
-                <div class="input-group">
-                  <label for="calib-crop">Target Crop</label>
-                  <select id="calib-crop" class="form-control" onchange="updateCropPlanPreview(this.value)">
-                    <option value="Wheat" selected>Wheat (Triticum aestivum)</option>
-                    <option value="Rice">Rice / Paddy (Oryza sativa)</option>
-                    <option value="Tomato">Tomato (Solanum lycopersicum)</option>
-                    <option value="Maize">Maize (Zea mays)</option>
-                    <option value="Potato">Potato (Solanum tuberosum)</option>
-                    <option value="Cotton">Cotton (Gossypium)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="input-group">
-                <label>Infrastructure to Include</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.85rem; color:#334155; margin-top:4px;">
-                  <label><input type="checkbox" checked id="infra-well"> Solar Borewell (75m)</label>
-                  <label><input type="checkbox" checked id="infra-pond"> Rainwater Pond</label>
-                  <label><input type="checkbox" checked id="infra-poly"> Nursery Polyhouse</label>
-                  <label><input type="checkbox" checked id="infra-weather"> Weather Station</label>
-                </div>
-              </div>
-
-              <div style="margin-top:1rem; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:0.8rem; color:#64748b;">
-                <strong>Perimeter Walk Status:</strong> 4 GPS Corner Pins Latched (30.9010° N, 75.8573° E). Ready to commit Version 1.
-              </div>
-
-              <button type="submit" class="btn-primary" style="width:100%; justify-content:center; margin-top:1.25rem; height:44px;" id="btn-calibrate-submit">
-                🚀 Calibrate Boundary & Build 3D Twin (v1)
-              </button>
-            </form>
+        <!-- Walk & Calibrate Header Bar (Collapsible) -->
+        <div class="dt3d-calibrate-bar" id="dt3d-calibrate-bar">
+          <div>
+            <h3>🚀 Walk & Calibrate Field Boundary</h3>
+            <p>Trace GPS perimeter and build the 3D Digital Twin.</p>
           </div>
-
-          <!-- Interactive 3D / Planting Grid Viewer -->
-          <div class="card-panel">
-            <div class="panel-header">
-              <div>
-                <h3 class="panel-title">3D Digital Twin & Planting Grid</h3>
-                <p class="panel-subtitle">Interactive plant status audit (Click dots: 🟢 Healthy $\to$ 🟡 Stressed $\to$ 🔴 Dead).</p>
-              </div>
-              <div style="display:flex; gap:6px;">
-                <span class="card-badge badge-success" id="twin-healthy-count">1180 Healthy</span>
-                <span class="card-badge badge-warning" id="twin-stressed-count">20 Stressed</span>
-                <span class="card-badge badge-danger" id="twin-dead-count">0 Dead</span>
-              </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="calib-farm-name" value="Greenfield Model Farm" class="form-control" style="width:180px; height:34px; font-size:0.8rem;">
+              <input type="number" id="calib-acres" step="0.5" value="14.5" class="form-control" style="width:80px; height:34px; font-size:0.8rem;" placeholder="Acres">
+              <select id="calib-crop" class="form-control" style="width:140px; height:34px; font-size:0.8rem;">
+                <option value="Wheat" selected>Wheat</option>
+                <option value="Rice">Rice / Paddy</option>
+                <option value="Tomato">Tomato</option>
+                <option value="Maize">Maize</option>
+                <option value="Potato">Potato</option>
+                <option value="Cotton">Cotton</option>
+              </select>
             </div>
-
-            <!-- Planting Grid Canvas -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem; overflow-x:auto;">
-              <div id="planting-grid-display" style="display:grid; grid-template-columns:repeat(24, 1fr); gap:4px; max-width:540px; margin:0 auto;">
-                <!-- Dynamically populated plant dots -->
-              </div>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
-              <div style="font-size:0.8rem; color:#64748b;">Version: <strong id="twin-version-label" style="color:#059669;">v1 (Current)</strong></div>
-              <button class="btn-secondary" onclick="savePlantingGridStatus()" style="height:32px; font-size:0.75rem;">
-                💾 Save Twin Status
-              </button>
+            <button class="btn-primary" id="btn-calibrate-submit" onclick="handleWalkAndCalibrate(event)" style="height:34px; font-size:0.8rem; white-space:nowrap;">
+              🚀 Calibrate & Build 3D Twin
+            </button>
+            <div style="font-size:0.72rem; color:#64748b;">
+              <span class="card-badge badge-success" id="twin-healthy-count" style="font-size:0.68rem;">1180 Healthy</span>
+              <span class="card-badge badge-warning" id="twin-stressed-count" style="font-size:0.68rem;">20 Stressed</span>
+              <span class="card-badge badge-danger" id="twin-dead-count" style="font-size:0.68rem;">0 Dead</span>
             </div>
           </div>
         </div>
+
+        <!-- 3D Viewport Wrapper -->
+        <div class="dt3d-viewport-wrapper" id="dt3d-viewport-wrapper">
+
+          <!-- 3D Canvas Container -->
+          <div class="dt3d-canvas-container" id="dt3d-canvas-container">
+
+            <!-- HUD Overlay (top) -->
+            <div class="dt3d-hud" id="dt3d-hud">
+              <div class="dt3d-hud-pill"><span class="hud-icon">🛰️</span> LAI: <strong>3.8</strong></div>
+              <div class="dt3d-hud-pill"><span class="hud-icon">🌱</span> Canopy: <strong>72.5%</strong></div>
+              <div class="dt3d-hud-pill"><span class="hud-icon">📊</span> NDVI: <strong>0.78</strong></div>
+              <div class="dt3d-hud-pill"><span class="hud-icon">⚡</span> Stress: <strong style="color:#34d399">0.12</strong></div>
+            </div>
+
+            <!-- Weather Badge (top-right) -->
+            <div class="dt3d-weather-badge" id="dt3d-weather-badge">
+              <span>☀️</span> <span>Clear Sky</span> <span style="color:#94a3b8">|</span> <span>28°C</span>
+            </div>
+
+            <!-- Left Toolbar: Layer Toggles -->
+            <div class="dt3d-toolbar" id="dt3d-layer-toolbar">
+              <button class="dt3d-toolbar-btn active" data-layer="fields" title="Fields" onclick="window._dt3dToggleLayer('fields', this)">🌾</button>
+              <button class="dt3d-toolbar-btn active" data-layer="crops" title="Crops" onclick="window._dt3dToggleLayer('crops', this)">🌱</button>
+              <button class="dt3d-toolbar-btn active" data-layer="workers" title="Workers" onclick="window._dt3dToggleLayer('workers', this)">👷</button>
+              <button class="dt3d-toolbar-btn active" data-layer="infrastructure" title="Infrastructure" onclick="window._dt3dToggleLayer('infrastructure', this)">🏗️</button>
+              <button class="dt3d-toolbar-btn" data-layer="risks" title="Risk Zones" onclick="window._dt3dToggleLayer('risks', this)">⚠️</button>
+              <div class="dt3d-toolbar-divider"></div>
+              <button class="dt3d-toolbar-btn" title="Weather: Clear" onclick="window._dt3dCycleWeather()">🌤️</button>
+              <button class="dt3d-toolbar-btn" title="Fullscreen" onclick="window._dt3dToggleFullscreen()">⛶</button>
+            </div>
+
+            <!-- Right Panel: Camera Presets -->
+            <div class="dt3d-camera-panel" id="dt3d-camera-panel">
+              <button class="dt3d-toolbar-btn active" data-camera="overview" title="Bird's Eye" onclick="window._dt3dSetCamera('overview', this)">🦅</button>
+              <button class="dt3d-toolbar-btn" data-camera="field_focus" title="Field Close-up" onclick="window._dt3dSetCamera('field_focus', this)">🔍</button>
+              <button class="dt3d-toolbar-btn" data-camera="worker_focus" title="Worker View" onclick="window._dt3dSetCamera('worker_focus', this)">👤</button>
+              <button class="dt3d-toolbar-btn" data-camera="infrastructure" title="Infrastructure" onclick="window._dt3dSetCamera('infrastructure', this)">🏭</button>
+            </div>
+
+            <!-- Time Simulation Slider (bottom-center) -->
+            <div class="dt3d-time-control" id="dt3d-time-control">
+              <span class="dt3d-time-label">Growth Day:</span>
+              <input type="range" class="dt3d-time-slider" id="dt3d-time-slider" min="1" max="120" value="30" oninput="window._dt3dSetDay(this.value)">
+              <span class="dt3d-time-day" id="dt3d-day-label">Day 30</span>
+            </div>
+
+            <!-- Minimap (bottom-right, offset above time control) -->
+            <div class="dt3d-minimap" id="dt3d-minimap" style="bottom: 60px;">
+              <span class="dt3d-minimap-label">MINIMAP</span>
+              <canvas id="dt3d-minimap-canvas" width="160" height="120"></canvas>
+            </div>
+
+            <!-- Inspector Panel (bottom, hidden by default) -->
+            <div class="dt3d-inspector" id="dt3d-inspector">
+              <div class="dt3d-inspector-header">
+                <span class="dt3d-inspector-title">📍 Select an object</span>
+                <button class="dt3d-inspector-close" onclick="document.getElementById('dt3d-inspector').classList.remove('visible')">✕</button>
+              </div>
+              <div class="dt3d-inspector-grid">
+                <div class="dt3d-inspector-stat"><label>Type</label><span class="val">—</span></div>
+              </div>
+            </div>
+
+            <!-- Loading Overlay (shown during init) -->
+            <div class="dt3d-loading" id="dt3d-loading-init" style="display:none;">
+              <div class="dt3d-loading-spinner"></div>
+              <div>Initializing 3D Digital Twin...</div>
+            </div>
+
+          </div><!-- /dt3d-canvas-container -->
+
+        </div><!-- /dt3d-viewport-wrapper -->
+
+        <!-- Version & Save Row -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+          <div style="font-size:0.8rem; color:#64748b;">Version: <strong id="twin-version-label" style="color:#059669;">v1 (Current)</strong> · <span id="dt3d-scene-stats" style="color:#94a3b8;">Scene loading...</span></div>
+          <button class="btn-secondary" onclick="savePlantingGridStatus()" style="height:32px; font-size:0.75rem;">
+            💾 Save Twin Status
+          </button>
+        </div>
+
       </div>
 
       <!-- TAB 4: SUBORDINATES (ASSIGN FARMERS & WORKERS) -->
@@ -841,8 +879,10 @@
 <script src="js/api.js"></script>
 <script src="js/realtime.js"></script>
 <script src="js/components.js"></script>
+<script src="js/digital_twin.js"></script>
 <script>
   let activeTab = "overview";
+  let twinAdapter3D = null;
   let currentStep = 1;
   const totalSteps = 8;
   let isMandatoryOnboarding = false;
@@ -1016,8 +1056,68 @@
       loadQuarantineZones();
     } else if (tabId === "circulars") {
       loadBroadcastHistory();
+    } else if (tabId === "fieldcalibration") {
+      init3DDigitalTwin();
     }
   }
+
+  async function init3DDigitalTwin() {
+    try {
+      if (!twinAdapter3D) {
+        twinAdapter3D = new AgriosDigitalTwinAdapter();
+        await twinAdapter3D.mount("dt3d-canvas-container", activeFarmId || "default", "dt3d-minimap-canvas");
+        const statsEl = document.getElementById("dt3d-scene-stats");
+        if (statsEl) statsEl.innerText = "3D Agricultural World Active";
+      } else {
+        if (twinAdapter3D.engine && twinAdapter3D.engine.renderer) {
+          twinAdapter3D.setCamera("overview");
+          const container = document.getElementById("dt3d-canvas-container");
+          if (container) twinAdapter3D.engine._onResize(container);
+        }
+      }
+    } catch (e) {
+      console.error("[Agronomist] Error initializing 3D Digital Twin:", e);
+    }
+  }
+
+  window._dt3dToggleLayer = function(layerName, btn) {
+    if (!twinAdapter3D) return;
+    const isVisible = btn.classList.contains("active");
+    twinAdapter3D.setLayer(layerName, !isVisible);
+    btn.classList.toggle("active", !isVisible);
+  };
+
+  window._dt3dSetCamera = function(preset, btn) {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.setCamera(preset);
+  };
+
+  window._dt3dSetDay = function(day) {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.setTimeDay(parseInt(day, 10));
+  };
+
+  let weatherModes = ["clear", "cloudy", "rain", "heatwave"];
+  let currentWeatherIdx = 0;
+  window._dt3dCycleWeather = function() {
+    if (!twinAdapter3D) return;
+    currentWeatherIdx = (currentWeatherIdx + 1) % weatherModes.length;
+    const nextWeather = weatherModes[currentWeatherIdx];
+    twinAdapter3D.setWeather(nextWeather);
+    AgriosUI.showToast("Weather Transition", `Atmosphere shifted to: ${nextWeather.toUpperCase()}`, "🌤️");
+  };
+
+  window._dt3dToggleFullscreen = function() {
+    const wrapper = document.getElementById("dt3d-viewport-wrapper");
+    if (!wrapper) return;
+    wrapper.classList.toggle("dt3d-fullscreen");
+    if (twinAdapter3D && twinAdapter3D.engine && twinAdapter3D.engine.renderer) {
+      setTimeout(() => {
+        const container = document.getElementById("dt3d-canvas-container");
+        if (container) twinAdapter3D.engine._onResize(container);
+      }, 100);
+    }
+  };
 
   async function loadAgronomistProfile() {
     const user = AgriosAPI.getCurrentUser() || { full_name: "Agronomist", persona_code: "AGRONOMIST-001" };
@@ -1414,17 +1514,31 @@
 
       activeFarmId = data.farm_id;
       AgriosUI.showToast("3D Twin Calibrated", `Farm '${data.farm_name}' calibrated to Version 1 (v1).`, "📐");
-      document.getElementById("card-calibrated-acres").innerText = `${payload.area_acres} Acres`;
-      document.getElementById("card-calibrated-badge").innerText = "v1 Active";
-      document.getElementById("card-calibrated-badge").className = "card-badge badge-success";
-      document.getElementById("card-crop-name").innerText = payload.crop_type;
+      const acresEl = document.getElementById("card-calibrated-acres");
+      if (acresEl) acresEl.innerText = `${payload.area_acres} Acres`;
+      const badgeEl = document.getElementById("card-calibrated-badge");
+      if (badgeEl) {
+        badgeEl.innerText = "v1 Active";
+        badgeEl.className = "card-badge badge-success";
+      }
+      const cropEl = document.getElementById("card-crop-name");
+      if (cropEl) cropEl.innerText = payload.crop_type;
+
+      if (twinAdapter3D) {
+        twinAdapter3D.farmId = activeFarmId;
+        await twinAdapter3D._rebuildScene();
+      } else {
+        await init3DDigitalTwin();
+      }
 
       await loadCropPlanPreview(payload.crop_type);
     } catch (err) {
       AgriosUI.showToast("Calibration Failed", err.message, "❌");
     } finally {
-      btn.disabled = false;
-      btn.innerText = "🚀 Calibrate Boundary & Build 3D Twin (v1)";
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = "🚀 Calibrate & Build 3D Twin";
+      }
     }
   }
 
@@ -1442,17 +1556,22 @@
 
   function renderPlantDots() {
     const container = document.getElementById("planting-grid-display");
-    container.innerHTML = gridPlants.map((p, idx) => `
-      <div class="plant-dot plant-${p.status}" onclick="togglePlantStatus(${idx})" title="Plant #${idx + 1}: ${p.status}"></div>
-    `).join("");
+    if (container) {
+      container.innerHTML = gridPlants.map((p, idx) => `
+        <div class="plant-dot plant-${p.status}" onclick="togglePlantStatus(${idx})" title="Plant #${idx + 1}: ${p.status}"></div>
+      `).join("");
+    }
 
     const healthy = gridPlants.filter(p => p.status === "healthy").length * 12;
     const stressed = gridPlants.filter(p => p.status === "stressed").length * 10;
     const dead = gridPlants.filter(p => p.status === "dead").length * 10;
 
-    document.getElementById("twin-healthy-count").innerText = `${healthy} Healthy`;
-    document.getElementById("twin-stressed-count").innerText = `${stressed} Stressed`;
-    document.getElementById("twin-dead-count").innerText = `${dead} Dead`;
+    const healthyEl = document.getElementById("twin-healthy-count");
+    if (healthyEl) healthyEl.innerText = `${healthy} Healthy`;
+    const stressedEl = document.getElementById("twin-stressed-count");
+    if (stressedEl) stressedEl.innerText = `${stressed} Stressed`;
+    const deadEl = document.getElementById("twin-dead-count");
+    if (deadEl) deadEl.innerText = `${dead} Dead`;
   }
 
   function togglePlantStatus(idx) {
