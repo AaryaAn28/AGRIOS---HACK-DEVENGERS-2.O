@@ -106,16 +106,16 @@ def health_check():
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 
 @app.get("/")
-@app.get("/about")
-@app.get("/about.html")
-def get_about_page():
-    return FileResponse(os.path.join(frontend_path, "about.html"))
-
 @app.get("/login")
 @app.get("/login.html")
 @app.get("/index.html")
 def get_login_page():
     return FileResponse(os.path.join(frontend_path, "index.html"))
+
+@app.get("/about")
+@app.get("/about.html")
+def get_about_page():
+    return FileResponse(os.path.join(frontend_path, "about.html"))
 
 @app.get("/logout")
 def get_logout_page():

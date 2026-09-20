@@ -47,6 +47,65 @@ def seed_database(clean_slate: bool = True):
         else:
             print("[Seed] Government Admin already present.")
 
+        # Seed Central and State Government Schemes if none exist
+        if db.query(GovScheme).count() == 0:
+            print("[Seed] Seeding Central and State Government Schemes...")
+            schemes_data = [
+                GovScheme(
+                    scheme_code="PMFBY",
+                    title="Pradhan Mantri Fasal Bima Yojana",
+                    department="Ministry of Agriculture & Farmers Welfare",
+                    description="Comprehensive yield loss and localized calamity crop insurance protection.",
+                    subsidy_percentage=85.0,
+                    max_benefit_amount=150000.0,
+                    eligibility_criteria="All farmers growing notified crops in notified areas.",
+                    active=True
+                ),
+                GovScheme(
+                    scheme_code="PM-KISAN",
+                    title="Pradhan Mantri Kisan Samman Nidhi",
+                    department="Department of Agriculture and Farmers Welfare",
+                    description="Direct income support of Rs 6,000 per year in three equal installments.",
+                    subsidy_percentage=100.0,
+                    max_benefit_amount=6000.0,
+                    eligibility_criteria="Small and marginal landholder farmer families.",
+                    active=True
+                ),
+                GovScheme(
+                    scheme_code="SMAM-DRONE",
+                    title="Sub-Mission on Agricultural Mechanization (Kisan Drone)",
+                    department="Ministry of Agriculture & Farmers Welfare",
+                    description="Financial assistance up to 50% for purchase of agricultural drones by FPOs and progressive farmers.",
+                    subsidy_percentage=50.0,
+                    max_benefit_amount=500000.0,
+                    eligibility_criteria="Registered FPOs, Custom Hiring Centers, and progressive farmers.",
+                    active=True
+                ),
+                GovScheme(
+                    scheme_code="PMKSY",
+                    title="Pradhan Mantri Krishi Sinchayee Yojana (Per Drop More Crop)",
+                    department="Department of Water Resources",
+                    description="Precision micro-irrigation systems (drip and sprinkler) subsidy.",
+                    subsidy_percentage=55.0,
+                    max_benefit_amount=45000.0,
+                    eligibility_criteria="Farmers with assured irrigation source.",
+                    active=True
+                ),
+                GovScheme(
+                    scheme_code="CRM-ROTAVATOR",
+                    title="Crop Residue Management Machinery Subsidy",
+                    department="Department of Agriculture, Punjab",
+                    description="In-situ paddy straw management machinery (Super SMS, Happy Seeder, Rotavator).",
+                    subsidy_percentage=50.0,
+                    max_benefit_amount=35000.0,
+                    eligibility_criteria="Individual farmers and cooperative societies in Punjab.",
+                    active=True
+                )
+            ]
+            db.add_all(schemes_data)
+            db.commit()
+            print("[Seed] Government schemes seeded successfully.")
+
     except Exception as e:
         db.rollback()
         print(f"[Seed] Error during seeding: {e}")

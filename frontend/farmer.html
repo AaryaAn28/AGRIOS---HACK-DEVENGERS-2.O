@@ -755,9 +755,32 @@
   });
 
   function renderNavigation() {
-    document.getElementById("sidebar-container").innerHTML = AgriosUI.renderSidebar("farmer", activeTab);
+    const sidebarContainer = document.getElementById("sidebar-container");
+    const menu = sidebarContainer ? sidebarContainer.querySelector(".sidebar-menu") : null;
+    const prevScrollTop = menu ? menu.scrollTop : 0;
+
+    sidebarContainer.innerHTML = AgriosUI.renderSidebar("farmer", activeTab);
     document.getElementById("navbar-container").innerHTML = AgriosUI.renderNavbar("Farmer Operational Portal", "farmer");
     if (window.AgriosI18n) window.AgriosI18n.applyTranslations();
+
+    const newMenu = sidebarContainer ? sidebarContainer.querySelector(".sidebar-menu") : null;
+    if (newMenu && prevScrollTop) {
+      newMenu.scrollTop = prevScrollTop;
+    }
+  }
+
+  function updateSidebarActive(tabId) {
+    const sidebarContainer = document.getElementById("sidebar-container");
+    if (!sidebarContainer) return;
+    const items = sidebarContainer.querySelectorAll(".menu-item");
+    items.forEach(item => {
+      const onclickAttr = item.getAttribute("onclick") || "";
+      if (onclickAttr.includes(`'${tabId}'`)) {
+        item.classList.add("active");
+      } else {
+        item.classList.remove("active");
+      }
+    });
   }
 
   function switchTab(tabId) {
@@ -774,7 +797,7 @@
       twinAdapter.resizeCanvas();
     }
 
-    renderNavigation();
+    updateSidebarActive(tabId);
 
     // Trigger tab-specific loaders dynamically
     if (tabId === "overview") {
