@@ -412,7 +412,7 @@ class BiosecurityService:
         checkpoints = max(3, int(radius_km * 0.8) + 2)
 
         order_no = f"AGRI-SEC/PUN/ORD-{datetime.now().year}-{uuid.uuid4().hex[:4].upper()}"
-        zone_code = f"QZ-PUN-{datetime.now().year}-{uuid.uuid4().hex[:3].upper()}"
+        zone_code = f"QZ-PUN-{datetime.now().year}-{uuid.uuid4().hex[:6].upper()}"
 
         new_zone = BiosecurityBufferZone(
             zone_code=zone_code,

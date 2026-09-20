@@ -4,6 +4,7 @@ import '../constants/app_text_styles.dart';
 import '../services/auth_service.dart';
 import '../screens/help/help_guide_screen.dart';
 import 'language_selector.dart';
+import '../main.dart';
 
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -72,6 +73,10 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
           tooltip: 'Sign Out',
           onPressed: () {
             AuthService().logout();
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const AuthGate()),
+              (route) => false,
+            );
           },
         ),
         const SizedBox(width: 4),

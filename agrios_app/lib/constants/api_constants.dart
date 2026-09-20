@@ -1,12 +1,12 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConstants {
-  // Platform-aware base URL
+  // Production live backend on Render (connects on physical Android devices & emulators)
+  static const String remoteBaseUrl = 'https://agrios-nerh.onrender.com';
+
   static String get baseUrl {
     if (kIsWeb) return 'http://localhost:8000';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
-    return 'http://127.0.0.1:8000';
+    return remoteBaseUrl;
   }
   static String activeFarmId = '9fca8bd1-344e-46b1-b5f8-4a94ebd4167c';
 

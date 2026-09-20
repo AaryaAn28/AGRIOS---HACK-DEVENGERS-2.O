@@ -6,6 +6,10 @@ import '../../services/auth_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/language_selector.dart';
 import '../../widgets/quick_persona_card.dart';
+import '../dashboard/operator_dashboard_screen.dart';
+import '../dashboard/farmer_dashboard_screen.dart';
+import '../dashboard/agronomist_dashboard_screen.dart';
+import '../dashboard/government_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,9 +33,36 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _navigateToDashboard(String role) {
+    Widget dashboard;
+    switch (role.toLowerCase()) {
+      case 'agronomist':
+        dashboard = const AgronomistDashboardScreen();
+        break;
+      case 'farmer':
+        dashboard = const FarmerDashboardScreen();
+        break;
+      case 'government':
+        dashboard = const GovernmentDashboardScreen();
+        break;
+      case 'worker':
+      default:
+        dashboard = const OperatorDashboardScreen();
+        break;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => dashboard),
+      (route) => false,
+    );
+  }
+
   void _handleOperatorLogin() {
     setState(() => _isLoading = true);
     AuthService().loginAsOperator();
+    if (mounted) {
+      _navigateToDashboard('worker');
+    }
   }
 
   void _handleStandardLogin() async {
@@ -41,6 +72,17 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
       role: _selectedRole,
     );
+    if (mounted) {
+      _navigateToDashboard(_selectedRole);
+    }
+  }
+
+  void _handlePersonaLogin(Map<String, dynamic> persona) {
+    AuthService().loginAsPersona(persona);
+    if (mounted) {
+      final role = persona['role']?.toString() ?? 'worker';
+      _navigateToDashboard(role);
+    }
   }
 
   @override
@@ -410,7 +452,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   final persona = StaticContent.quickDemoPersonas[index];
                   return QuickPersonaCard(
                     persona: persona,
-                    onTap: () => auth.loginAsPersona(persona),
+                    onTap: () => _handlePersonaLogin(persona),
                   );
                 },
               ),
