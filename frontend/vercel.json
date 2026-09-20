@@ -3,7 +3,6 @@
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/login", "destination": "/index.html" },
-    { "source": "/about", "destination": "/about.html" },
     { "source": "/farmer", "destination": "/farmer.html" },
     { "source": "/worker", "destination": "/worker.html" },
     { "source": "/agronomist", "destination": "/agronomist.html" },

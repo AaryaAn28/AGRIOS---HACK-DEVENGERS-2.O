@@ -45,7 +45,6 @@ AGRIOS - HACK DEVENGERS 2.O/
 │   ├── assets/                 # High-resolution artwork, crop geometries, UI icons
 │   ├── css/                    # Vizitor theme, 3D Digital Twin styles
 │   ├── js/                     # AgriosAPI client, Three.js 3D Twin, i18n, realtime WebSockets
-│   ├── about.html              # Landing page ("Fields Today. A Brighter Tomorrow.")
 │   ├── index.html              # Core authentication terminal with demo quick-login
 │   ├── farmer.html             # Farmer operations portal
 │   ├── worker.html             # Krishi Sakhi field companion portal

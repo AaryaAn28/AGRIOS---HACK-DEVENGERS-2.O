@@ -112,11 +112,6 @@ frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fronte
 def get_login_page():
     return FileResponse(os.path.join(frontend_path, "index.html"))
 
-@app.get("/about")
-@app.get("/about.html")
-def get_about_page():
-    return FileResponse(os.path.join(frontend_path, "about.html"))
-
 @app.get("/logout")
 def get_logout_page():
     return FileResponse(os.path.join(frontend_path, "index.html"))
