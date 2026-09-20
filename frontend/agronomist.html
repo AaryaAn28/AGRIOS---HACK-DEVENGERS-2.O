@@ -202,46 +202,84 @@
           <div class="card-panel">
             <div class="panel-header">
               <div>
-                <h3 class="panel-title">End-to-End Operational Lifecycle Pipeline</h3>
-                <p class="panel-subtitle">Current status of agricultural deployment in your administrative zone.</p>
+                <h3 class="panel-title" style="font-size:1.1rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                  <span>⚡</span> End-to-End Operational Lifecycle Pipeline
+                </h3>
+                <p class="panel-subtitle">Real-time status of agronomic calibration, 3D geospatial twin, and field deployment.</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="card-badge badge-success" style="font-weight:700; font-size:0.75rem; padding:4px 10px;">● 100% CALIBRATED & ACTIVE</span>
               </div>
             </div>
 
-            <div style="display:flex; flex-direction:column; gap:1rem;">
-              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
-                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">1</div>
-                <div style="flex-grow:1;">
-                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">8-Pillar Precision Crop Engine & Workforce Calibration</div>
-                  <div style="font-size:0.8rem; color:#64748b;">Calibrate workforce cadre capacity, agro-climatic jurisdiction, farming classification, and biophysical fatigue constraints.</div>
+            <!-- Bold Visual Pipeline Container -->
+            <div id="lifecycle-pipeline-container" style="display:flex; flex-direction:column; gap:0.9rem;">
+              <!-- Step 1 -->
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:#f8fafc; border:1px solid #e2e8f0; border-left:5px solid #059669; border-radius:10px; transition:transform 0.15s ease;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                  <div style="width:36px; height:36px; border-radius:10px; background:#ecfdf5; color:#059669; font-weight:800; font-size:1rem; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(5,150,105,0.2);">1</div>
+                  <div>
+                    <div style="font-weight:800; font-size:0.92rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                      <span>8-Pillar Precision Crop Engine</span>
+                      <span class="card-badge badge-success" style="font-size:0.68rem;">LOCKED</span>
+                    </div>
+                    <div style="font-size:0.8rem; color:#475569; margin-top:2px;">
+                      Active Crop: <strong style="color:#059669;" id="pipe-crop-val">Wheat (PBW-550)</strong> • Monitored Area: <strong style="color:#0f172a;" id="pipe-acres-val">14.5 Acres</strong> • Zone VI Punjab Alluvial
+                    </div>
+                  </div>
                 </div>
-                <button class="btn-secondary" onclick="openOnboardingWizard(false)" style="height:30px; padding:0 10px; font-size:0.75rem;">Configure</button>
+                <button class="btn-secondary" onclick="openOnboardingWizard(false)" style="height:32px; padding:0 12px; font-size:0.78rem; font-weight:700; white-space:nowrap;">Reconfigure</button>
               </div>
 
-              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
-                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">2</div>
-                <div style="flex-grow:1;">
-                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Walk & Calibrate Field Boundary (3D Twin)</div>
-                  <div style="font-size:0.8rem; color:#64748b;">Walk the perimeter, place borewells/greenhouses, and build Version 1 (v1) of the Digital Twin.</div>
+              <!-- Step 2 -->
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:#f8fafc; border:1px solid #e2e8f0; border-left:5px solid #0284c7; border-radius:10px;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                  <div style="width:36px; height:36px; border-radius:10px; background:#f0f9ff; color:#0284c7; font-weight:800; font-size:1rem; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(2,132,199,0.2);">2</div>
+                  <div>
+                    <div style="font-weight:800; font-size:0.92rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                      <span>Walk & Calibrate Field Boundary (3D Twin)</span>
+                      <span class="card-badge badge-success" style="font-size:0.68rem;">v1.2 ACTIVE</span>
+                    </div>
+                    <div style="font-size:0.8rem; color:#475569; margin-top:2px;">
+                      GPS Perimeter: <strong style="color:#0284c7;" id="pipe-twin-acres">14.5 Acres</strong> • PBR Terrain Shader • Tractor CAD • Sprinkler Particle Mesh
+                    </div>
+                  </div>
                 </div>
-                <button class="btn-secondary" onclick="switchTab('fieldcalibration')" style="height:30px; padding:0 10px; font-size:0.75rem;">Calibrate</button>
+                <button class="btn-secondary" onclick="switchTab('fieldcalibration')" style="height:32px; padding:0 12px; font-size:0.78rem; font-weight:700; white-space:nowrap; background:#f0f9ff; border-color:#bae6fd; color:#0284c7;">Launch 3D</button>
               </div>
 
-              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
-                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">3</div>
-                <div style="flex-grow:1;">
-                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Master Crop Growing Plan Synthesis</div>
-                  <div style="font-size:0.8rem; color:#64748b;">System compiles stage-by-stage agronomic schedule (sowing to harvest) for the farmer.</div>
+              <!-- Step 3 -->
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:#f8fafc; border:1px solid #e2e8f0; border-left:5px solid #d97706; border-radius:10px;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                  <div style="width:36px; height:36px; border-radius:10px; background:#fffbeb; color:#d97706; font-weight:800; font-size:1rem; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(217,119,6,0.2);">3</div>
+                  <div>
+                    <div style="font-weight:800; font-size:0.92rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                      <span>Master Agronomic Plan & Lifecycle Clock</span>
+                      <span class="card-badge badge-success" style="font-size:0.68rem;">STAGE 1 RELEASED</span>
+                    </div>
+                    <div style="font-size:0.8rem; color:#475569; margin-top:2px;">
+                      Simulation Clock: <strong style="color:#d97706;" id="pipe-day-clock-val">Day 1</strong> • Lifecycle Duration: <strong style="color:#0f172a;" id="pipe-duration-val">120 Days</strong> (Seedbed to Combine)
+                    </div>
+                  </div>
                 </div>
-                <button class="btn-secondary" onclick="switchTab('cropplan')" style="height:30px; padding:0 10px; font-size:0.75rem;">View Plan</button>
+                <button class="btn-secondary" onclick="switchTab('cropplan')" style="height:32px; padding:0 12px; font-size:0.78rem; font-weight:700; white-space:nowrap; background:#fffbeb; border-color:#fde68a; color:#b45309;">View Plan</button>
               </div>
 
-              <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
-                <div style="width:30px; height:30px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; display:flex; align-items:center; justify-content:center;">4</div>
-                <div style="flex-grow:1;">
-                  <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Assign Farmers & Field Workers</div>
-                  <div style="font-size:0.8rem; color:#64748b;">Once assigned, Stage 1 land preparation and sowing tasks are released to work queues.</div>
+              <!-- Step 4 -->
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:#f8fafc; border:1px solid #e2e8f0; border-left:5px solid #8b5cf6; border-radius:10px;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                  <div style="width:36px; height:36px; border-radius:10px; background:#f5f3ff; color:#8b5cf6; font-weight:800; font-size:1rem; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(139,92,246,0.2);">4</div>
+                  <div>
+                    <div style="font-weight:800; font-size:0.92rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                      <span>Workforce Cadre Assignment & Task Queue</span>
+                      <span class="card-badge badge-success" id="pipe-tasks-badge" style="font-size:0.68rem;">DIRECTIVES CIRCULATED</span>
+                    </div>
+                    <div style="font-size:0.8rem; color:#475569; margin-top:2px;">
+                      Field Cadre: <strong style="color:#8b5cf6;" id="pipe-cadre-val">Balwinder Singh & Sunita Devi</strong> • Real-time Cross-tab Sync Active
+                    </div>
+                  </div>
                 </div>
-                <button class="btn-secondary" onclick="switchTab('subordinates')" style="height:30px; padding:0 10px; font-size:0.75rem;">Assign</button>
+                <button class="btn-secondary" onclick="switchTab('subordinates')" style="height:32px; padding:0 12px; font-size:0.78rem; font-weight:700; white-space:nowrap; background:#f5f3ff; border-color:#ddd6fe; color:#7c3aed;">Cadre Roster</button>
               </div>
             </div>
           </div>
@@ -303,6 +341,59 @@
               <button class="btn-primary" onclick="activateCropPlanOnFarm()">
                 ⚡ Activate Plan & Release Stage 1 Tasks
               </button>
+            </div>
+          <!-- Agronomic Day Clock & Rapid Dispatch Controller -->
+          <div class="card-panel" id="agronomic-day-clock-panel" style="margin-bottom:1.25rem; background:linear-gradient(135deg, #064e3b 0%, #0f172a 100%); color:#ffffff; border-radius:12px; border:1px solid #059669; box-shadow:0 4px 20px rgba(5,150,105,0.25); padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:52px; height:52px; border-radius:12px; background:rgba(16,185,129,0.18); border:2px solid #10b981; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(16,185,129,0.35);">
+                  <span style="font-size:1.4rem;">⏱️</span>
+                </div>
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:#6ee7b7; font-weight:700;">AGRONOMIC LIFECYCLE CLOCK</span>
+                    <span class="card-badge badge-success" id="clock-pulse-badge" style="font-size:0.68rem; padding:2px 8px;">● LIVE CLOCK</span>
+                  </div>
+                  <div style="font-size:1.35rem; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:10px; margin-top:2px;">
+                    <span id="clock-day-display">Day 1</span>
+                    <span style="font-size:0.85rem; font-weight:500; color:#a7f3d0;" id="clock-stage-subtitle">Stage 1: Seedbed Preparation & Basal Sowing</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.08); padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);">
+                  <label for="jump-day-input" style="font-size:0.75rem; color:#cbd5e1; margin-right:4px;">Day:</label>
+                  <input type="number" id="jump-day-input" min="1" max="150" value="1" style="width:55px; height:28px; background:#0f172a; border:1px solid #334155; border-radius:4px; color:#ffffff; font-weight:700; text-align:center; font-size:0.85rem;" />
+                  <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(document.getElementById('jump-day-input').value)" style="height:28px; padding:0 8px; font-size:0.75rem; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#ffffff; cursor:pointer;">
+                    Go
+                  </button>
+                </div>
+
+                <button type="button" class="btn-secondary" id="btn-clock-prev" onclick="stepClock(-1)" style="height:34px; padding:0 12px; font-size:0.8rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#ffffff; cursor:pointer;" title="Previous Day">
+                  ◀ Prev Day
+                </button>
+
+                <button type="button" class="btn-secondary" id="btn-clock-next" onclick="stepClock(1)" style="height:34px; padding:0 12px; font-size:0.8rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#ffffff; cursor:pointer;" title="Next Day">
+                  Next Day ▶
+                </button>
+
+                <button type="button" class="btn-primary" id="btn-clock-dispatch" onclick="dispatchCurrentClockDay()" style="height:34px; padding:0 14px; font-size:0.8rem; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:6px; color:#ffffff; box-shadow:0 2px 10px rgba(16,185,129,0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                  <span>🚀</span> <span id="clock-dispatch-btn-text">Dispatch Day 1 Tasks</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Day Jump Bar -->
+            <div style="display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.12); overflow-x:auto;">
+              <span style="font-size:0.72rem; color:#94a3b8; white-space:nowrap;">Quick Simulation Jump:</span>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(1)" style="height:24px; padding:0 8px; font-size:0.72rem; background:rgba(255,255,255,0.12); color:#ffffff; border:none; border-radius:12px; cursor:pointer;">Day 1 (Sowing)</button>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(2)" style="height:24px; padding:0 8px; font-size:0.72rem; background:rgba(255,255,255,0.12); color:#ffffff; border:none; border-radius:12px; cursor:pointer;">Day 2 (Irrigation)</button>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(7)" style="height:24px; padding:0 8px; font-size:0.72rem; background:rgba(255,255,255,0.12); color:#ffffff; border:none; border-radius:12px; cursor:pointer;">Day 7 (Germination)</button>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(15)" style="height:24px; padding:0 8px; font-size:0.72rem; background:rgba(255,255,255,0.12); color:#ffffff; border:none; border-radius:12px; cursor:pointer;">Day 15 (Tillering)</button>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(30)" style="height:24px; padding:0 8px; font-size:0.72rem; background:#dc2626; color:#ffffff; border:none; border-radius:12px; cursor:pointer; font-weight:700;">🚨 Day 30 (Outbreak Shock)</button>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(60)" style="height:24px; padding:0 8px; font-size:0.72rem; background:rgba(255,255,255,0.12); color:#ffffff; border:none; border-radius:12px; cursor:pointer;">Day 60 (Canopy)</button>
+              <button type="button" class="btn-secondary" onclick="advanceAgronomicDay(120)" style="height:24px; padding:0 8px; font-size:0.72rem; background:rgba(255,255,255,0.12); color:#ffffff; border:none; border-radius:12px; cursor:pointer;">Day 120 (Harvest)</button>
             </div>
           </div>
 
@@ -703,14 +794,23 @@
       <!-- TAB: BROADCAST CIRCULARS -->
       <div id="tab-circulars" class="vizitor-tab-content">
         <div class="card-panel">
-          <div class="panel-header">
+          <div class="panel-header" style="flex-wrap:wrap; gap:10px;">
             <div>
-              <h3 class="panel-title">Broadcast Agronomic Advisories</h3>
+              <h3 class="panel-title">Broadcast Agronomic Advisories & Volatilities</h3>
               <p class="panel-subtitle">Direct omni-channel alerts (SMS, WhatsApp, AGRIOS Mobile) dispatched to registered farming families.</p>
             </div>
             <button class="btn-primary" onclick="openBroadcastCircularModal()">
               📡 + Broadcast Advisory Circular
             </button>
+          </div>
+
+          <!-- Quick Template Chips Bar -->
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow-x:auto;">
+            <span style="font-size:0.75rem; font-weight:700; color:#334155; white-space:nowrap;">⚡ Instant Advisory Templates:</span>
+            <button type="button" class="btn-secondary" onclick="fillBroadcastTemplate('frost')" style="height:26px; padding:0 10px; font-size:0.72rem; border-radius:14px; white-space:nowrap; cursor:pointer;">❄️ Frost Alert</button>
+            <button type="button" class="btn-secondary" onclick="fillBroadcastTemplate('pest')" style="height:26px; padding:0 10px; font-size:0.72rem; border-radius:14px; white-space:nowrap; cursor:pointer;">🐛 Yellow Rust Warning</button>
+            <button type="button" class="btn-secondary" onclick="fillBroadcastTemplate('irrigation')" style="height:26px; padding:0 10px; font-size:0.72rem; border-radius:14px; white-space:nowrap; cursor:pointer;">💧 Micro-Drip Schedule</button>
+            <button type="button" class="btn-secondary" onclick="fillBroadcastTemplate('mandi')" style="height:26px; padding:0 10px; font-size:0.72rem; border-radius:14px; white-space:nowrap; cursor:pointer;">📈 Mandi MSP Spike</button>
           </div>
 
           <div id="circulars-feed-container" style="display:flex; flex-direction:column; gap:12px;">
@@ -1478,10 +1578,6 @@
   }
 
   function updateSidebarActive(tabId) {
-    if (window.AgriosUI && typeof window.AgriosUI.updateSidebarActive === 'function') {
-      AgriosUI.updateSidebarActive(tabId);
-      return;
-    }
     const sidebarContainer = document.getElementById("sidebar-container");
     if (!sidebarContainer) return;
     const items = sidebarContainer.querySelectorAll(".menu-item");
@@ -1978,6 +2074,9 @@
       if (durBadge) durBadge.innerText = `${activeCropPlan ? activeCropPlan.duration_days : surveyState.duration_days} Days`;
       const taskCount = document.getElementById("card-task-count");
       if (taskCount) taskCount.innerText = `${activeCropPlan?.dispatched_tasks_count || 4} Released`;
+
+      updateLifecyclePipelineUI();
+      updateClockDisplay(currentClockDay);
     }
   }
 
@@ -2400,8 +2499,9 @@
           <div style="font-size:0.85rem; color:#b91c1c; font-weight:700; margin-top:4px;">${disease.name}</div>
           <div style="font-size:0.8rem; color:#475569; margin-top:2px;">Pathogen: ${disease.pest} • Crop Stress: ${Math.round(disease.stressedPct * 100)}%</div>
           <div style="font-size:0.78rem; color:#0369a1; margin-top:2px;">Rx Protocol: ${disease.prescription}</div>
-          <div style="margin-top:10px; display:flex; gap:8px;">
-            <button class="btn-primary" style="height:28px; font-size:0.75rem; background:#dc2626;" onclick="openQuarantineModal('${disease.sector.replace(/'/g, "\\'")}', '${disease.pest.replace(/'/g, "\\'")}')">Establish Biosecurity Quarantine</button>
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-primary" style="height:28px; font-size:0.75rem; background:#059669;" onclick="executePrescriptionDispatch('RX-EMERG-D${disease.day}', '${(disease.pest || disease.name).replace(/'/g, "\\'")}', '${disease.prescription.replace(/'/g, "\\'")}', 'Targeted Drone Mist Canopy Drench')">⚡ Dispatch Spray to Workers</button>
+            <button class="btn-primary" style="height:28px; font-size:0.75rem; background:#dc2626;" onclick="openQuarantineModal('${disease.sector.replace(/'/g, "\\'")}', '${disease.pest.replace(/'/g, "\\'")}')">Establish Quarantine</button>
             <button class="btn-secondary" style="height:28px; font-size:0.75rem;" onclick="switchTab('prescriptions')">View Rx Spray Order</button>
           </div>
         `;
@@ -2412,12 +2512,27 @@
         const rxRow = document.createElement("tr");
         rxRow.id = "rx-emergency-outbreak";
         rxRow.style.background = "#fef2f2";
+        const emergRxId = `RX-EMERG-D${disease.day}`;
+        const emergStatus = localStorage.getItem('rx_status_' + emergRxId) || 'ready';
+        let actionCell = '';
+        if (emergStatus === 'completed') {
+          actionCell = `<span class="card-badge badge-success">✓ COMPLETED & VERIFIED</span>`;
+        } else if (emergStatus === 'dispatched') {
+          actionCell = `<span class="card-badge badge-warning">⚡ DISPATCHED TO WORKERS</span>`;
+        } else {
+          actionCell = `
+            <button class="btn-primary" onclick="executePrescriptionDispatch('${emergRxId}', '${(disease.pest || disease.name).replace(/'/g, "\\'")}', '${disease.prescription.replace(/'/g, "\\'")}', 'Targeted Drone Mist Canopy Drench')" style="height:28px; font-size:0.75rem; padding:0 10px; background:#dc2626; border-radius:4px; cursor:pointer;">
+              ⚡ Dispatch Emergency Spray
+            </button>
+          `;
+        }
+
         rxRow.innerHTML = `
-          <td><code style="color:#dc2626; font-weight:800;">RX-EMERG-D${disease.day}</code></td>
+          <td><code style="color:#dc2626; font-weight:800;">${emergRxId}</code></td>
           <td><strong style="color:#991b1b;">${disease.name} (${disease.sector})</strong></td>
           <td>${disease.prescription}</td>
           <td>Targeted Drone Mist Canopy Drench</td>
-          <td><span class="card-badge badge-danger">EMERGENCY ACTIVE</span></td>
+          <td id="status-cell-${emergRxId}">${actionCell}</td>
         `;
         rxTbody.prepend(rxRow);
       }
@@ -2908,16 +3023,6 @@
     }
     document.getElementById("onboarding-wizard-modal").style.display = "none";
   }
-
-  // Expose wizard methods to window for sidebar sub-menu deep linking
-  window.openOnboardingWizard = openOnboardingWizard;
-  window.jumpToStep = function(step) { jumpToStep(step); };
-  window.openWizardToStep = function(step) {
-    openOnboardingWizard(false);
-    if (typeof step === 'number') {
-      jumpToStep(step);
-    }
-  };
 
   function syncCadreTo3DModel() {
     if (twinAdapter3D && typeof twinAdapter3D.syncWorkersRoster === 'function') {
@@ -3646,9 +3751,14 @@
         }
       }
 
-      // Render plan and refresh profile
+      // Render plan and refresh all calibrated intelligence panels
       renderCalibratedCropPlan(calibratedPlan);
       await loadAgronomistProfile();
+      updateLifecyclePipelineUI();
+      updateClockDisplay(1);
+      await loadSoilAnalysis();
+      await loadCropRotationAdvice();
+      await loadCameraObservations();
       switchTab("cropplan");
     } catch (err) {
       AgriosUI.showToast("Calibration Error", err.message, "❌");
@@ -3703,18 +3813,53 @@
       const rxs = await AgriosAPI.listPrescriptions();
       const tbody = document.getElementById("prescriptions-table-body");
       if (tbody && rxs) {
-        tbody.innerHTML = rxs.map(r => `
-          <tr>
-            <td><code>${r.id}</code></td>
-            <td><strong>${r.diagnosis}</strong></td>
-            <td>${r.active_ingredient}</td>
-            <td>${r.dosage}</td>
-            <td><span class="card-badge badge-success">DISPATCHED TO WORKERS</span></td>
-          </tr>
-        `).join("");
+        tbody.innerHTML = rxs.map(r => {
+          const st = localStorage.getItem('rx_status_' + r.id) || r.status || 'ready';
+          let statusBadge = '';
+          if (st === 'completed') {
+            statusBadge = '<span class="card-badge badge-success">✓ COMPLETED & VERIFIED</span>';
+          } else if (st === 'dispatched') {
+            statusBadge = '<span class="card-badge badge-warning">⚡ DISPATCHED TO WORKERS</span>';
+          } else {
+            statusBadge = `
+              <button class="btn-primary" onclick="executePrescriptionDispatch('${r.id}', '${r.diagnosis.replace(/'/g, "\\'")}', '${r.active_ingredient.replace(/'/g, "\\'")}', '${(r.dosage || 'Standard Dose').replace(/'/g, "\\'")}')" style="height:28px; font-size:0.75rem; padding:0 10px; background:#059669; border-radius:4px; cursor:pointer;">
+                ⚡ Dispatch Spray
+              </button>
+            `;
+          }
+          return `
+            <tr>
+              <td><code>${r.id}</code></td>
+              <td><strong>${r.diagnosis}</strong></td>
+              <td>${r.active_ingredient}</td>
+              <td>${r.dosage}</td>
+              <td id="status-cell-${r.id}">${statusBadge}</td>
+            </tr>
+          `;
+        }).join("");
       }
     } catch (err) {
       console.error("Prescriptions load error:", err);
+    }
+  }
+
+  async function executePrescriptionDispatch(rxId, diagnosis, ingredient, dosage) {
+    try {
+      AgriosUI.showToast("Dispatching Prescription...", `Transmitting spray order ${rxId} to field workers...`, "💊");
+      await AgriosAPI.dispatchPrescription({
+        farm_id: activeFarmId,
+        rx_id: rxId,
+        pathogen: diagnosis,
+        prescription: ingredient,
+        dosage: dosage || "Standard Dose",
+        urgency: "urgent"
+      });
+      localStorage.setItem('rx_status_' + rxId, 'dispatched');
+      AgriosUI.showToast("Prescription Dispatched!", `Field workers notified to apply ${ingredient}. Task entered worker active queue.`, "🚀");
+      loadPrescriptions();
+      loadSubordinates();
+    } catch (e) {
+      AgriosUI.showToast("Dispatch Failed", e.message, "❌");
     }
   }
 
@@ -3748,6 +3893,33 @@
       AgriosUI.showToast("Creation Failed", err.message, "❌");
     } finally {
       btn.disabled = false;
+    }
+  }
+
+  function fillBroadcastTemplate(type) {
+    const crop = getActiveCropName();
+    openBroadcastCircularModal();
+    const subj = document.getElementById("circ-subject");
+    const body = document.getElementById("circ-body");
+    const target = document.getElementById("circ-target");
+    if (!subj || !body) return;
+
+    if (type === 'frost') {
+      subj.value = `URGENT: Ground Frost & Radiative Cooling Inversion Warning for ${crop}`;
+      body.value = `Meteorological radar forecasts surface inversion temp dropping below 3.5°C between 03:00–06:00. Execute light micro-sprinkler misting across all open parcels to release latent heat of fusion and protect tender tillers/flowers.`;
+      if (target) target.value = 'all';
+    } else if (type === 'pest') {
+      subj.value = `CRITICAL ALERT: Spore Inoculum Spread & Prophylactic Spray Advisory`;
+      body.value = `High humidity (>85%) and calm winds have elevated yellow rust and blight spore dispersion risk across District Quadrant 2. Inspect flag leaves and apply recommended bio-antagonist Trichoderma / Propiconazole within 36 hours.`;
+      if (target) target.value = 'farmer';
+    } else if (type === 'irrigation') {
+      subj.value = `WATER RATIONING: Canal Closure & Solar Micro-Drip Schedule`;
+      body.value = `Secondary canal maintenance scheduled for the next 72 hours. Transition ${crop} parcels to nocturnal drip fertigation (1.8 L/hr emitters) between 21:00 and 04:00 to conserve 40% soil moisture.`;
+      if (target) target.value = 'all';
+    } else if (type === 'mandi') {
+      subj.value = `MARKET VOLATILITY: Mandi Procurement Surge (MSP + ₹220/Qtl)`;
+      body.value = `Spot market rate for Grade-A ${crop} has exceeded statutory MSP by 8.4% at the Central Apex Mandi. Farmers with harvest moisture below 12% are advised to book e-NAM transit slots.`;
+      if (target) target.value = 'farmer';
     }
   }
 
@@ -3857,13 +4029,127 @@
     window.print();
   }
 
+  function getActiveCropName() {
+    return localStorage.getItem("agrios_calibrated_crop") || (activeCropPlan ? activeCropPlan.crop_name : null) || "Wheat";
+  }
+
+  function updateLifecyclePipelineUI() {
+    const crop = getActiveCropName();
+    const acres = localStorage.getItem("agrios_calibrated_acres") || (activeCropPlan?.monitored_acres) || "14.5";
+    const duration = activeCropPlan ? activeCropPlan.duration_days : 120;
+    const day = currentClockDay || 1;
+
+    const cropVal = document.getElementById("pipe-crop-val");
+    if (cropVal) cropVal.innerText = crop;
+
+    const acresVal = document.getElementById("pipe-acres-val");
+    if (acresVal) acresVal.innerText = `${acres} Acres`;
+
+    const twinAcresVal = document.getElementById("pipe-twin-acres");
+    if (twinAcresVal) twinAcresVal.innerText = `${acres} Acres`;
+
+    const dayVal = document.getElementById("pipe-day-clock-val");
+    if (dayVal) dayVal.innerText = `Day ${day}`;
+
+    const durVal = document.getElementById("pipe-duration-val");
+    if (durVal) durVal.innerText = `${duration} Days`;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // AGRONOMIC DAY CLOCK & DISPATCH CONTROLLER
+  // ─────────────────────────────────────────────────────────────
+  let currentClockDay = parseInt(localStorage.getItem("agrios_active_dispatched_day") || "1", 10);
+
+  function updateClockDisplay(day) {
+    currentClockDay = parseInt(day, 10) || 1;
+    localStorage.setItem("agrios_active_dispatched_day", currentClockDay);
+
+    const disp = document.getElementById("clock-day-display");
+    if (disp) disp.innerText = `Day ${currentClockDay}`;
+
+    const inp = document.getElementById("jump-day-input");
+    if (inp) inp.value = currentClockDay;
+
+    const btnText = document.getElementById("clock-dispatch-btn-text");
+    if (btnText) btnText.innerText = `Dispatch Day ${currentClockDay} Tasks`;
+
+    const sub = document.getElementById("clock-stage-subtitle");
+    if (sub) {
+      if (currentClockDay <= 15) sub.innerText = "Stage 1: Seedbed Preparation & Basal Sowing";
+      else if (currentClockDay <= 40) sub.innerText = "Stage 2: Root Anchoring, Tillering & Foliar Nutrition";
+      else if (currentClockDay <= 80) sub.innerText = "Stage 3: Vegetative Canopy & Boot Stage Protection";
+      else if (currentClockDay <= 105) sub.innerText = "Stage 4: Inflorescence Panicle Emergence & Grain Filling";
+      else sub.innerText = "Stage 5: Physiological Maturation & Combine Harvesting";
+    }
+
+    updateLifecyclePipelineUI();
+
+    // Update 3D twin day time-slider if present
+    const slider = document.getElementById("dt3d-time-slider");
+    if (slider) {
+      slider.value = currentClockDay;
+      if (typeof window._dt3dOnSliderInput === 'function') {
+        window._dt3dOnSliderInput(slider);
+      }
+    }
+  }
+
+  function stepClock(delta) {
+    const nextDay = Math.max(1, currentClockDay + delta);
+    advanceAgronomicDay(nextDay);
+  }
+
+  function dispatchCurrentClockDay() {
+    dispatchDayTasks(currentClockDay);
+  }
+
+  async function advanceAgronomicDay(day) {
+    const targetDay = parseInt(day, 10) || 1;
+    updateClockDisplay(targetDay);
+    AgriosUI.showToast(`Clock Advanced: Day ${targetDay}`, `Transmitting Day ${targetDay} directives to workforce queues...`, "⏱️");
+    await dispatchDayTasks(targetDay);
+  }
+
+  // Cross-tab real-time task completion sync
+  window.addEventListener("storage", (e) => {
+    if (e.key === "agrios_broadcast_event" && e.newValue) {
+      try {
+        const ev = JSON.parse(e.newValue);
+        if (ev.event_type === "TASK_COMPLETED") {
+          const task = ev.payload?.task || {};
+          if (task.task_type === "spray" || (task.title && task.title.toLowerCase().includes("spray"))) {
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith("rx_status_") && localStorage.getItem(k) === "dispatched") {
+                localStorage.setItem(k, "completed");
+              }
+            }
+            loadPrescriptions();
+            AgriosUI.showToast(
+              "Spray Task Completed & Verified",
+              `Worker completed "${task.title || 'Spray Directive'}". Canopy disinfected!`,
+              "✅"
+            );
+            if (twinAdapter3D && typeof twinAdapter3D.setOutbreakBeacon === 'function') {
+              twinAdapter3D.setOutbreakBeacon(false);
+            }
+          }
+          loadSubordinates();
+        }
+      } catch (err) {
+        console.warn("Cross-tab event error:", err);
+      }
+    }
+  });
+
   async function loadCameraObservations() {
     try {
-      const obs = await AgriosAPI.getPathogenObservations();
+      const crop = getActiveCropName();
+      const obs = await AgriosAPI.getPathogenObservations(crop);
       const tbody = document.getElementById("pathogen-observations-body");
       if (!tbody) return;
       if (!obs || obs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:#64748b;">No active pathogen alerts flagged by vision cameras. Field canopy pristine.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:#64748b;">No active pathogen alerts flagged for ${crop}. Field canopy pristine.</td></tr>`;
         return;
       }
       tbody.innerHTML = obs.map(o => `
@@ -3880,8 +4166,8 @@
           </td>
           <td>
             ${!o.status.includes('Certified') ? `
-              <button class="btn-primary" onclick="certifyPrescription('${o.id}', '${o.pathogen}')" style="height:30px; font-size:0.75rem; padding:0 8px;">
-                Certify Spray Rx
+              <button class="btn-primary" onclick="certifyPrescription('${o.id}', '${o.pathogen.replace(/'/g, "\\'")}')" style="height:30px; font-size:0.75rem; padding:0 8px;">
+                Certify & Dispatch Rx
               </button>
             ` : `<span style="font-size:0.75rem; color:#059669; font-weight:700;">✓ Rx Dispatched</span>`}
           </td>
@@ -3924,39 +4210,61 @@
 
   async function loadSoilAnalysis() {
     try {
-      const data = await AgriosAPI.getSoilAnalysis(activeFarmId);
+      const crop = getActiveCropName();
+      const data = await AgriosAPI.getSoilAnalysis(activeFarmId, crop);
       const container = document.getElementById("soil-analysis-body");
       if (!container || !data) return;
       container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:6px 12px; background:#f0fdf4; border-radius:6px; border:1px solid #bbf7d0;">
+          <span style="font-size:0.8rem; font-weight:700; color:#166534;">🌾 Calibrated Crop: ${crop} • ${data.farm_name || 'Model Farm'}</span>
+          <span class="card-badge badge-success" style="font-size:0.7rem;">Active Soil Profile</span>
+        </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:1rem;">
           <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
             <div style="font-size:0.75rem; color:#64748b;">Soil pH & Texture</div>
-            <div style="font-size:1.1rem; font-weight:700; color:#0f172a;">${data.ph} • Loam</div>
-            <div style="font-size:0.7rem; color:#059669;">Optimal Neutral</div>
+            <div style="font-size:1.05rem; font-weight:700; color:#0f172a;">${data.ph} • ${data.soil_texture ? data.soil_texture.split(' ')[0] : 'Loam'}</div>
+            <div style="font-size:0.7rem; color:#059669;">EC: ${data.ec_ds_m || 0.42} dS/m</div>
           </div>
           <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
             <div style="font-size:0.75rem; color:#64748b;">Available Nitrogen (N)</div>
-            <div style="font-size:1.1rem; font-weight:700; color:#d97706;">${data.npk_levels.nitrogen_kg_ha} kg/ha</div>
-            <div style="font-size:0.7rem; color:#d97706;">${data.npk_levels.nitrogen_status}</div>
+            <div style="font-size:1.05rem; font-weight:700; color:#d97706;">${data.npk_levels?.nitrogen_kg_ha || 210} kg/ha</div>
+            <div style="font-size:0.7rem; color:#d97706;">${data.npk_levels?.nitrogen_status || 'Medium'}</div>
           </div>
           <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
             <div style="font-size:0.75rem; color:#64748b;">Phosphorus (P2O5)</div>
-            <div style="font-size:1.1rem; font-weight:700; color:#059669;">${data.npk_levels.phosphorus_kg_ha} kg/ha</div>
-            <div style="font-size:0.7rem; color:#059669;">${data.npk_levels.phosphorus_status}</div>
+            <div style="font-size:1.05rem; font-weight:700; color:#059669;">${data.npk_levels?.phosphorus_kg_ha || 22} kg/ha</div>
+            <div style="font-size:0.7rem; color:#059669;">${data.npk_levels?.phosphorus_status || 'Medium'}</div>
           </div>
           <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
             <div style="font-size:0.75rem; color:#64748b;">Potassium (K2O)</div>
-            <div style="font-size:1.1rem; font-weight:700; color:#0284c7;">${data.npk_levels.potassium_kg_ha} kg/ha</div>
-            <div style="font-size:0.7rem; color:#0284c7;">${data.npk_levels.potassium_status}</div>
+            <div style="font-size:1.05rem; font-weight:700; color:#0284c7;">${data.npk_levels?.potassium_kg_ha || 250} kg/ha</div>
+            <div style="font-size:0.7rem; color:#0284c7;">${data.npk_levels?.potassium_status || 'High'}</div>
           </div>
         </div>
+
+        ${data.micronutrients ? `
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:10px; font-size:0.75rem;">
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <span style="color:#64748b;">Zinc (Zn):</span> <strong style="color:#0f172a;">${data.micronutrients.zinc_ppm} ppm</strong>
+            <span style="color:${(data.micronutrients.zinc_status || '').includes('Deficient') ? '#dc2626' : '#059669'}; display:block;">${data.micronutrients.zinc_status}</span>
+          </div>
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <span style="color:#64748b;">Iron (Fe):</span> <strong style="color:#0f172a;">${data.micronutrients.iron_ppm} ppm</strong>
+            <span style="color:#059669; display:block;">${data.micronutrients.iron_status}</span>
+          </div>
+          <div style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+            <span style="color:#64748b;">Boron (B):</span> <strong style="color:#0f172a;">${data.micronutrients.boron_ppm} ppm</strong>
+            <span style="color:${(data.micronutrients.boron_status || '').includes('Deficient') ? '#dc2626' : '#059669'}; display:block;">${data.micronutrients.boron_status}</span>
+          </div>
+        </div>
+        ` : ''}
 
         <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:12px; margin-top:10px;">
           <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#065f46; letter-spacing:0.05em; margin-bottom:4px;">
             Agronomic Fertilizer Directives:
           </div>
           <ul style="margin:0; padding-left:1.2rem; font-size:0.8rem; color:#064e3b; line-height:1.4;">
-            ${data.scientific_recommendations.map(r => `<li>${r}</li>`).join("")}
+            ${(data.scientific_recommendations || []).map(r => `<li>${r}</li>`).join("")}
           </ul>
         </div>
       `;
@@ -3967,12 +4275,17 @@
 
   async function loadCropRotationAdvice() {
     try {
-      const data = await AgriosAPI.getCropRotationAdvice();
+      const crop = getActiveCropName();
+      const data = await AgriosAPI.getCropRotationAdvice(crop);
       const container = document.getElementById("crop-rotation-body");
       if (!container || !data) return;
       container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:6px 12px; background:#f0fdf4; border-radius:6px; border:1px solid #bbf7d0; font-size:0.78rem;">
+          <strong style="color:#166534;">Rotation Base: ${data.current_crop || crop}</strong>
+          <span style="color:#64748b;">${data.agro_climatic_zone || 'Alluvial Agro-Climatic Zone'}</span>
+        </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          ${data.optimal_rotation_sequence.map(s => `
+          ${(data.optimal_rotation_sequence || []).map(s => `
             <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
               <div style="width:24px; height:24px; border-radius:50%; background:#ecfdf5; color:#059669; font-weight:700; font-size:0.75rem; display:flex; align-items:center; justify-content:center;">
                 ${s.sequence}
@@ -3989,11 +4302,11 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; font-size:0.75rem;">
           <div style="background:#f1f5f9; padding:8px; border-radius:6px;">
             <strong style="color:#0f172a;">Economic Benefit:</strong>
-            <div style="color:#059669; font-weight:600;">${data.benefits.nitrogen_savings_inr}</div>
+            <div style="color:#059669; font-weight:600;">${data.benefits?.nitrogen_savings_inr || '₹4,200/acre saved'}</div>
           </div>
           <div style="background:#f1f5f9; padding:8px; border-radius:6px;">
             <strong style="color:#0f172a;">Pathogen Break:</strong>
-            <div style="color:#0284c7; font-weight:600;">${data.benefits.pathogen_break_rate}</div>
+            <div style="color:#0284c7; font-weight:600;">${data.benefits?.pathogen_break_rate || '88% break rate'}</div>
           </div>
         </div>
       `;

@@ -1066,10 +1066,6 @@
   }
 
   function updateSidebarActive(tabId) {
-    if (window.AgriosUI && typeof window.AgriosUI.updateSidebarActive === 'function') {
-      AgriosUI.updateSidebarActive(tabId);
-      return;
-    }
     const sidebarContainer = document.getElementById("sidebar-container");
     if (!sidebarContainer) return;
     const items = sidebarContainer.querySelectorAll(".menu-item");
@@ -1169,11 +1165,14 @@
         return;
       }
 
-      // Strictly filter to show only tasks matching the Agronomist's assigned day
-      let displayedTasks = tasks.filter(t => `${t.title || ''} ${t.description || ''}`.includes(`Day ${activeDay}`));
-      if (displayedTasks.length === 0) {
-        displayedTasks = tasks;
-      }
+      // Strictly filter to show ONLY tasks matching the Agronomist's assigned growth day
+      // (or urgent emergency spray / biosecurity tasks dispatched for this farm)
+      let displayedTasks = tasks.filter(t => {
+        const text = `${t.title || ''} ${t.description || ''}`;
+        const isDayTask = text.includes(`Day ${activeDay}`) || text.includes(`Day ${activeDay}:`) || text.includes(`Day ${activeDay} `);
+        const isEmergencySpray = text.includes("RX-") || text.includes("Emergency Spray") || t.task_type === "spray";
+        return isDayTask || isEmergencySpray;
+      });
 
       const pending = displayedTasks.filter(t => (t.status || "").toUpperCase() !== "COMPLETED");
       const done = displayedTasks.filter(t => (t.status || "").toUpperCase() === "COMPLETED");
@@ -1182,19 +1181,30 @@
       document.getElementById("worker-completed-count").innerText = done.length;
 
       if (displayedTasks.length === 0) {
-        mount.innerHTML = `<div style="text-align:center; padding:1.5rem; color:#64748b;">No tasks found for Day ${activeDay}. Waiting for Agronomist dispatch.</div>`;
+        mount.innerHTML = `
+          <div style="text-align:center; padding:2rem 1.5rem; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:10px; color:#475569;">
+            <div style="font-size:2rem; margin-bottom:8px;">⏳</div>
+            <strong style="font-size:1rem; color:#0f172a; display:block; margin-bottom:4px;">No Tasks Dispatched for Day ${activeDay} Yet</strong>
+            <p style="font-size:0.82rem; margin:0 0 12px 0; color:#64748b;">Dr. Priya Sharma (Lead Agronomist) has not circulated Day ${activeDay} field operations to your work queue.</p>
+            <button class="btn-secondary" onclick="loadWorkerTasks()" style="height:32px; font-size:0.75rem; padding:0 12px;">
+              🔄 Refresh Queue
+            </button>
+          </div>
+        `;
         return;
       }
 
       mount.innerHTML = displayedTasks.map(t => {
         const isDone = (t.status || "").toUpperCase() === "COMPLETED";
+        const isSpray = (t.task_type === 'spray') || (t.title || '').includes('Spray') || (t.title || '').includes('RX-');
         return `
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid ${isDone ? '#10b981' : '#f59e0b'}; border-radius:8px; padding:1.25rem;">
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid ${isDone ? '#10b981' : (isSpray ? '#dc2626' : '#f59e0b')}; border-radius:8px; padding:1.25rem;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <strong style="font-size:0.95rem; color:#0f172a;">${t.title}</strong>
                 <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
-                  Category: ${t.category} • Priority: <span class="card-badge ${t.priority === 'URGENT' ? 'badge-danger' : 'badge-warning'}">${t.priority}</span>
+                  Category: ${t.category || t.task_type} • Priority: <span class="card-badge ${t.priority === 'URGENT' || isSpray ? 'badge-danger' : 'badge-warning'}">${t.priority}</span>
+                  ${isSpray ? `<span class="card-badge badge-danger" style="margin-left:4px;">💊 Chemical Spray Rx</span>` : ''}
                 </div>
               </div>
               <span class="card-badge ${isDone ? 'badge-success' : 'badge-warning'}">${t.status}</span>
@@ -1202,8 +1212,8 @@
             <p style="font-size:0.85rem; color:#475569; margin:8px 0;">${t.description || 'Follow standard agronomic SOP.'}</p>
             <div style="display:flex; justify-content:flex-end;">
               ${!isDone ? `
-                <button class="btn-primary" onclick="completeTask('${t.id}')" style="height:32px; font-size:0.75rem; padding:0 10px;">
-                  ✓ Execute & Verify GPS Fix
+                <button class="btn-primary" onclick="completeTask('${t.id}')" style="height:32px; font-size:0.75rem; padding:0 12px; background:${isSpray ? '#dc2626' : '#059669'};">
+                  ${isSpray ? '✓ Execute Spray & Log Chemical Dose' : '✓ Execute & Verify GPS Fix'}
                 </button>
               ` : `<span style="font-size:0.75rem; color:#059669; font-weight:700;">✓ Verified & Logged</span>`}
             </div>
@@ -1221,13 +1231,22 @@
       const res = await AgriosAPI.updateTaskStatus(taskId, "COMPLETED");
       AgriosUI.showToast("Task Verified & Logged", "GPS coordinates latched. Work log recorded in database.", "✓");
 
-      // Broadcast across tabs
+      // Broadcast across tabs and notify Agronomist
+      const completionPayload = {
+        event_type: "TASK_COMPLETED",
+        timestamp: Date.now(),
+        payload: { 
+          id: taskId, 
+          task_id: taskId,
+          title: res ? res.title : "Field Task", 
+          worker_id: "Sunita Devi (WORKER-001)",
+          worker_name: "Sunita Devi"
+        }
+      };
       if (window.broadcastAgriosEvent) {
-        window.broadcastAgriosEvent({
-          event_type: "TASK_COMPLETED",
-          payload: { id: taskId, title: res ? res.title : "Field Task", worker_id: "Sunita Devi (WORKER-001)" }
-        });
+        window.broadcastAgriosEvent(completionPayload);
       }
+      localStorage.setItem("agrios_broadcast_event", JSON.stringify(completionPayload));
 
       await loadWorkerTasks();
       if (window.AgriosNotifications) AgriosNotifications.loadNotifications();

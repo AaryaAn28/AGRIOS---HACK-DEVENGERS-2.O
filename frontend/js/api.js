@@ -536,12 +536,14 @@ const AgriosAPI = {
     });
   },
 
-  async getSoilAnalysis(farmId) {
-    return await this.request(`/api/agronomist/soil-analysis/${farmId || 'default'}`);
+  async getSoilAnalysis(farmId, cropName) {
+    const url = `/api/agronomist/soil-analysis/${farmId || 'default'}` + (cropName ? `?crop_name=${encodeURIComponent(cropName)}` : '');
+    return await this.request(url);
   },
 
-  async getCropRotationAdvice() {
-    return await this.request("/api/agronomist/crop-rotation-advice");
+  async getCropRotationAdvice(cropName) {
+    const url = "/api/agronomist/crop-rotation-advice" + (cropName ? `?crop_name=${encodeURIComponent(cropName)}` : '');
+    return await this.request(url);
   },
 
   async getSprayWeatherCheck() {
@@ -552,8 +554,16 @@ const AgriosAPI = {
     return await this.request("/api/agronomist/ipm-protocols");
   },
 
-  async getPathogenObservations() {
-    return await this.request("/api/agronomist/pathogen-observations");
+  async getPathogenObservations(cropName) {
+    const url = "/api/agronomist/pathogen-observations" + (cropName ? `?crop_name=${encodeURIComponent(cropName)}` : '');
+    return await this.request(url);
+  },
+
+  async dispatchPrescription(data) {
+    return await this.request("/api/agronomist/dispatch-prescription", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
   },
 
   async getBroadcastHistory() {

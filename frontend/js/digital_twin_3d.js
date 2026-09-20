@@ -22,6 +22,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getCropGeometry, createCropMaterial, normalizeCropKey } from './crop_geometries.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -282,9 +283,16 @@ export class AgriosDigitalTwin3D {
     // Water Spraying Particle System
     this.sprayParticlesPool = [];
 
+    // 3D GLTF Model Loader & Asset Cache
+    this.gltfLoader = new GLTFLoader();
+    this._modelCache = {};
+
     // Web Audio Native Synthesizer & Procedural Ambience State
     this.soundMuted = false;
+    this.soundVolume = 0.20;
     this._audioCtx = null;
+    this._masterGain = null;
+    this._compressor = null;
     this._ambientSoundNodes = {
       birdTimer: null,
       rainSource: null,
@@ -1218,6 +1226,59 @@ export class AgriosDigitalTwin3D {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // 3D GLTF ASSET LOADER & CACHE MANAGER
+  // ─────────────────────────────────────────────────────────────
+  _loadModel(url, onLoad, onError) {
+    if (this._modelCache && this._modelCache[url]) {
+      if (onLoad) onLoad(this._modelCache[url]);
+      return;
+    }
+    if (!this.gltfLoader) {
+      this.gltfLoader = new GLTFLoader();
+    }
+    this.gltfLoader.load(
+      url,
+      (gltf) => {
+        const root = gltf.scene;
+        // Compute bounding box and normalize to ~1 unit
+        const bbox = new THREE.Box3().setFromObject(root);
+        const sz = new THREE.Vector3();
+        bbox.getSize(sz);
+        const maxDim = Math.max(sz.x, sz.y, sz.z) || 1.0;
+        const normScale = 1.0 / maxDim;
+        root.scale.set(normScale, normScale, normScale);
+
+        // Center root around its geometry origin
+        const center = new THREE.Vector3();
+        bbox.getCenter(center);
+        root.position.sub(center.multiplyScalar(normScale));
+
+        root.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.material) {
+              child.material.roughness = 0.35;
+              child.material.metalness = 0.05;
+            }
+          }
+        });
+
+        const wrapper = new THREE.Group();
+        wrapper.add(root);
+        if (!this._modelCache) this._modelCache = {};
+        this._modelCache[url] = wrapper;
+        if (onLoad) onLoad(wrapper);
+      },
+      undefined,
+      (err) => {
+        console.warn(`[3D Twin Model Loader] Falling back to procedural geometry for ${url}:`, err);
+        if (onError) onError(err);
+      }
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 2. COMMERCIAL HORTICULTURE & ORCHARD WORLD ARCHITECTURE
   // ─────────────────────────────────────────────────────────────
   _buildHorticultureOrchard() {
@@ -1310,7 +1371,7 @@ export class AgriosDigitalTwin3D {
         }
         treeGroup.add(canopyGroup);
 
-        // Hanging Fruit Meshes
+        // Hanging Fruit Meshes (procedural initial fallback)
         const fruits = [];
         const fruitCount = 5 + Math.floor(Math.random() * 4);
         for (let f = 0; f < fruitCount; f++) {
@@ -1362,6 +1423,60 @@ export class AgriosDigitalTwin3D {
       crate.castShadow = true;
       this.groups.infrastructure.add(crate);
     }
+
+    // 4. Asynchronously load real 3D GLB model and replace fruits on trees and crates
+    let modelPath = 'assets/models/mango.glb';
+    let realScale = 0.38;
+    if (cLower.includes('citrus') || cLower.includes('orange')) {
+      modelPath = 'assets/models/orange.glb';
+      realScale = 0.34;
+    } else if (cLower.includes('lemon')) {
+      modelPath = 'assets/models/lemon.glb';
+      realScale = 0.32;
+    } else if (cLower.includes('apple')) {
+      modelPath = 'assets/models/apple.glb';
+      realScale = 0.34;
+    }
+
+    this._loadModel(modelPath, (cachedWrapper) => {
+      // Upgrade hanging tree fruits with real GLB clones
+      this.horticultureTrees.forEach((treeGroup) => {
+        if (!treeGroup.userData || !treeGroup.userData.fruits) return;
+        const oldFruits = treeGroup.userData.fruits;
+        const newFruits = [];
+        oldFruits.forEach((fMesh) => {
+          const pos = fMesh.position.clone();
+          treeGroup.remove(fMesh);
+          const realFruit = cachedWrapper.clone();
+          realFruit.scale.set(realScale, realScale, realScale);
+          realFruit.position.copy(pos);
+          realFruit.rotation.set(
+            (Math.random() - 0.5) * 0.4,
+            Math.random() * Math.PI * 2,
+            (Math.random() - 0.5) * 0.4
+          );
+          treeGroup.add(realFruit);
+          newFruits.push(realFruit);
+        });
+        treeGroup.userData.fruits = newFruits;
+        treeGroup.userData.isGLB = true;
+      });
+
+      // Fill harvest crates with real harvested fruit GLB models!
+      for (let cr = 0; cr < 6; cr++) {
+        const crateX = minX + 4 + cr * 1.5;
+        const crateZ = minZ + 4;
+        for (let ix = -0.3; ix <= 0.3; ix += 0.3) {
+          for (let iz = -0.2; iz <= 0.2; iz += 0.2) {
+            const crFruit = cachedWrapper.clone();
+            crFruit.scale.set(realScale * 0.85, realScale * 0.85, realScale * 0.85);
+            crFruit.position.set(crateX + ix, 0.82, crateZ + iz);
+            crFruit.rotation.set(Math.random() * 0.3, Math.random() * Math.PI, Math.random() * 0.3);
+            this.groups.infrastructure.add(crFruit);
+          }
+        }
+      }
+    });
 
     const orchardLabel = this._createLabel(`🍎 Commercial High-Density ${rawCropName} Orchard (${cols * rows} Trees)`, new THREE.Vector3(0, 7.5, 0), '#f59e0b', '0.78rem', true);
     this.groups.labels.add(orchardLabel);
@@ -1584,6 +1699,25 @@ export class AgriosDigitalTwin3D {
 
     trellisGroup.userData = { type: 'tomato_trellis', name: 'High-Tensile Wire Trellis Grid (Himsona Protected)' };
     this.groups.fields.add(trellisGroup);
+
+    // Asynchronously load real 3D GLB tomato model and enhance vine clusters
+    this._loadModel('assets/models/tomato.glb', (cachedWrapper) => {
+      const newTomatoes = [];
+      this.tomatoTrellises.forEach((tMesh) => {
+        const pos = tMesh.position.clone();
+        const parent = tMesh.parent;
+        if (!parent) return;
+        parent.remove(tMesh);
+        const realTomato = cachedWrapper.clone();
+        const s = 0.22 + Math.random() * 0.05;
+        realTomato.scale.set(s, s, s);
+        realTomato.position.copy(pos);
+        realTomato.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.5);
+        parent.add(realTomato);
+        newTomatoes.push(realTomato);
+      });
+      this.tomatoTrellises = newTomatoes;
+    });
 
     const label = this._createLabel('🍅 Protected Tomato Trellis Grid', new THREE.Vector3(0, 3.5, 0), '#ef4444', '0.75rem', true);
     this.groups.labels.add(label);
@@ -4132,6 +4266,29 @@ export class AgriosDigitalTwin3D {
     if (this._audioCtx && this._audioCtx.state === 'suspended') {
       this._audioCtx.resume();
     }
+    if (this._audioCtx && !this._masterGain) {
+      // Gentle master volume bus (default 0.20)
+      this._masterGain = this._audioCtx.createGain();
+      this._masterGain.gain.setValueAtTime(this.soundVolume || 0.20, this._audioCtx.currentTime);
+
+      // Dynamics compressor / soft limiter to eliminate clicks, pops, and harsh bursts
+      this._compressor = this._audioCtx.createDynamicsCompressor();
+      this._compressor.threshold.setValueAtTime(-18, this._audioCtx.currentTime);
+      this._compressor.knee.setValueAtTime(12, this._audioCtx.currentTime);
+      this._compressor.ratio.setValueAtTime(6, this._audioCtx.currentTime);
+      this._compressor.attack.setValueAtTime(0.005, this._audioCtx.currentTime);
+      this._compressor.release.setValueAtTime(0.25, this._audioCtx.currentTime);
+
+      this._masterGain.connect(this._compressor);
+      this._compressor.connect(this._audioCtx.destination);
+    }
+  }
+
+  setSoundVolume(val) {
+    this.soundVolume = Math.max(0, Math.min(1, parseFloat(val) || 0.20));
+    if (this._masterGain && this._audioCtx) {
+      this._masterGain.gain.setValueAtTime(this.soundVolume, this._audioCtx.currentTime);
+    }
   }
 
   toggleSound() {
@@ -4188,16 +4345,16 @@ export class AgriosDigitalTwin3D {
     }
   }
 
-  // Procedural FM Bird Song Synthesizer (Authentic High-Pitch Warbles & Chirps)
+  // Soothing Procedural Morning Birdsong (Gentle Wood Thrush & Field Sparrows)
   _playBirdChirp() {
     if (this.soundMuted) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
       const now = ctx.currentTime;
 
-      // FM Carrier & Modulator
+      // FM Carrier & Modulator with pure, soft sine waves
       const carrier = ctx.createOscillator();
       const modulator = ctx.createOscillator();
       const modGain = ctx.createGain();
@@ -4206,43 +4363,44 @@ export class AgriosDigitalTwin3D {
       carrier.type = 'sine';
       modulator.type = 'sine';
 
-      const baseFreq = 2600 + Math.random() * 1200;
+      // Gentle mid-range song frequency (1600-2200 Hz instead of piercing 3800Hz)
+      const baseFreq = 1600 + Math.random() * 500;
       carrier.frequency.setValueAtTime(baseFreq, now);
-      carrier.frequency.exponentialRampToValueAtTime(baseFreq * 1.35, now + 0.05);
-      carrier.frequency.exponentialRampToValueAtTime(baseFreq * 0.85, now + 0.12);
+      carrier.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.06);
+      carrier.frequency.exponentialRampToValueAtTime(baseFreq * 0.95, now + 0.15);
 
-      modulator.frequency.setValueAtTime(25 + Math.random() * 20, now);
-      modGain.gain.setValueAtTime(250 + Math.random() * 150, now);
+      modulator.frequency.setValueAtTime(6.0, now); // Subtle natural vibrato
+      modGain.gain.setValueAtTime(25, now);
 
-      mainGain.gain.setValueAtTime(0.001, now);
-      mainGain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
-      mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      mainGain.gain.setValueAtTime(0.0001, now);
+      mainGain.gain.exponentialRampToValueAtTime(0.045, now + 0.03); // Soothing, soft volume
+      mainGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
 
       modulator.connect(modGain);
       modGain.connect(carrier.frequency);
       carrier.connect(mainGain);
-      mainGain.connect(ctx.destination);
+      mainGain.connect(this._masterGain);
 
       carrier.start(now);
       modulator.start(now);
-      carrier.stop(now + 0.16);
-      modulator.stop(now + 0.16);
+      carrier.stop(now + 0.20);
+      modulator.stop(now + 0.20);
 
-      // Natural echo warble chirp
-      if (Math.random() > 0.4) {
+      // Subtle soft second chirp echo in distance
+      if (Math.random() > 0.5) {
         const echoCarrier = ctx.createOscillator();
         const echoGain = ctx.createGain();
         echoCarrier.type = 'sine';
-        const echoTime = now + 0.18;
-        echoCarrier.frequency.setValueAtTime(baseFreq * 1.15, echoTime);
-        echoCarrier.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, echoTime + 0.1);
-        echoGain.gain.setValueAtTime(0.001, echoTime);
-        echoGain.gain.exponentialRampToValueAtTime(0.12, echoTime + 0.02);
-        echoGain.gain.exponentialRampToValueAtTime(0.001, echoTime + 0.11);
+        const echoTime = now + 0.22;
+        echoCarrier.frequency.setValueAtTime(baseFreq * 1.1, echoTime);
+        echoCarrier.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, echoTime + 0.12);
+        echoGain.gain.setValueAtTime(0.0001, echoTime);
+        echoGain.gain.exponentialRampToValueAtTime(0.025, echoTime + 0.03);
+        echoGain.gain.exponentialRampToValueAtTime(0.0001, echoTime + 0.15);
         echoCarrier.connect(echoGain);
-        echoGain.connect(ctx.destination);
+        echoGain.connect(this._masterGain);
         echoCarrier.start(echoTime);
-        echoCarrier.stop(echoTime + 0.12);
+        echoCarrier.stop(echoTime + 0.16);
       }
     } catch (_) {}
   }
@@ -4254,10 +4412,10 @@ export class AgriosDigitalTwin3D {
         return;
       }
       this._playBirdChirp();
-      const delay = 3500 + Math.random() * 4500;
+      const delay = 4000 + Math.random() * 5000;
       this._ambientSoundNodes.birdTimer = setTimeout(scheduleNext, delay);
     };
-    this._ambientSoundNodes.birdTimer = setTimeout(scheduleNext, 1200);
+    this._ambientSoundNodes.birdTimer = setTimeout(scheduleNext, 1500);
   }
 
   _stopAmbientBirds() {
@@ -4267,12 +4425,12 @@ export class AgriosDigitalTwin3D {
     }
   }
 
-  // Continuous Rain Wash & Droplet Transients Synthesizer
+  // Soothing Gentle Rain on Farm Foliage
   _startRainSound() {
     if (this.soundMuted || this._ambientSoundNodes.rainSource) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
       const bufferSize = ctx.sampleRate * 2;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -4284,18 +4442,19 @@ export class AgriosDigitalTwin3D {
       source.buffer = buffer;
       source.loop = true;
 
+      // Gentle lowpass filter removing harsh hiss
       const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1400, ctx.currentTime);
-      filter.Q.value = 0.85;
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(720, ctx.currentTime);
+      filter.Q.value = 0.7;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.001, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 1.0);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 1.2);
 
       source.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this._masterGain);
 
       source.start();
       this._ambientSoundNodes.rainSource = source;
@@ -4308,25 +4467,25 @@ export class AgriosDigitalTwin3D {
     try {
       const { rainSource, rainGain } = this._ambientSoundNodes;
       const now = this._audioCtx.currentTime;
-      rainGain.gain.linearRampToValueAtTime(0.001, now + 0.5);
+      rainGain.gain.linearRampToValueAtTime(0.0001, now + 0.6);
       setTimeout(() => {
         try { rainSource.stop(); } catch (_) {}
-      }, 550);
+      }, 650);
     } catch (_) {}
     this._ambientSoundNodes.rainSource = null;
     this._ambientSoundNodes.rainGain = null;
   }
 
-  // Arid Heatwave Wind & Cicadas Synthesizer
+  // Gentle Warm Breeze with Subtle Distant Cicadas
   _startHeatwaveSound() {
     if (this.soundMuted || this._ambientSoundNodes.heatwaveSource) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
       const now = ctx.currentTime;
 
-      // Hot dry wind noise
+      // Soft warm wind noise
       const bufferSize = ctx.sampleRate * 2;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -4336,32 +4495,32 @@ export class AgriosDigitalTwin3D {
       source.loop = true;
 
       const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(800, now);
-      filter.Q.value = 4.5;
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(450, now);
+      filter.Q.value = 1.2;
 
-      // Rhythmic summer cicadas
+      // Distant gentle cicada in warm afternoon (soft sine wave, not harsh square)
       const cicadaOsc = ctx.createOscillator();
       cicadaOsc.type = 'sine';
-      cicadaOsc.frequency.setValueAtTime(4600, now);
+      cicadaOsc.frequency.setValueAtTime(3200, now);
 
       const cicadaLfo = ctx.createOscillator();
-      cicadaLfo.type = 'square';
-      cicadaLfo.frequency.setValueAtTime(7.5, now);
+      cicadaLfo.type = 'sine';
+      cicadaLfo.frequency.setValueAtTime(3.5, now);
 
       const cicadaGain = ctx.createGain();
-      cicadaGain.gain.setValueAtTime(0.06, now);
+      cicadaGain.gain.setValueAtTime(0.015, now);
       cicadaLfo.connect(cicadaGain.gain);
 
       const mainGain = ctx.createGain();
-      mainGain.gain.setValueAtTime(0.001, now);
-      mainGain.gain.linearRampToValueAtTime(0.18, now + 1.0);
+      mainGain.gain.setValueAtTime(0.0001, now);
+      mainGain.gain.linearRampToValueAtTime(0.05, now + 1.2);
 
       source.connect(filter);
       filter.connect(mainGain);
       cicadaOsc.connect(cicadaGain);
       cicadaGain.connect(mainGain);
-      mainGain.connect(ctx.destination);
+      mainGain.connect(this._masterGain);
 
       source.start();
       cicadaOsc.start();
@@ -4377,47 +4536,47 @@ export class AgriosDigitalTwin3D {
     try {
       const { heatwaveSource, heatwaveGain } = this._ambientSoundNodes;
       const now = this._audioCtx.currentTime;
-      heatwaveGain.gain.linearRampToValueAtTime(0.001, now + 0.4);
+      heatwaveGain.gain.linearRampToValueAtTime(0.0001, now + 0.5);
       setTimeout(() => {
         try {
           heatwaveSource.source.stop();
           heatwaveSource.cicadaOsc.stop();
           heatwaveSource.cicadaLfo.stop();
         } catch (_) {}
-      }, 450);
+      }, 550);
     } catch (_) {}
     this._ambientSoundNodes.heatwaveSource = null;
     this._ambientSoundNodes.heatwaveGain = null;
   }
 
-  // Nocturnal Summer Night Crickets & Owl Chime
+  // Peaceful Nocturnal Meadow Crickets (Gentle Sine Modulation)
   _startNightSound() {
     if (this.soundMuted || this._ambientSoundNodes.nightSource) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
       const now = ctx.currentTime;
 
       const osc = ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(4300, now);
+      osc.frequency.setValueAtTime(2900, now);
 
       const lfo = ctx.createOscillator();
-      lfo.type = 'square';
-      lfo.frequency.setValueAtTime(14, now);
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(8.0, now);
 
       const lfoGain = ctx.createGain();
-      lfoGain.gain.setValueAtTime(0.04, now);
+      lfoGain.gain.setValueAtTime(0.018, now);
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.15, now + 1.0);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.04, now + 1.2);
 
       lfo.connect(lfoGain.gain);
       osc.connect(lfoGain);
       lfoGain.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this._masterGain);
 
       osc.start();
       lfo.start();
@@ -4432,54 +4591,57 @@ export class AgriosDigitalTwin3D {
     try {
       const { nightSource, nightGain } = this._ambientSoundNodes;
       const now = this._audioCtx.currentTime;
-      nightGain.gain.linearRampToValueAtTime(0.001, now + 0.4);
+      nightGain.gain.linearRampToValueAtTime(0.0001, now + 0.5);
       setTimeout(() => {
         try {
           nightSource.osc.stop();
           nightSource.lfo.stop();
         } catch (_) {}
-      }, 450);
+      }, 550);
     } catch (_) {}
     this._ambientSoundNodes.nightSource = null;
     this._ambientSoundNodes.nightGain = null;
   }
 
-  // Authentic 2-Cylinder Diesel Tractor Engine Rumble (Chug-Chug-Chug)
+  // Warm, Deep, Pleasant 2-Cylinder Diesel Purr (Muffled & Relaxing)
   _startTractorSound() {
     if (this.soundMuted || this._tractorSoundNodes) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
       const now = ctx.currentTime;
 
+      // Soft triangle waves for pleasant low-end warmth
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
-      osc1.type = 'sawtooth';
-      osc2.type = 'triangle';
-      osc1.frequency.setValueAtTime(48, now);
-      osc2.frequency.setValueAtTime(51.5, now);
+      osc1.type = 'triangle';
+      osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(36, now);
+      osc2.frequency.setValueAtTime(40.5, now);
 
+      // Soft sine LFO for rhythmic idle pulse
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
-      lfo.type = 'square';
-      lfo.frequency.setValueAtTime(8.5, now);
-      lfoGain.gain.setValueAtTime(0.4, now);
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(5.2, now);
+      lfoGain.gain.setValueAtTime(0.2, now);
 
+      // Deep lowpass filter to remove all harsh buzzing
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(190, now);
-      filter.Q.value = 2.4;
+      filter.frequency.setValueAtTime(110, now);
+      filter.Q.value = 1.1;
 
       const mainGain = ctx.createGain();
-      mainGain.gain.setValueAtTime(0.001, now);
-      mainGain.gain.linearRampToValueAtTime(0.25, now + 0.5);
+      mainGain.gain.setValueAtTime(0.0001, now);
+      mainGain.gain.linearRampToValueAtTime(0.065, now + 0.8);
 
       lfo.connect(mainGain.gain);
       osc1.connect(filter);
       osc2.connect(filter);
       filter.connect(mainGain);
-      mainGain.connect(ctx.destination);
+      mainGain.connect(this._masterGain);
 
       osc1.start(now);
       osc2.start(now);
@@ -4494,53 +4656,46 @@ export class AgriosDigitalTwin3D {
     try {
       const { osc1, osc2, lfo, mainGain } = this._tractorSoundNodes;
       const now = this._audioCtx.currentTime;
-      mainGain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+      mainGain.gain.linearRampToValueAtTime(0.0001, now + 0.4);
       setTimeout(() => {
         try {
           osc1.stop();
           osc2.stop();
           lfo.stop();
         } catch (_) {}
-      }, 350);
+      }, 450);
     } catch (_) {}
     this._tractorSoundNodes = null;
   }
 
-  // Cattle / Livestock Formant Lowing Synthesizer (Gentle Moo)
+  // Gentle, Warm Countryside Cow Lowing
   _playCowMoo() {
     if (this.soundMuted) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
       const now = ctx.currentTime;
-      const dur = 1.6;
+      const dur = 1.8;
 
       const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(165, now);
-      osc.frequency.exponentialRampToValueAtTime(132, now + dur);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(92, now + dur);
 
       const f1 = ctx.createBiquadFilter();
-      f1.type = 'bandpass';
-      f1.frequency.setValueAtTime(460, now);
-      f1.Q.value = 4.2;
-
-      const f2 = ctx.createBiquadFilter();
-      f2.type = 'bandpass';
-      f2.frequency.setValueAtTime(860, now);
-      f2.Q.value = 3.8;
+      f1.type = 'lowpass';
+      f1.frequency.setValueAtTime(320, now);
+      f1.Q.value = 1.8;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.25);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.07, now + 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
       osc.connect(f1);
-      osc.connect(f2);
       f1.connect(gain);
-      f2.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this._masterGain);
 
       osc.start(now);
       osc.stop(now + dur);
@@ -4571,18 +4726,19 @@ export class AgriosDigitalTwin3D {
     return true;
   }
 
+  // Gentle Distant Rolling Thunder Synthesizer (Warm & Atmospheric)
   _playSynthesizedThunder() {
     if (this.soundMuted) return;
     try {
       this._initAudioContext();
-      if (!this._audioCtx) return;
+      if (!this._audioCtx || !this._masterGain) return;
       const ctx = this._audioCtx;
-      const duration = 3.2 + Math.random() * 1.5;
+      const duration = 3.5 + Math.random() * 1.5;
       const bufferSize = Math.floor(ctx.sampleRate * duration);
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = buffer.getChannelData(0);
 
-      // Procedural pink/brown noise acoustic generator (Paul Kellet's algorithm)
+      // Pink noise generator
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
       for (let i = 0; i < bufferSize; i++) {
         const white = Math.random() * 2 - 1;
@@ -4592,38 +4748,31 @@ export class AgriosDigitalTwin3D {
         b3 = 0.86650 * b3 + white * 0.3104856;
         b4 = 0.55000 * b4 + white * 0.5329522;
         b5 = -0.7616 * b5 - white * 0.0168980;
-        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.12;
+        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.08;
         b6 = white * 0.115926;
       }
 
       const noiseSource = ctx.createBufferSource();
       noiseSource.buffer = buffer;
 
-      // Resonant dynamic sweep lowpass filter
+      // Deep resonant sweep lowpass filter (warm distant rolling rumble)
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.Q.value = 4.8;
+      filter.Q.value = 2.2;
       const now = ctx.currentTime;
-      filter.frequency.setValueAtTime(185, now);
-      filter.frequency.exponentialRampToValueAtTime(36, now + duration);
-
-      // Lowshelf bass boost for deep gut rumble
-      const bassBoost = ctx.createBiquadFilter();
-      bassBoost.type = 'lowshelf';
-      bassBoost.frequency.value = 95;
-      bassBoost.gain.value = 9.5;
+      filter.frequency.setValueAtTime(75, now);
+      filter.frequency.exponentialRampToValueAtTime(24, now + duration);
 
       // Dynamic envelope shaper
       const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(0.001, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.85, now + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.65, now + 0.4);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      gainNode.gain.setValueAtTime(0.0001, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.16, now + 0.2);
+      gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.8);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
       noiseSource.connect(filter);
-      filter.connect(bassBoost);
-      bassBoost.connect(gainNode);
-      gainNode.connect(ctx.destination);
+      filter.connect(gainNode);
+      gainNode.connect(this._masterGain);
 
       noiseSource.start(now);
       noiseSource.stop(now + duration);

@@ -776,10 +776,6 @@
   }
 
   function updateSidebarActive(tabId) {
-    if (window.AgriosUI && typeof window.AgriosUI.updateSidebarActive === 'function') {
-      AgriosUI.updateSidebarActive(tabId);
-      return;
-    }
     const sidebarContainer = document.getElementById("sidebar-container");
     if (!sidebarContainer) return;
     const items = sidebarContainer.querySelectorAll(".menu-item");
@@ -928,35 +924,50 @@
         return;
       }
 
-      // Filter tasks strictly by the Agronomist's assigned day
-      let displayedTasks = tasks.filter(t => `${t.title || ''} ${t.description || ''}`.includes(`Day ${activeDay}`));
-      if (displayedTasks.length === 0) {
-        displayedTasks = tasks;
-      }
+      // Filter tasks strictly by the Agronomist's assigned day (or emergency sprays)
+      let displayedTasks = tasks.filter(t => {
+        const text = `${t.title || ''} ${t.description || ''}`;
+        const isDayTask = text.includes(`Day ${activeDay}`) || text.includes(`Day ${activeDay}:`) || text.includes(`Day ${activeDay} `);
+        const isEmergencySpray = text.includes("RX-") || text.includes("Emergency Spray") || t.task_type === "spray";
+        return isDayTask || isEmergencySpray;
+      });
 
       if (displayedTasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.5rem; color:#64748b;">No tasks for Day ${activeDay}. Waiting for Agronomist dispatch.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#64748b;">
+          <div style="font-size:1.8rem; margin-bottom:6px;">⏳</div>
+          <strong style="color:#0f172a; font-size:0.95rem;">No Directives Dispatched for Day ${activeDay} Yet</strong>
+          <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">Lead Agronomist has not released Day ${activeDay} tasks. Waiting for dispatch.</div>
+          <button class="btn-secondary" onclick="loadFarmerTasks()" style="height:28px; font-size:0.75rem; margin-top:8px;">🔄 Refresh Tasks</button>
+        </td></tr>`;
+        document.getElementById("card-tasks-ratio").innerText = `0 / 0`;
         return;
       }
 
-      tbody.innerHTML = displayedTasks.map(t => `
-        <tr>
-          <td><strong style="color:#0f172a;">${t.title}</strong></td>
-          <td><span class="card-badge badge-neutral">${t.category}</span></td>
-          <td><span class="card-badge ${t.priority === 'URGENT' ? 'badge-danger' : 'badge-warning'}">${t.priority}</span></td>
-          <td>Field Team (Krishi Sakhi)</td>
-          <td><span class="card-badge ${t.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}">${t.status}</span></td>
+      tbody.innerHTML = displayedTasks.map(t => {
+        const isDone = (t.status || "").toUpperCase() === "COMPLETED";
+        const isSpray = (t.task_type === 'spray') || (t.title || '').includes('Spray') || (t.title || '').includes('RX-');
+        return `
+        <tr style="${isSpray ? 'background:#fef2f2;' : ''}">
           <td>
-            ${t.status !== 'COMPLETED' ? `
-              <button class="btn-primary" onclick="completeTask('${t.id}')" style="height:30px; font-size:0.75rem; padding:0 8px;">
-                ✓ Complete
+            <strong style="color:#0f172a;">${t.title}</strong>
+            ${isSpray ? `<div style="font-size:0.7rem; color:#dc2626; font-weight:700;">💊 Urgent Chemical Rx Spray</div>` : ''}
+          </td>
+          <td><span class="card-badge badge-neutral">${t.category || t.task_type}</span></td>
+          <td><span class="card-badge ${t.priority === 'URGENT' || isSpray ? 'badge-danger' : 'badge-warning'}">${t.priority}</span></td>
+          <td>Field Team (Krishi Sakhi)</td>
+          <td><span class="card-badge ${isDone ? 'badge-success' : 'badge-warning'}">${t.status}</span></td>
+          <td>
+            ${!isDone ? `
+              <button class="btn-primary" onclick="completeTask('${t.id}')" style="height:30px; font-size:0.75rem; padding:0 10px; background:${isSpray ? '#dc2626' : '#059669'};">
+                ${isSpray ? '✓ Execute Spray' : '✓ Complete'}
               </button>
             ` : `<span style="font-size:0.75rem; color:#059669; font-weight:700;">Verified</span>`}
           </td>
         </tr>
-      `).join("");
+      `;
+      }).join("");
 
-      document.getElementById("card-tasks-ratio").innerText = `${tasks.filter(t => t.status === 'COMPLETED').length} / ${tasks.length}`;
+      document.getElementById("card-tasks-ratio").innerText = `${displayedTasks.filter(t => (t.status || '').toUpperCase() === 'COMPLETED').length} / ${displayedTasks.length}`;
     } catch (err) {
       console.error(err);
     }
@@ -1016,6 +1027,24 @@
       await AgriosAPI.completeTask(taskId, { notes, hours_logged: hours });
       closeCompleteTaskModal();
       AgriosUI.showToast("Task Completed", "Operation marked done and synchronized to canonical database.", "✓");
+
+      // Broadcast across tabs and notify Agronomist
+      const completionPayload = {
+        event_type: "TASK_COMPLETED",
+        timestamp: Date.now(),
+        payload: { 
+          id: taskId, 
+          task_id: taskId,
+          title: "Field Operation", 
+          worker_id: "Balwinder Singh (Farmer Custodian)",
+          worker_name: "Balwinder Singh"
+        }
+      };
+      if (window.broadcastAgriosEvent) {
+        window.broadcastAgriosEvent(completionPayload);
+      }
+      localStorage.setItem("agrios_broadcast_event", JSON.stringify(completionPayload));
+
       await loadFarmerTasks();
     } catch (err) {
       AgriosUI.showToast("Complete Failed", err.message, "❌");

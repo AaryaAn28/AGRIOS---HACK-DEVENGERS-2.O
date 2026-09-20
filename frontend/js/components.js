@@ -78,45 +78,6 @@ const AgriosUI = {
     document.body.classList.remove("sidebar-locked");
   },
 
-  toggleSidebarGroup(groupId) {
-    const grp = document.getElementById(`group-${groupId}`);
-    if (grp) {
-      const isOpen = grp.classList.contains("open");
-      grp.classList.toggle("open", !isOpen);
-      const btn = grp.querySelector(".sidebar-group-header");
-      if (btn) {
-        btn.setAttribute("aria-expanded", !isOpen ? "true" : "false");
-      }
-    }
-  },
-
-  updateSidebarActive(tabId) {
-    const sidebarContainer = document.getElementById("sidebar-container");
-    if (!sidebarContainer) return;
-    const items = sidebarContainer.querySelectorAll(".menu-item, .sub-menu-item");
-    items.forEach(item => {
-      const onclickAttr = item.getAttribute("onclick") || "";
-      const dataTab = item.getAttribute("data-tab") || "";
-      if (onclickAttr.includes(`'${tabId}'`) || dataTab === tabId) {
-        item.classList.add("active");
-        const parentGroup = item.closest(".sidebar-group");
-        if (parentGroup) {
-          parentGroup.classList.add("open", "has-active");
-          const btn = parentGroup.querySelector(".sidebar-group-header");
-          if (btn) btn.setAttribute("aria-expanded", "true");
-        }
-      } else {
-        item.classList.remove("active");
-      }
-    });
-
-    sidebarContainer.querySelectorAll(".sidebar-group").forEach(grp => {
-      if (!grp.querySelector(".menu-item.active, .sub-menu-item.active")) {
-        grp.classList.remove("has-active");
-      }
-    });
-  },
-
   // VIZITOR Header bar: With live notification bell, language switcher, help modal, and global search
   renderNavbar(currentPortalName = "Farmer Portal", activePage = "home") {
     const user = AgriosAPI.getCurrentUser() || { full_name: "Agronomist", role: "agronomist" };
@@ -191,268 +152,96 @@ const AgriosUI = {
     `;
   },
 
-  // VIZITOR Sticky Left Sidebar Navigation Component (Expandable Functional Groups)
+  // VIZITOR Sticky Left Sidebar Navigation Component
   renderSidebar(role = "agronomist", activeTab = "overview") {
     const notifIcon = `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`;
-    let standaloneItems = [];
-    let groupItems = [];
+    let menuItems = [];
 
-    if (role === "agronomist") {
-      standaloneItems = [
-        {
-          id: "overview",
-          label: "Agronomy Lab Overview",
-          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
-          tab: "overview",
-          i18nKey: "tab_overview"
-        }
+    if (role === "government") {
+      menuItems = [
+        { id: "overview", label: "Executive Command", icon: `<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>` },
+        { id: "surveillance", label: "Pest Outbreak Radar", icon: `<circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>` },
+        { id: "quarantine", label: "Containment Buffer Zones", icon: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/>` },
+        { id: "subsidies", label: "DBT & Insurance Claims", icon: `<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>` },
+        { id: "foodsecurity", label: "Strategic Grain Reserves", icon: `<path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>` },
+        { id: "fertilizers", label: "Fertilizer Rakes & Buffers", icon: `<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/>` },
+        { id: "telemetry", label: "State Satellite Telemetry", icon: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>` },
+        { id: "directives", label: "Disaster Directives", icon: `<polygon points="12 2 2 22 22 22 12 2"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>` },
+        { id: "cropintel", label: "Crop Intelligence & Analytics", icon: `<path d="M18 20V10M12 20V4M6 20v-6"/>` },
+        { id: "workforce", label: "Workforce Cadre Registry", icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>` },
+        { id: "finance", label: "Financial Oversight & Budget", icon: `<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>` },
+        { id: "infrastructure", label: "Infrastructure & IoT Network", icon: `<rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>` },
+        { id: "compliance", label: "Compliance & Biosecurity Audit", icon: `<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>` },
+        { id: "reports", label: "Reports & Executive Export", icon: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>` }
       ];
-
-      groupItems = [
-        {
-          id: "twin_spatial",
-          label: "3D Farm & Digital Twin",
-          icon: "🌐",
-          badge: "3D Twin",
-          items: [
-            { id: "twin_view", label: "3D Living Farm World", icon: "🌐", tab: "fieldcalibration", action: "switchTab('fieldcalibration')" },
-            { id: "twin_walk", label: "Walk & Calibrate Boundary", icon: "📱", tab: "fieldcalibration", action: "switchTab('fieldcalibration'); setTimeout(function(){ var el = document.getElementById('btn-walk-cadre'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);", badge: "GPS" },
-            { id: "twin_cad", label: "CAD Farm Studio (Edit Farm)", icon: "📐", tab: "fieldcalibration", action: "switchTab('fieldcalibration'); setTimeout(function(){ if (window._dt3dToggleEditMode) window._dt3dToggleEditMode(); else if (twinAdapter3D) twinAdapter3D.setEditMode(true); }, 150);", badge: "CAD" },
-            { id: "twin_precision", label: "11-Step Precision Wizard", icon: "⚙️", tab: "fieldcalibration", action: "openOnboardingWizard(false)", badge: "11 Steps" },
-            { id: "twin_tractor", label: "55HP Tractor Operations", icon: "🚜", tab: "fieldcalibration", action: "switchTab('fieldcalibration'); setTimeout(function(){ if(window._dt3dToggleTractor) window._dt3dToggleTractor(); }, 150);", badge: "Drive" },
-            { id: "twin_livestock", label: "Agro-Pastoral Livestock", icon: "🐄", tab: "fieldcalibration", action: "switchTab('fieldcalibration'); setTimeout(function(){ if(window._dt3dTriggerCuteAnimal) window._dt3dTriggerCuteAnimal(); }, 150);" },
-            { id: "twin_disaster", label: "Extreme Disaster Engine", icon: "🌪️", tab: "fieldcalibration", action: "switchTab('fieldcalibration'); setTimeout(function(){ var el = document.getElementById('dt3d-disaster-select'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);", badge: "Sim" },
-            { id: "twin_names", label: "Hide / Show Name Tags", icon: "👤🏷️", tab: "fieldcalibration", action: "if(window._dt3dToggleWorkerNames) window._dt3dToggleWorkerNames();" }
-          ]
-        },
-        {
-          id: "crop_science",
-          label: "Master Crop Science",
-          icon: "🌾",
-          badge: "Crop",
-          items: [
-            { id: "crop_schedule", label: "Master Growing Schedule", icon: "📅", tab: "cropplan", action: "switchTab('cropplan')" },
-            { id: "crop_stages", label: "Botanical Stages Timeline", icon: "📈", tab: "cropplan", action: "switchTab('cropplan'); setTimeout(function(){ var el = document.getElementById('crop-plan-stages-container'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);" },
-            { id: "crop_cultivar", label: "Cultivar Selector & Days", icon: "🌾", tab: "cropplan", action: "if(window.openWizardToStep) openWizardToStep(7); else { openOnboardingWizard(false); jumpToStep(7); }" },
-            { id: "crop_rotation", label: "Strategic Crop Rotation", icon: "🔄", tab: "overview", action: "switchTab('overview'); setTimeout(function(){ var el = document.getElementById('crop-rotation-card'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);" }
-          ]
-        },
-        {
-          id: "pathogen_ai",
-          label: "Pathogen AI & Lab",
-          icon: "🔬",
-          badge: "AI",
-          items: [
-            { id: "diag_lab", label: "Pathogen AI Diagnostic Lab", icon: "🔬", tab: "diagnostics", action: "switchTab('diagnostics')", badge: "AI" },
-            { id: "diag_cams", label: "IoT Field Vision Cameras", icon: "📹", tab: "diagnostics", action: "switchTab('diagnostics'); setTimeout(function(){ var el = document.getElementById('camera-obs-grid'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);" },
-            { id: "diag_soil", label: "Root Zone Soil Nutrition", icon: "🧪", tab: "overview", action: "switchTab('overview'); setTimeout(function(){ var el = document.getElementById('soil-analysis-card'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);" },
-            { id: "diag_beacon", label: "North Sector Pest Beacon", icon: "🚨", tab: "fieldcalibration", action: "switchTab('fieldcalibration'); setTimeout(function(){ if(twinAdapter3D) twinAdapter3D.setOutbreakBeacon(true); }, 150);" }
-          ]
-        },
-        {
-          id: "workforce",
-          label: "Assign Farmers & Team",
-          icon: "👥",
-          badge: "Team",
-          items: [
-            { id: "wf_roster", label: "Field Cadre Roster", icon: "👥", tab: "subordinates", action: "switchTab('subordinates')" },
-            { id: "wf_register", label: "Register New Personnel", icon: "➕", tab: "subordinates", action: "if(window.openWizardToStep) openWizardToStep(1); else { openOnboardingWizard(false); jumpToStep(1); }", badge: "Add" },
-            { id: "wf_tasks", label: "Task & Exertion Ledger", icon: "⏱️", tab: "subordinates", action: "switchTab('subordinates'); setTimeout(function(){ var el = document.getElementById('attendance-table-body'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);" }
-          ]
-        },
-        {
-          id: "prescriptions",
-          label: "Prescriptions & Directives",
-          icon: "📋",
-          badge: "Rx",
-          items: [
-            { id: "rx_ledger", label: "Rx Chemical Spray Ledger", icon: "💊", tab: "prescriptions", action: "switchTab('prescriptions')" },
-            { id: "rx_weather", label: "Spray Weather Micro-Check", icon: "🌤️", tab: "prescriptions", action: "switchTab('prescriptions'); setTimeout(function(){ if(typeof loadSprayWeatherCheck === 'function') loadSprayWeatherCheck(); }, 150);", badge: "Check" },
-            { id: "rx_broadcast", label: "Broadcast Agro-Advisories", icon: "📢", tab: "circulars", action: "switchTab('circulars')" }
-          ]
-        }
+    } else if (role === "agronomist") {
+      menuItems = [
+        { id: "overview", label: "Agronomy Lab (Overview)", icon: `<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>` },
+        { id: "cropplan", label: "Master Crop Plan", icon: `<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>` },
+        { id: "fieldcalibration", label: "3D Farm & Calibrate", icon: `<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>` },
+        { id: "subordinates", label: "Assign Farmers & Team", icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>` },
+        { id: "diagnostics", label: "Pathogen AI Lab", icon: `<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>` },
+        { id: "prescriptions", label: "Rx Spray Ledger", icon: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>` },
+        { id: "circulars", label: "Broadcast Advisories", icon: `<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>` }
       ];
     } else if (role === "farmer") {
-      standaloneItems = [
-        {
-          id: "overview",
-          label: "Living Farm Twin Overview",
-          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
-          tab: "overview"
-        }
-      ];
-
-      groupItems = [
-        {
-          id: "farmer_crops",
-          label: "Crops & Daily Tasks",
-          icon: "🌾",
-          badge: "Tasks",
-          items: [
-            { id: "cropplan", label: "Crop Growing Plan Calendar", icon: "📅", tab: "cropplan", action: "switchTab('cropplan')" },
-            { id: "tasks", label: "Priority Field Task Queue", icon: "⚡", tab: "tasks", action: "switchTab('tasks')", badge: "Due" },
-            { id: "harvest", label: "Harvest & Silo Storage", icon: "🚜", tab: "harvest", action: "switchTab('harvest')" }
-          ]
-        },
-        {
-          id: "farmer_care",
-          label: "Plant Health & Fields",
-          icon: "🛡️",
-          badge: "Health",
-          items: [
-            { id: "care", label: "AI Leaf Pathogen Scanner", icon: "🔬", tab: "care", action: "switchTab('care')", badge: "AI" },
-            { id: "fields", label: "Fields & Soil Telemetry", icon: "🌱", tab: "fields", action: "switchTab('fields')" },
-            { id: "resources", label: "Bio-Inputs & Machinery", icon: "📦", tab: "resources", action: "switchTab('resources')" }
-          ]
-        },
-        {
-          id: "farmer_mandi",
-          label: "Mandi & Direct Schemes",
-          icon: "🏛️",
-          badge: "Govt",
-          items: [
-            { id: "mandi", label: "APMC Mandi & Govt Schemes", icon: "💰", tab: "mandi", action: "switchTab('mandi')" }
-          ]
-        }
-      ];
-    } else if (role === "government") {
-      standaloneItems = [
-        {
-          id: "overview",
-          label: "Executive Command Center",
-          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
-          tab: "overview"
-        }
-      ];
-
-      groupItems = [
-        {
-          id: "gov_biosecurity",
-          label: "Biosecurity & Surveillance",
-          icon: "🛡️",
-          badge: "Radar",
-          items: [
-            { id: "surveillance", label: "Pest Outbreak Radar", icon: "📡", tab: "surveillance", action: "switchTab('surveillance')", badge: "Live" },
-            { id: "quarantine", label: "Containment Buffer Zones", icon: "⭕", tab: "quarantine", action: "switchTab('quarantine')" },
-            { id: "compliance", label: "Biosecurity Audit & Compliance", icon: "📋", tab: "compliance", action: "switchTab('compliance')" },
-            { id: "directives", label: "Disaster Directives Dispatch", icon: "🚨", tab: "directives", action: "switchTab('directives')" }
-          ]
-        },
-        {
-          id: "gov_reserves",
-          label: "Grain & Resource Buffers",
-          icon: "🌾",
-          badge: "Supply",
-          items: [
-            { id: "foodsecurity", label: "Strategic Grain Reserves", icon: "🏛️", tab: "foodsecurity", action: "switchTab('foodsecurity')" },
-            { id: "fertilizers", label: "Fertilizer Rakes & Buffers", icon: "🧪", tab: "fertilizers", action: "switchTab('fertilizers')" },
-            { id: "telemetry", label: "State Satellite Telemetry", icon: "🛰️", tab: "telemetry", action: "switchTab('telemetry')" },
-            { id: "cropintel", label: "Crop Intelligence & Analytics", icon: "📊", tab: "cropintel", action: "switchTab('cropintel')" }
-          ]
-        },
-        {
-          id: "gov_fiscal",
-          label: "Fiscal & Workforce Cadre",
-          icon: "💼",
-          badge: "Fiscal",
-          items: [
-            { id: "workforce", label: "Workforce Cadre Registry", icon: "👥", tab: "workforce", action: "switchTab('workforce')" },
-            { id: "subsidies", label: "DBT & Insurance Claims", icon: "💳", tab: "subsidies", action: "switchTab('subsidies')" },
-            { id: "finance", label: "Financial Oversight & Budget", icon: "📈", tab: "finance", action: "switchTab('finance')" },
-            { id: "infrastructure", label: "Infrastructure & IoT Network", icon: "⚙️", tab: "infrastructure", action: "switchTab('infrastructure')" },
-            { id: "reports", label: "Reports & Executive Export", icon: "📑", tab: "reports", action: "switchTab('reports')" }
-          ]
-        }
+      menuItems = [
+        { id: "overview", label: "Living Farm Twin (Overview)", icon: `<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>` },
+        { id: "cropplan", label: "Crop Growing Plan", icon: `<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>` },
+        { id: "tasks", label: "Priority Field Tasks", icon: `<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>` },
+        { id: "care", label: "AI Leaf Pathogen Scanner", icon: `<circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/>` },
+        { id: "fields", label: "Fields & Soil Health", icon: `<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>` },
+        { id: "resources", label: "Inputs & Machinery", icon: `<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>` },
+        { id: "harvest", label: "Harvest & Silo Storage", icon: `<path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>` },
+        { id: "mandi", label: "Mandi & Govt Schemes", icon: `<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>` }
       ];
     } else if (role === "worker") {
-      standaloneItems = [
-        {
-          id: "overview",
-          label: "Today's Work Plan",
-          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
-          tab: "overview"
-        }
-      ];
-
-      groupItems = [
-        {
-          id: "worker_field",
-          label: "Field Work & Tools",
-          icon: "🔧",
-          badge: "Field",
-          items: [
-            { id: "scanner", label: "Mobile Leaf Scanner", icon: "📷", tab: "scanner", action: "switchTab('scanner')", badge: "AI" },
-            { id: "groundtruth", label: "Ground Truth Logs", icon: "📝", tab: "groundtruth", action: "switchTab('groundtruth')" },
-            { id: "equipment", label: "Field Kit & Tools", icon: "🧰", tab: "equipment", action: "switchTab('equipment')" }
-          ]
-        },
-        {
-          id: "worker_welfare",
-          label: "Attendance & Welfare",
-          icon: "🤝",
-          badge: "Logs",
-          items: [
-            { id: "logbook", label: "Attendance & Shift Log", icon: "⏱️", tab: "logbook", action: "switchTab('logbook')" },
-            { id: "performance", label: "Performance Scorecard", icon: "🏆", tab: "performance", action: "switchTab('performance')" },
-            { id: "advisory", label: "Agronomist Hotline", icon: "📞", tab: "advisory", action: "switchTab('advisory')" },
-            { id: "training", label: "Training & Certification", icon: "🎓", tab: "training", action: "switchTab('training')" },
-            { id: "leaves", label: "Leave & Advance Requests", icon: "🌴", tab: "leaves", action: "switchTab('leaves')" },
-            { id: "emergency", label: "Emergency Protocols & SOS", icon: "🆘", tab: "emergency", action: "switchTab('emergency')", badge: "SOS" }
-          ]
-        }
+      menuItems = [
+        { id: "overview", label: "Today's Work Plan (Overview)", icon: `<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>` },
+        { id: "scanner", label: "Mobile Leaf Scanner", icon: `<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>` },
+        { id: "logbook", label: "Attendance & Logbook", icon: `<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>` },
+        { id: "groundtruth", label: "Ground Truth Logs", icon: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>` },
+        { id: "equipment", label: "Field Kit & Tools", icon: `<polygon points="12 2 2 22 22 22 12 2"/>` },
+        { id: "advisory", label: "Agronomist Hotline", icon: `<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>` },
+        { id: "training", label: "Training & Certification", icon: `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>` },
+        { id: "leaves", label: "Leave & Welfare Requests", icon: `<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>` },
+        { id: "performance", label: "Performance Scorecard", icon: `<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>` },
+        { id: "emergency", label: "Emergency Protocols & SOS", icon: `<polygon points="12 2 2 22 22 22 12 2"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>` }
       ];
     }
 
-    const standaloneHTML = standaloneItems.map(item => {
-      const tabKey = item.i18nKey || `tab_${item.id}`;
+    const getTabKey = (itemId) => {
+      if (itemId === "overview") {
+        if (role === "worker") return "tab_workplan";
+        if (role === "farmer") return "tab_overview";
+        if (role === "government") return "tab_gov_overview";
+        return "tab_overview";
+      }
+      if (itemId === "logbook") return "tab_attendance";
+      if (itemId === "cropplan" && role === "farmer") return "tab_farmer_cropplan";
+      if (itemId === "fieldcalibration") return "tab_digitaltwin";
+      if (itemId === "diagnostics") return "tab_pathogen";
+      if (itemId === "circulars") return "tab_comms";
+      if (itemId === "surveillance") return "tab_pest_radar";
+      if (itemId === "quarantine") return "tab_buffer_zones";
+      if (itemId === "subsidies") return "tab_dbt";
+      if (itemId === "foodsecurity") return "tab_reserves";
+      if (itemId === "fertilizers") return "tab_fertilizer";
+      if (itemId === "workforce") return "tab_workforce_reg";
+      return `tab_${itemId}`;
+    };
+
+    const navLinks = menuItems.map(item => {
+      const tabKey = getTabKey(item.id);
       const translated = window.AgriosI18n ? window.AgriosI18n.t(tabKey) : item.label;
       const display = (translated && translated !== tabKey) ? translated : item.label;
-      const isActive = activeTab === item.tab;
       return `
-        <a href="javascript:void(0)" class="menu-item ${isActive ? 'active' : ''}" 
-           onclick="switchTab('${item.tab}'); if(window.AgriosUI) AgriosUI.closeMobileSidebar();" 
-           data-tab="${item.tab}"
-           style="position:relative; display:flex; align-items:center;">
-          ${item.icon.startsWith('<') ? item.icon : `<span style="font-size:1.1rem; width:22px; display:inline-flex; align-items:center; justify-content:center;">${item.icon}</span>`}
+        <a href="javascript:void(0)" class="menu-item ${activeTab === item.id ? 'active' : ''}" onclick="switchTab('${item.id}'); if(window.AgriosUI) AgriosUI.closeMobileSidebar();" style="position:relative; display:flex; align-items:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${item.icon}
+          </svg>
           <span style="flex:1;" data-i18n="${tabKey}">${display}</span>
         </a>
-      `;
-    }).join("");
-
-    const groupsHTML = groupItems.map(group => {
-      const hasActiveChild = group.items.some(sub => sub.tab === activeTab);
-      const isExpanded = hasActiveChild;
-      const subItemsHTML = group.items.map(sub => {
-        const isSubActive = activeTab === sub.tab;
-        const subAction = sub.action ? sub.action : `switchTab('${sub.tab}')`;
-        return `
-          <a href="javascript:void(0)" class="menu-item sub-menu-item ${isSubActive ? 'active' : ''}" 
-             onclick="${subAction}; if(window.AgriosUI) AgriosUI.closeMobileSidebar();" 
-             data-tab="${sub.tab}"
-             title="${sub.label}">
-            <span class="sub-item-icon">${sub.icon}</span>
-            <span class="sub-item-text">${sub.label}</span>
-            ${sub.badge ? `<span class="sub-item-badge">${sub.badge}</span>` : ''}
-          </a>
-        `;
-      }).join("");
-
-      return `
-        <div class="sidebar-group ${isExpanded ? 'open' : ''} ${hasActiveChild ? 'has-active' : ''}" id="group-${group.id}">
-          <button type="button" class="sidebar-group-header" onclick="AgriosUI.toggleSidebarGroup('${group.id}')" aria-expanded="${isExpanded ? 'true' : 'false'}">
-            <span class="group-icon">${group.icon}</span>
-            <span class="group-label">${group.label}</span>
-            ${group.badge ? `<span class="group-badge">${group.badge}</span>` : ''}
-            <span class="group-arrow">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </span>
-          </button>
-          <div class="sidebar-sub-menu">
-            ${subItemsHTML}
-          </div>
-        </div>
       `;
     }).join("");
 
@@ -470,14 +259,13 @@ const AgriosUI = {
         </div>
 
         <div class="sidebar-label" data-i18n="nav_navigation">${navLabel}</div>
-        <nav class="sidebar-menu">
-          ${standaloneHTML}
-          ${groupsHTML}
+        <nav class="sidebar-menu" style="overflow-y: auto; max-height: calc(100vh - 200px); padding-right: 4px;">
+          ${navLinks}
         </nav>
 
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" style="border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: auto;">
           <!-- Notifications Tab Docked Directly Above Sign Out -->
-          <a href="javascript:void(0)" class="menu-item ${activeTab === 'notifications' ? 'active' : ''}" onclick="switchTab('notifications'); if(window.AgriosUI) AgriosUI.closeMobileSidebar();" data-tab="notifications" style="position:relative; display:flex; align-items:center;">
+          <a href="javascript:void(0)" class="menu-item ${activeTab === 'notifications' ? 'active' : ''}" onclick="switchTab('notifications'); if(window.AgriosUI) AgriosUI.closeMobileSidebar();" style="position:relative; display:flex; align-items:center; margin-bottom:4px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               ${notifIcon}
             </svg>

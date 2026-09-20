@@ -18,6 +18,7 @@ from app.models.communication import AdvisoryMessage
 from app.core.events import EventBus, DomainEvent
 from app.utils.auth import get_current_user
 from app.services.biosecurity_service import BiosecurityService
+from app.services.crop_plan_service import CropPlanService
 
 router = APIRouter(prefix="/api", tags=["AGRIOS Ecosystem Interconnected Engine"])
 
@@ -642,9 +643,169 @@ def broadcast_circular(req: CircularBroadcastRequest, db: Session = Depends(get_
 def list_broadcast_circulars():
     return _CIRCULAR_BROADCASTS
 
+class DispatchPrescriptionRequest(BaseModel):
+    farm_id: Optional[str] = "default"
+    rx_id: str
+    pathogen: str
+    prescription: str
+    dosage: Optional[str] = "Standard Calibration Dose"
+    urgency: Optional[str] = "urgent"
+
+@router.post("/agronomist/dispatch-prescription")
+def dispatch_prescription_to_cadre(req: DispatchPrescriptionRequest, db: Session = Depends(get_db)):
+    farm = db.query(Farm).filter(Farm.id == req.farm_id).first() if req.farm_id != "default" else db.query(Farm).first()
+    farm_id = farm.id if farm else req.farm_id
+
+    # Create task for field workers
+    task = FarmTask(
+        farm_id=farm_id,
+        title=f"Execute Spray: {req.pathogen}",
+        description=f"Prescription {req.rx_id}: Apply {req.prescription} ({req.dosage}). Enforce strict 48h withholding interval and personal protective gear (PPE).",
+        task_type="spray",
+        priority=req.urgency or "urgent",
+        status="pending",
+        assigned_role="worker"
+    )
+    db.add(task)
+    db.commit()
+
+    # Emit domain event
+    EventBus.publish(DomainEvent(
+        event_type="TASK_CREATED",
+        aggregate_type="FarmTask",
+        aggregate_id=task.id,
+        payload=task.to_dict(),
+        producer="Agronomist_Rx_Ledger"
+    ))
+
+    # Mark observation as Certified & Dispatched
+    for o in _PATHOGEN_OBSERVATIONS:
+        if o["id"] == req.rx_id or o.get("pathogen") == req.pathogen:
+            o["status"] = "Certified & Dispatched"
+
+    return {
+        "status": "success",
+        "task_id": task.id,
+        "message": f"Prescription {req.rx_id} successfully dispatched to field workers for immediate spraying."
+    }
+
 @router.get("/agronomist/pathogen-observations")
-def list_pathogen_observations():
-    return _PATHOGEN_OBSERVATIONS
+def list_pathogen_observations(crop_name: Optional[str] = None, db: Session = Depends(get_db)):
+    farm = db.query(Farm).first() if hasattr(db, "query") else None
+    raw_crop = crop_name if isinstance(crop_name, str) else (getattr(farm, 'crop_type', None) if farm else "Wheat")
+    actual_crop = (raw_crop or "Wheat").strip().lower()
+
+    if "rice" in actual_crop or "paddy" in actual_crop:
+        return [
+            {
+                "id": "OBS-RC01",
+                "field_zone": "Paddy Basin Sector 1",
+                "symptom": "Wavy, water-soaked greenish-yellow leaf margin lesions (Bacterial Blight)",
+                "pathogen": "Xanthomonas oryzae pv. oryzae (Bacterial Leaf Blight)",
+                "confidence_pct": 95.8,
+                "status": "Awaiting Agronomist",
+                "prescription": "Copper Oxychloride (500g) + Streptocycline (15g/acre)",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "OBS-RC02",
+                "field_zone": "Paddy Basin Sector 2",
+                "symptom": "Spindle-shaped diamond lesions with ash-grey centers on upper tillers",
+                "pathogen": "Magnaporthe oryzae (Rice Blast)",
+                "confidence_pct": 92.4,
+                "status": "Awaiting Agronomist",
+                "prescription": "Tricyclazole 75% WP @ 120g/acre",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    elif "tomato" in actual_crop:
+        return [
+            {
+                "id": "OBS-TM01",
+                "field_zone": "Polyhouse Bay A",
+                "symptom": "Concentric dark brown rings on lower leaves with yellow halo (Target Spot)",
+                "pathogen": "Alternaria solani (Early Blight)",
+                "confidence_pct": 96.2,
+                "status": "Awaiting Agronomist",
+                "prescription": "Mancozeb 75% WP @ 2.5g/L + Azoxystrobin 23% SC",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "OBS-TM02",
+                "field_zone": "Field Block 2",
+                "symptom": "Severe upward leaf curling, vein thickening, and stunting with whitefly vectors",
+                "pathogen": "Begomovirus (Tomato Yellow Leaf Curl Virus)",
+                "confidence_pct": 93.1,
+                "status": "Awaiting Agronomist",
+                "prescription": "Diafenthiuron 50% WP @ 250g/acre + Yellow Sticky Traps",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    elif "cotton" in actual_crop:
+        return [
+            {
+                "id": "OBS-CT01",
+                "field_zone": "South Cotton Quadrant",
+                "symptom": "Rosetted flowers and boreholes in developing bolls with larval excreta",
+                "pathogen": "Pectinophora gossypiella (Pink Bollworm)",
+                "confidence_pct": 97.4,
+                "status": "Awaiting Agronomist",
+                "prescription": "Chlorantraniliprole 18.5% SC @ 60 ml/acre + PB Rope Pheromone",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    elif "maize" in actual_crop or "corn" in actual_crop:
+        return [
+            {
+                "id": "OBS-MZ01",
+                "field_zone": "Central Maize Parcel",
+                "symptom": "Extensive whorl skeletonization with moist sawdust-like frass deposits",
+                "pathogen": "Spodoptera frugiperda (Fall Armyworm)",
+                "confidence_pct": 98.2,
+                "status": "Awaiting Agronomist",
+                "prescription": "Emamectin Benzoate 5% SG @ 80g/acre in central whorl",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    elif "mango" in actual_crop or "horticulture" in actual_crop or "orchard" in actual_crop:
+        return [
+            {
+                "id": "OBS-MG01",
+                "field_zone": "North Orchard Row 3",
+                "symptom": "White powdery fungal bloom on inflorescence panicles and young fruitlets",
+                "pathogen": "Oidium mangiferae (Powdery Mildew)",
+                "confidence_pct": 94.6,
+                "status": "Awaiting Agronomist",
+                "prescription": "Wettable Sulfur 80% WP @ 3g/L or Hexaconazole 5% EC",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "OBS-MG02",
+                "field_zone": "East Orchard Perimeter",
+                "symptom": "Necrotic dark sunken tear-stain lesions on leaves and tender branches",
+                "pathogen": "Colletotrichum gloeosporioides (Anthracnose)",
+                "confidence_pct": 91.5,
+                "status": "Awaiting Agronomist",
+                "prescription": "Copper Oxychloride 50% WP @ 3g/L post-pruning spray",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    elif "pisc" in actual_crop or "aqua" in actual_crop or "fish" in actual_crop:
+        return [
+            {
+                "id": "OBS-AQ01",
+                "field_zone": "Nursery Pond A (North)",
+                "symptom": "Superficial skin erosions with necrotic hemorrhagic ulcers on fingerlings",
+                "pathogen": "Aphanomyces invadans (Epizootic Ulcerative Syndrome - EUS)",
+                "confidence_pct": 93.9,
+                "status": "Awaiting Agronomist",
+                "prescription": "CIFAX bath treatment @ 1 liter/ha-meter water + Lime @ 100 kg/ha",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    else:
+        # Wheat default
+        return _PATHOGEN_OBSERVATIONS
 
 @router.post("/agronomist/certify-observation/{obs_id}")
 def certify_pathogen_observation(obs_id: str):
@@ -655,79 +816,298 @@ def certify_pathogen_observation(obs_id: str):
     return {"status": "not_found", "message": f"Observation {obs_id} not found"}
 
 @router.get("/agronomist/soil-analysis/{farm_id}")
-def get_agronomist_soil_analysis(farm_id: str, db: Session = Depends(get_db)):
-    farm = db.query(Farm).filter(Farm.id == farm_id).first()
-    return {
-        "farm_id": farm_id,
-        "farm_name": farm.name if farm else "Greenfield Model Farm",
-        "soil_texture": "Alluvial Silt Loam",
-        "ph": 7.2,
-        "ec_ds_m": 0.42,
-        "organic_carbon_pct": 0.54,
-        "npk_levels": {
-            "nitrogen_kg_ha": 218,
-            "nitrogen_status": "Low (< 250)",
-            "phosphorus_kg_ha": 19.5,
-            "phosphorus_status": "Medium (15 - 25)",
-            "potassium_kg_ha": 275,
-            "potassium_status": "High (> 250)"
-        },
-        "micronutrients": {
-            "zinc_ppm": 0.58,
-            "zinc_status": "Deficient (Critical < 0.6)",
-            "iron_ppm": 5.2,
-            "iron_status": "Adequate",
-            "boron_ppm": 0.44,
-            "boron_status": "Marginal"
-        },
-        "scientific_recommendations": [
-            "Apply basal DAP @ 55 kg/acre + Zinc Sulfate (ZnSO4 21%) @ 10 kg/acre prior to sowing.",
-            "Split Urea (46% N) top-dressing: 30 kg at 1st Rauni irrigation (21 DAS) and 25 kg at boot stage.",
-            "Incorporate green manure (Sesbania/Dhaincha) during pre-monsoon fallow to raise organic carbon to >0.75%."
-        ]
-    }
+def get_agronomist_soil_analysis(farm_id: str, db: Session = Depends(get_db), crop_name: Optional[str] = None):
+    farm = None
+    if hasattr(db, "query"):
+        farm = db.query(Farm).filter(Farm.id == farm_id).first() if farm_id != "default" else db.query(Farm).first()
+    raw_crop = crop_name if isinstance(crop_name, str) else (getattr(farm, 'crop_type', None) if farm else "Wheat")
+    target_crop = (raw_crop or "Wheat").strip().lower()
+
+    if "rice" in target_crop or "paddy" in target_crop:
+        return {
+            "farm_id": farm_id,
+            "farm_name": farm.name if farm else "Basin Paddy Model Farm",
+            "soil_texture": "Heavy Alluvial Clay Loam",
+            "ph": 6.8,
+            "ec_ds_m": 0.38,
+            "organic_carbon_pct": 0.62,
+            "npk_levels": {
+                "nitrogen_kg_ha": 195,
+                "nitrogen_status": "Low (< 200)",
+                "phosphorus_kg_ha": 22.0,
+                "phosphorus_status": "Medium (15 - 25)",
+                "potassium_kg_ha": 210,
+                "potassium_status": "Medium (150 - 250)"
+            },
+            "micronutrients": {
+                "zinc_ppm": 0.52,
+                "zinc_status": "Deficient (Critical < 0.6)",
+                "iron_ppm": 8.4,
+                "iron_status": "Adequate",
+                "boron_ppm": 0.48,
+                "boron_status": "Marginal"
+            },
+            "scientific_recommendations": [
+                "Apply basal NPK (10:26:26) @ 50 kg/acre + Zinc Sulfate (ZnSO4 21%) @ 10 kg/acre prior to transplanting.",
+                "Split Neem-Coated Urea: 30 kg at tillering (21 DAT), 30 kg at panicle initiation (45 DAT).",
+                "Intermittent drying-wetting irrigation cycle to avoid iron toxicity and root rot."
+            ]
+        }
+    elif "tomato" in target_crop:
+        return {
+            "farm_id": farm_id,
+            "farm_name": farm.name if farm else "Horticulture Polyhouse Farm",
+            "soil_texture": "Red Sandy Loam (High Porosity)",
+            "ph": 6.5,
+            "ec_ds_m": 0.55,
+            "organic_carbon_pct": 0.72,
+            "npk_levels": {
+                "nitrogen_kg_ha": 180,
+                "nitrogen_status": "Medium",
+                "phosphorus_kg_ha": 35.0,
+                "phosphorus_status": "High (> 30)",
+                "potassium_kg_ha": 320,
+                "potassium_status": "High (> 280)"
+            },
+            "micronutrients": {
+                "zinc_ppm": 0.82,
+                "zinc_status": "Adequate",
+                "iron_ppm": 6.5,
+                "iron_status": "Adequate",
+                "boron_ppm": 0.35,
+                "boron_status": "Deficient (Risk of Blossom End Rot)"
+            },
+            "scientific_recommendations": [
+                "Calcium Nitrate (15.5-0-0 + 18.8% Ca) drip fertigation @ 25 kg/acre to prevent Blossom End Rot.",
+                "Sulfate of Potash (0-0-50) @ 15 kg/acre during fruit enlargement for brix and firmness.",
+                "Foliar Boron (Solubor 20%) @ 1.5 g/L during active flowering to enhance fruit set."
+            ]
+        }
+    elif "cotton" in target_crop:
+        return {
+            "farm_id": farm_id,
+            "farm_name": farm.name if farm else "Malwa Cotton Estate",
+            "soil_texture": "Deep Black Regur Clay",
+            "ph": 7.8,
+            "ec_ds_m": 0.48,
+            "organic_carbon_pct": 0.45,
+            "npk_levels": {
+                "nitrogen_kg_ha": 160,
+                "nitrogen_status": "Low",
+                "phosphorus_kg_ha": 18.0,
+                "phosphorus_status": "Medium",
+                "potassium_kg_ha": 240,
+                "potassium_status": "High"
+            },
+            "micronutrients": {
+                "zinc_ppm": 0.48,
+                "zinc_status": "Deficient",
+                "iron_ppm": 4.8,
+                "iron_status": "Adequate",
+                "boron_ppm": 0.30,
+                "boron_status": "Deficient"
+            },
+            "scientific_recommendations": [
+                "Basal application of Single Super Phosphate (SSP) @ 75 kg/acre + 10 kg Zinc Sulfate.",
+                "Magnesium Sulfate (MgSO4) @ 15 kg/acre foliar spray to arrest leaf reddening physiological disorder.",
+                "Borax (11% B) foliar spray @ 2 g/L at squaring to prevent boll drop."
+            ]
+        }
+    elif "mango" in target_crop or "horticulture" in target_crop or "orchard" in target_crop:
+        return {
+            "farm_id": farm_id,
+            "farm_name": farm.name if farm else "Commercial Mango Orchard",
+            "soil_texture": "Well-Drained Alluvial Loam",
+            "ph": 7.0,
+            "ec_ds_m": 0.32,
+            "organic_carbon_pct": 0.85,
+            "npk_levels": {
+                "nitrogen_kg_ha": 150,
+                "nitrogen_status": "Medium",
+                "phosphorus_kg_ha": 25.0,
+                "phosphorus_status": "Medium",
+                "potassium_kg_ha": 350,
+                "potassium_status": "High"
+            },
+            "micronutrients": {
+                "zinc_ppm": 0.75,
+                "zinc_status": "Adequate",
+                "iron_ppm": 7.2,
+                "iron_status": "Adequate",
+                "boron_ppm": 0.65,
+                "boron_status": "Adequate"
+            },
+            "scientific_recommendations": [
+                "Post-harvest ring application: 50 kg FYM + 1.0 kg Urea + 1.5 kg SSP + 1.5 kg MOP per mature tree.",
+                "Paclobutrazol (Cultar) collar drench @ 3 ml/meter canopy diameter in September for uniform flowering.",
+                "Zinc Sulfate (0.5%) + Boric Acid (0.2%) pre-bloom foliar spray to minimize fruitlet drop."
+            ]
+        }
+    elif "pisc" in target_crop or "aqua" in target_crop or "fish" in target_crop:
+        return {
+            "farm_id": farm_id,
+            "farm_name": farm.name if farm else "Aquaculture Pond Complex",
+            "soil_texture": "Pond Bottom Clayey Silt (Water Retentive)",
+            "ph": 7.6,
+            "ec_ds_m": 0.65,
+            "organic_carbon_pct": 1.25,
+            "npk_levels": {
+                "nitrogen_kg_ha": 280,
+                "nitrogen_status": "Optimal",
+                "phosphorus_kg_ha": 42.0,
+                "phosphorus_status": "High",
+                "potassium_kg_ha": 190,
+                "potassium_status": "Medium"
+            },
+            "micronutrients": {
+                "zinc_ppm": 1.10,
+                "zinc_status": "Optimal",
+                "iron_ppm": 9.5,
+                "iron_status": "High",
+                "boron_ppm": 0.55,
+                "boron_status": "Optimal"
+            },
+            "scientific_recommendations": [
+                "Apply Agricultural Limestone (CaCO3) @ 250 kg/ha to maintain pond alkalinity > 120 mg/L.",
+                "Single Super Phosphate (SSP) @ 40 kg/ha monthly to sustain healthy green phytoplankton bloom.",
+                "Maintain dissolved oxygen > 5.5 mg/L using paddlewheel surface aerators during dawn hours."
+            ]
+        }
+    else:
+        # Wheat default
+        return {
+            "farm_id": farm_id,
+            "farm_name": farm.name if farm else "Greenfield Model Farm",
+            "soil_texture": "Alluvial Silt Loam",
+            "ph": 7.2,
+            "ec_ds_m": 0.42,
+            "organic_carbon_pct": 0.54,
+            "npk_levels": {
+                "nitrogen_kg_ha": 218,
+                "nitrogen_status": "Low (< 250)",
+                "phosphorus_kg_ha": 19.5,
+                "phosphorus_status": "Medium (15 - 25)",
+                "potassium_kg_ha": 275,
+                "potassium_status": "High (> 250)"
+            },
+            "micronutrients": {
+                "zinc_ppm": 0.58,
+                "zinc_status": "Deficient (Critical < 0.6)",
+                "iron_ppm": 5.2,
+                "iron_status": "Adequate",
+                "boron_ppm": 0.44,
+                "boron_status": "Marginal"
+            },
+            "scientific_recommendations": [
+                "Apply basal DAP @ 55 kg/acre + Zinc Sulfate (ZnSO4 21%) @ 10 kg/acre prior to sowing.",
+                "Split Urea (46% N) top-dressing: 30 kg at 1st Rauni irrigation (21 DAS) and 25 kg at boot stage.",
+                "Incorporate green manure (Sesbania/Dhaincha) during pre-monsoon fallow to raise organic carbon to >0.75%."
+            ]
+        }
 
 @router.get("/agronomist/crop-rotation-advice")
-def get_crop_rotation_advice():
-    return {
-        "current_crop": "Wheat (PBW-550)",
-        "agro_climatic_zone": "Zone VI (Indo-Gangetic Alluvial)",
-        "optimal_rotation_sequence": [
-            {
-                "sequence": 1,
-                "crop": "Wheat (Rabi)",
-                "duration_days": 120,
-                "role": "Cereal staple, high biomass",
-                "soil_impact": "High N extraction (-85 kg/ha)"
-            },
-            {
-                "sequence": 2,
-                "crop": "Summer Moong (Zaid)",
-                "duration_days": 65,
-                "role": "Short-duration pulse & green manure",
-                "soil_impact": "Rhizobial atmospheric N-fixation (+32 kg/ha) & soil rest"
-            },
-            {
-                "sequence": 3,
-                "crop": "Basmati Rice (Kharif - DSR)",
-                "duration_days": 115,
-                "role": "Direct seeded rice (DSR) conserving 35% water",
-                "soil_impact": "Moderate extraction, weed control cycle"
-            },
-            {
-                "sequence": 4,
-                "crop": "Mustard / Rapeseed (Autumn Catch)",
-                "duration_days": 90,
-                "role": "Deep root tap, nematode bio-fumigation",
-                "soil_impact": "Disrupts pest mono-cropping vectors"
+def get_crop_rotation_advice(crop_name: Optional[str] = None, db: Session = Depends(get_db)):
+    farm = db.query(Farm).first() if hasattr(db, "query") else None
+    raw_crop = crop_name if isinstance(crop_name, str) else (getattr(farm, 'crop_type', None) if farm else "Wheat")
+    target_crop = (raw_crop or "Wheat").strip().lower()
+
+    if "rice" in target_crop or "paddy" in target_crop:
+        return {
+            "current_crop": "Basmati Rice (DSR - Direct Seeded)",
+            "agro_climatic_zone": "Mahanadi-Ganga Alluvial Basin",
+            "optimal_rotation_sequence": [
+                {"sequence": 1, "crop": "Basmati Rice (Kharif - DSR)", "duration_days": 115, "role": "Staple grain, 35% water-saving DSR method", "soil_impact": "Disrupts upland weed vectors (-45 kg N/ha)"},
+                {"sequence": 2, "crop": "Rabi Mustard (Pusa Bold)", "duration_days": 95, "role": "Deep taproot brassica, bio-fumigation", "soil_impact": "Suppresses soil nematodes and fungal inoculum"},
+                {"sequence": 3, "crop": "Summer Moong (Zaid Pulse)", "duration_days": 65, "role": "Rhizobial nitrogen fixer & green manure", "soil_impact": "Fixes +38 kg atmospheric N/ha, enriches topsoil"},
+                {"sequence": 4, "crop": "Autumn Catch Potato", "duration_days": 75, "role": "High-density tuber catch crop", "soil_impact": "High organic matter tilth, aerates subsoil"}
+            ],
+            "benefits": {
+                "nitrogen_savings_inr": "₹5,400 / acre in synthetic fertilizer",
+                "water_reduction_pct": "34% water saved vs continuous flood paddy",
+                "pathogen_break_rate": "88% lower bacterial leaf blight & sheath rot survival"
             }
-        ],
-        "benefits": {
-            "nitrogen_savings_inr": "₹4,200 / acre in synthetic fertilizer",
-            "water_reduction_pct": "28% water saved vs continuous flood paddy",
-            "pathogen_break_rate": "84% lower yellow rust & sheath blight inoculum survival"
         }
-    }
+    elif "tomato" in target_crop:
+        return {
+            "current_crop": "Hybrid Staked Tomato (Solanaceae)",
+            "agro_climatic_zone": "Central Plateau & Hills Horticulture Zone",
+            "optimal_rotation_sequence": [
+                {"sequence": 1, "crop": "Staked Hybrid Tomato (Kharif)", "duration_days": 110, "role": "High-value commercial solanaceous crop", "soil_impact": "Heavy feeder of potassium and phosphorus"},
+                {"sequence": 2, "crop": "French Beans / Cowpea (Rabi)", "duration_days": 65, "role": "Leguminous pulse restoration cycle", "soil_impact": "Restores +32 kg N/ha, breaks solanaceous fungal cycle"},
+                {"sequence": 3, "crop": "Sweetcorn / Babycorn (Zaid)", "duration_days": 75, "role": "Deep fibrous root biomass pump", "soil_impact": "Scavenges deep nitrates, prevents nutrient leaching"},
+                {"sequence": 4, "crop": "African Marigold (Winter Catch)", "duration_days": 70, "role": "Alleopathic nematicidal cover crop", "soil_impact": "Exudes alpha-terthienyl, kills 92% root-knot nematodes"}
+            ],
+            "benefits": {
+                "nitrogen_savings_inr": "₹7,200 / acre in soil restoration & fertilizer",
+                "water_reduction_pct": "22% reduction with precision drip mulch",
+                "pathogen_break_rate": "94% lower bacterial wilt & root-knot nematode infestation"
+            }
+        }
+    elif "cotton" in target_crop:
+        return {
+            "current_crop": "Bt Cotton (Malvaceae)",
+            "agro_climatic_zone": "Semi-Arid Black Cotton Soil Belt",
+            "optimal_rotation_sequence": [
+                {"sequence": 1, "crop": "Bt Cotton (Kharif Cash Crop)", "duration_days": 150, "role": "Deep taproot fibre commercial anchor", "soil_impact": "Deep subsoil extraction, high leaf litter drop"},
+                {"sequence": 2, "crop": "Desi Chickpea / Bengal Gram (Rabi)", "duration_days": 105, "role": "Residual moisture leguminous pulse", "soil_impact": "Atmospheric N-fixation (+35 kg N/ha), restores phosphorus"},
+                {"sequence": 3, "crop": "Cluster Bean / Guar (Zaid)", "duration_days": 70, "role": "Drought-hardy green manure crop", "soil_impact": "Increases soil aggregation, breaks bollworm pupal diapause"},
+                {"sequence": 4, "crop": "Pearl Millet / Bajra (Catch)", "duration_days": 80, "role": "Mycorrhizal restorer & fodder biomass", "soil_impact": "Reduces salinity buildup, restores soil mycorrhizae"}
+            ],
+            "benefits": {
+                "nitrogen_savings_inr": "₹6,100 / acre in chemical inputs",
+                "water_reduction_pct": "26% water saved vs cotton mono-cropping",
+                "pathogen_break_rate": "96% interruption of pink bollworm and wilt pathogens"
+            }
+        }
+    elif "mango" in target_crop or "horticulture" in target_crop or "orchard" in target_crop:
+        return {
+            "current_crop": "Commercial High-Density Mango Orchard",
+            "agro_climatic_zone": "Sub-Tropical Fruit Orchard Belt",
+            "optimal_rotation_sequence": [
+                {"sequence": 1, "crop": "Mango Tree Canopy (Perennial)", "duration_days": 365, "role": "Perennial timber & high-value fruit canopy", "soil_impact": "Continuous deep carbon sequestration"},
+                {"sequence": 2, "crop": "Turmeric / Ginger Alley Intercrop", "duration_days": 240, "role": "Partial-shade cash rhizome between tree rows", "soil_impact": "Soil bio-fumigation, suppresses root pathogens"},
+                {"sequence": 3, "crop": "Stylosanthes Guianensis Living Mulch", "duration_days": 180, "role": "Perennial legume groundcover & pasture", "soil_impact": "Fixes +45 kg N/ha, prevents weed growth 100%"},
+                {"sequence": 4, "crop": "Mustard / Cowpea Tree Basin Catch", "duration_days": 60, "role": "Organic green manure incorporation", "soil_impact": "Boosts organic carbon to >1.0%, enriches earthworms"}
+            ],
+            "benefits": {
+                "nitrogen_savings_inr": "₹12,400 / acre annual intercrop yield revenue",
+                "water_reduction_pct": "40% lower evaporation loss with live leguminous mulch",
+                "pathogen_break_rate": "90% reduction in anthracnose spore inoculum survival"
+            }
+        }
+    elif "pisc" in target_crop or "aqua" in target_crop or "fish" in target_crop:
+        return {
+            "current_crop": "Composite Freshwater Aquaculture (Carp & Tilapia)",
+            "agro_climatic_zone": "Aquatic In-Land Wetland Zone",
+            "optimal_rotation_sequence": [
+                {"sequence": 1, "crop": "Composite Major Carp Grow-Out", "duration_days": 180, "role": "Surface, column, and bottom feeder poly-culture", "soil_impact": "Enriches pond bottom benthic detritus"},
+                {"sequence": 2, "crop": "Pond Bottom Desilting & Sun-Drying", "duration_days": 25, "role": "Complete pathogen sterilization & mineralization", "soil_impact": "Oxidizes anaerobic hydrogen sulfide, sanitizes bottom"},
+                {"sequence": 3, "crop": "Floating Azolla Pinnata Bio-Culture", "duration_days": 40, "role": "High-protein live feed & natural nitrogen fixer", "soil_impact": "Biological nitrogen assimilation, lowers ammonia"},
+                {"sequence": 4, "crop": "Freshwater Scampi / Prawn Poly-Culture", "duration_days": 120, "role": "Detritus cleanup & benthic protein harvest", "soil_impact": "Recycles excess organic feed, zero eutrophication"}
+            ],
+            "benefits": {
+                "nitrogen_savings_inr": "₹16,500 / ha feed cost reduction via Azolla bio-culture",
+                "water_reduction_pct": "100% recycled effluent for perimeter agroforestry",
+                "pathogen_break_rate": "98% prevention of epizootic ulcerative syndrome"
+            }
+        }
+    else:
+        # Wheat default
+        return {
+            "current_crop": "Wheat (PBW-550)",
+            "agro_climatic_zone": "Zone VI (Indo-Gangetic Alluvial)",
+            "optimal_rotation_sequence": [
+                {"sequence": 1, "crop": "Wheat (Rabi)", "duration_days": 120, "role": "Cereal staple, high biomass", "soil_impact": "High N extraction (-85 kg/ha)"},
+                {"sequence": 2, "crop": "Summer Moong (Zaid)", "duration_days": 65, "role": "Short-duration pulse & green manure", "soil_impact": "Rhizobial atmospheric N-fixation (+32 kg/ha) & soil rest"},
+                {"sequence": 3, "crop": "Basmati Rice (Kharif - DSR)", "duration_days": 115, "role": "Direct seeded rice (DSR) conserving 35% water", "soil_impact": "Moderate extraction, weed control cycle"},
+                {"sequence": 4, "crop": "Mustard / Rapeseed (Autumn Catch)", "duration_days": 90, "role": "Deep root tap, nematode bio-fumigation", "soil_impact": "Disrupts pest mono-cropping vectors"}
+            ],
+            "benefits": {
+                "nitrogen_savings_inr": "₹4,200 / acre in synthetic fertilizer",
+                "water_reduction_pct": "28% water saved vs continuous flood paddy",
+                "pathogen_break_rate": "84% lower yellow rust & sheath blight inoculum survival"
+            }
+        }
 
 @router.get("/agronomist/spray-weather-check")
 def get_spray_weather_check(db: Session = Depends(get_db)):
