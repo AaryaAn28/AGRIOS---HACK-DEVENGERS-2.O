@@ -1166,13 +1166,48 @@
       }
 
       // Strictly filter to show ONLY tasks matching the Agronomist's assigned growth day
-      // (or urgent emergency spray / biosecurity tasks dispatched for this farm)
-      let displayedTasks = tasks.filter(t => {
-        const text = `${t.title || ''} ${t.description || ''}`;
-        const isDayTask = text.includes(`Day ${activeDay}`) || text.includes(`Day ${activeDay}:`) || text.includes(`Day ${activeDay} `);
-        const isEmergencySpray = text.includes("RX-") || text.includes("Emergency Spray") || t.task_type === "spray";
-        return isDayTask || isEmergencySpray;
+      // and specifically dispatched to THIS particular logged-in worker (e.g. Sunita Devi)
+      const currentUser = AgriosAPI.getCurrentUser() || { id: "test_worker", full_name: "Sunita Devi", persona_code: "WORKER-001", role: "worker" };
+      const workerName = (currentUser.full_name || "Sunita Devi").toLowerCase();
+      const workerFirstName = workerName.split(" ")[0]; // "sunita"
+      const workerCode = (currentUser.persona_code || "WORKER-001").toUpperCase();
+      const workerId = currentUser.id || "test_worker";
+
+      // Strict word-boundary regex for growth day (e.g. Day 1 won't match Day 10..19, Day 100..120)
+      const dayRegex = new RegExp(`\\bDay\\s*${activeDay}\\b`, 'i');
+
+      const rawMatchingTasks = tasks.filter(t => {
+        const titleStr = t.title || '';
+        const descStr = t.description || '';
+        const fullText = `${titleStr} ${descStr}`.toLowerCase();
+
+        const isDayTask = dayRegex.test(titleStr) || dayRegex.test(descStr);
+        const isEmergencySpray = (t.task_type === "spray" || titleStr.includes("Emergency Spray") || titleStr.includes("RX-")) && dayRegex.test(fullText);
+
+        if (!isDayTask && !isEmergencySpray) return false;
+
+        // Check if task is explicitly assigned to this logged-in worker
+        const isDirectUserMatch = Boolean(t.assigned_to_user_id && t.assigned_to_user_id === workerId);
+        const isNameMatch = fullText.includes(workerName) || fullText.includes(workerFirstName);
+        const isCodeMatch = Boolean(currentUser.persona_code && fullText.includes(workerCode.toLowerCase()));
+        
+        // Exclude tasks belonging to other personnel cadres
+        const isAssignedToOther = fullText.includes("balwinder") || fullText.includes("dr. priya") || fullText.includes("priya sharma") || (workerFirstName !== "mamata" && fullText.includes("mamata"));
+        const isWorkerRoleFallback = (!t.assigned_to_user_id && !isAssignedToOther && (t.assigned_role === 'worker' || !t.assigned_role));
+
+        return (isDirectUserMatch || isNameMatch || isCodeMatch || isWorkerRoleFallback) && !isAssignedToOther;
       });
+
+      // Deduplicate tasks by title to eliminate repeated rows from multiple dispatches
+      const seenTitles = new Set();
+      const displayedTasks = [];
+      for (const t of rawMatchingTasks) {
+        const norm = (t.title || '').trim().toLowerCase();
+        if (!seenTitles.has(norm)) {
+          seenTitles.add(norm);
+          displayedTasks.push(t);
+        }
+      }
 
       const pending = displayedTasks.filter(t => (t.status || "").toUpperCase() !== "COMPLETED");
       const done = displayedTasks.filter(t => (t.status || "").toUpperCase() === "COMPLETED");
@@ -2154,6 +2189,31 @@
       <div style="font-size:0.8rem; color:#475569; line-height:1.4; margin-top:6px;">
         ${d.pathogen_biology}
       </div>
+
+      ${d.biophysical_metrics ? `
+        <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; margin-top:8px;">
+          <div style="font-size:0.72rem; font-weight:700; color:#334155; text-transform:uppercase; margin-bottom:4px;">🔬 Biophysical Vision Metrics (Pillow + NumPy)</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:6px; font-size:0.72rem;">
+            <div style="background:#ffffff; padding:4px 6px; border-radius:4px; border:1px solid #e2e8f0;">
+              <span style="color:#166534; font-weight:700;">Healthy GLAI:</span> ${d.biophysical_metrics.healthy_green_pct}%
+            </div>
+            <div style="background:#ffffff; padding:4px 6px; border-radius:4px; border:1px solid #e2e8f0;">
+              <span style="color:#b45309; font-weight:700;">Chlorosis:</span> ${d.biophysical_metrics.chlorosis_pct}%
+            </div>
+            <div style="background:#ffffff; padding:4px 6px; border-radius:4px; border:1px solid #e2e8f0;">
+              <span style="color:#b91c1c; font-weight:700;">Necrosis/Spot:</span> ${d.biophysical_metrics.necrosis_lesion_pct}%
+            </div>
+            <div style="background:#ffffff; padding:4px 6px; border-radius:4px; border:1px solid #e2e8f0;">
+              <span style="color:#ea580c; font-weight:700;">Rust Pustules:</span> ${d.biophysical_metrics.rust_pustule_pct}%
+            </div>
+          </div>
+          ${d.biophysical_metrics.detected_features && d.biophysical_metrics.detected_features.length > 0 ? `
+            <div style="font-size:0.7rem; color:#475569; margin-top:4px;">
+              <strong>Detected:</strong> ${d.biophysical_metrics.detected_features.join(" • ")}
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
 
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-top:8px;">
         <div style="font-size:0.75rem; font-weight:700; color:#059669; text-transform:uppercase;">Prescribed Field Rx</div>

@@ -3,6 +3,7 @@ import '../../constants/app_colors.dart';
 import '../../constants/app_text_styles.dart';
 import '../../models/task_model.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/common_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/status_badge.dart';
@@ -30,10 +31,41 @@ class _TasksScreenState extends State<TasksScreen> {
     final api = ApiService();
     final day = await api.getActiveDispatchedDay();
     final list = await api.getTasks();
+    final user = AuthService().currentUser;
+    final workerName = (user?.fullName ?? 'sunita').toLowerCase();
+    final workerId = (user?.id ?? 'worker-001').toLowerCase();
+
+    // Filter strictly for active day and current worker, and deduplicate by title
+    final dayRegex = RegExp(r'\bDay\s*' + day.toString() + r'\b', caseSensitive: false);
+    final seenTitles = <String>{};
+    final filtered = list.where((t) {
+      // 1. Day matching
+      final matchesDay = dayRegex.hasMatch(t.title) || dayRegex.hasMatch(t.description);
+      if (!matchesDay) return false;
+
+      // 2. Worker matching (if assignedTo is specified)
+      if (t.assignedTo != null && t.assignedTo!.isNotEmpty) {
+        final assigned = t.assignedTo!.toLowerCase();
+        final matchesWorker = assigned.contains(workerName) ||
+            assigned.contains(workerId) ||
+            assigned.contains('worker') ||
+            assigned.contains('sakhi') ||
+            assigned.contains('field operator');
+        if (!matchesWorker) return false;
+      }
+
+      // 3. Deduplicate identical task titles
+      final normTitle = t.title.trim().toLowerCase();
+      if (seenTitles.contains(normTitle)) return false;
+      seenTitles.add(normTitle);
+
+      return true;
+    }).toList();
+
     if (mounted) {
       setState(() {
         _activeDay = day;
-        _tasks = list;
+        _tasks = filtered;
         _isLoading = false;
       });
     }

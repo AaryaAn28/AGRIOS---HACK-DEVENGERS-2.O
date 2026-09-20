@@ -19,6 +19,7 @@ from app.core.events import EventBus, DomainEvent
 from app.utils.auth import get_current_user
 from app.services.biosecurity_service import BiosecurityService
 from app.services.crop_plan_service import CropPlanService
+from app.services.leaf_ml_service import LeafMLService
 
 router = APIRouter(prefix="/api", tags=["AGRIOS Ecosystem Interconnected Engine"])
 
@@ -1168,102 +1169,24 @@ class LeafDiagnosisRequest(BaseModel):
 @router.post("/agronomist/diagnose-leaf")
 def diagnose_leaf(req: LeafDiagnosisRequest, db: Session = Depends(get_db)):
     """
-    Edge AI Botanical Pathogen Classifier.
+    Edge AI Botanical Pathogen Classifier with Real Biophysical ML Computer Vision.
     Evaluates real leaf imagery and symptoms across Rice, Wheat, Tomato, Potato, Maize, and Cotton.
     """
-    crop = (req.crop_name or "Wheat").strip().capitalize()
-    sym = (req.symptoms_observed or "").lower()
+    diagnosis = LeafMLService.diagnose_leaf(
+        crop_name=req.crop_name,
+        symptoms_observed=req.symptoms_observed,
+        image_data_url=req.image_data_url,
+        field_parcel=req.field_parcel
+    )
 
-    # Botanical Pathogen Knowledge Base
-    if "Rice" in crop or "Paddy" in crop:
-        pathogen = "Magnaporthe oryzae (Rice Blast / Pyricularia oryzae)"
-        conf = 95.6
-        severity = "Incipient (Pre-Spore Stage)"
-        tissue = "Collar leaf & upper foliar blades"
-        biology = "Fungal ascomycete inducing spindle-shaped lesions with necrotic gray centers and reddish-brown borders. Spreads rapidly under >90% RH and 22–28°C."
-        chem = "Tricyclazole 75% WP (Bim) @ 120g in 200L water per acre"
-        org = "Pseudomonas fluorescens (Bio-antagonist strain PB-2) @ 1.5 kg / acre"
-        withholding = 21
-        urgency = "Prophylactic barrier spray within 24 hours before canopy closure"
-    elif "Tomato" in crop:
-        pathogen = "Phytophthora infestans (Late Blight) & Alternaria solani"
-        conf = 96.2
-        severity = "Moderate Foliar Lesions"
-        tissue = "Adaxial leaf surface and petioles"
-        biology = "Oomycete water mold causing irregular water-soaked dark olive lesions with white fungal down on abaxial surface in humid mornings."
-        chem = "Cymoxanil 8% + Mancozeb 64% WP (Curzate) @ 600g in 200L water / acre"
-        org = "Trichoderma viride 1% WP (Bio-fungicide) @ 2.0 kg / acre"
-        withholding = 7
-        urgency = "Spray immediately before overcast drizzle to halt sporangial release"
-    elif "Potato" in crop:
-        pathogen = "Phytophthora infestans (Potato Late Blight)"
-        conf = 97.1
-        severity = "Early Canopy Water-Soaking"
-        tissue = "Leaf margins and lower stem nodes"
-        biology = "Highly virulent oomycete pathogen capable of 100% canopy collapse within 7 days under continuous leaf wetness."
-        chem = "Dimethomorph 50% WP @ 300g + Mancozeb 75% WP @ 600g per acre"
-        org = "Copper Oxychloride 50% WP @ 1.0 kg / acre"
-        withholding = 10
-        urgency = "Mandatory prophylactic application on all contiguous potato parcels"
-    elif "Maize" in crop or "Corn" in crop:
-        pathogen = "Spodoptera frugiperda (Fall Armyworm - FAW)"
-        conf = 94.4
-        severity = "Whorl Etching & Window-Pane Damage"
-        tissue = "Central whorl leaves and emerging tassel"
-        biology = "Invasive noctuid pest with larvae feeding inside maize whorl, depositing distinctive sawdust-like frass."
-        chem = "Chlorantraniliprole 18.5% SC (Coragen) @ 80ml in 150L water per acre"
-        org = "Bacillus thuringiensis (Bt) kurstaki @ 400g / acre + Neem Seed Kernel Extract 5%"
-        withholding = 14
-        urgency = "Direct nozzle spray straight into central whorls before larvae bore stems"
-    elif "Cotton" in crop:
-        pathogen = "Pectinophora gossypiella (Pink Bollworm) & Xanthomonas citri"
-        conf = 93.8
-        severity = "Square Etching & Rosette Blooms"
-        tissue = "Squares, fruiting branches, and young bolls"
-        biology = "Lepidopteran borer larvae mining into cotton squares and bolls, webbing petals into a rosette flower structure."
-        chem = "Profenofos 50% EC @ 500ml in 200L water per acre"
-        org = "Gossyplure Pheromone Lures @ 8 traps/acre + Trichogramma bactrae parasitoids"
-        withholding = 21
-        urgency = "Mass trapping installation and evening spray application"
-    else: # Wheat default
-        pathogen = "Puccinia striiformis (Stripe Rust / Yellow Rust)"
-        conf = 94.8
-        severity = "Early Stage (Incipient)"
-        tissue = "Flag leaf & secondary tillers"
-        biology = "Fungal basidiomycete thriving in cool, humid microclimates (10–15°C with leaf dew). Forms parallel linear orange-yellow pustule stripes."
-        chem = "Propiconazole 25% EC (Tilt) @ 200ml in 200L water per acre"
-        org = "Pseudomonas fluorescens (Bio-antagonist) @ 1.5 kg / acre"
-        withholding = 14
-        urgency = "Apply within 48 hours to prevent sporulation to neighboring fields"
+    # Automatically log a RiskAlert into the God Database if disease detected
+    pathogen = diagnosis.get("pathogen_identified", "Foliar Stress")
+    conf = diagnosis.get("confidence_pct", 94.0)
+    crop = diagnosis.get("crop", "Crop")
+    chem = diagnosis.get("recommended_treatment", {}).get("chemical", "Standard treatment")
 
-    lab_id = f"LAB-PATH-{uuid.uuid4().hex[:6].upper()}"
-    cert_code = f"CERT-ICAR-PB-{uuid.uuid4().hex[:8].upper()}"
-
-    diagnosis = {
-        "lab_id": lab_id,
-        "certificate_code": cert_code,
-        "crop": crop,
-        "field_parcel": req.field_parcel or "Parcel North #1",
-        "pathogen_identified": pathogen,
-        "confidence_pct": conf,
-        "severity": severity,
-        "affected_tissue": tissue,
-        "pathogen_biology": biology,
-        "recommended_treatment": {
-            "chemical": chem,
-            "organic_alternative": org,
-            "withholding_period_days": withholding,
-            "urgency": urgency
-        },
-        "gps_lat": 30.9010,
-        "gps_lon": 75.8573,
-        "certified_by": "Dr. Priya Sharma (Lead Agronomist • PB-AGRO-001)",
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
-
-    # Automatically log a RiskAlert into the God Database
     farm = db.query(Farm).first()
-    if farm:
+    if farm and "Healthy" not in pathogen:
         alert = RiskAlert(
             farm_id=farm.id,
             alert_category="pest",

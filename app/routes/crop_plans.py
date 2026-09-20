@@ -264,12 +264,25 @@ def dispatch_day_tasks(req: DispatchDayTasksRequest, db: Session = Depends(get_d
     day_ctx = CropPlanService.get_day_context(actual_farm_id, req.day_number, crop)
     tasks_to_create = day_ctx.get("tasks", [])
 
+    # Deduplicate: Remove prior pending tasks for this day on this farm to prevent duplicate stacking
+    day_prefix = f"Day {req.day_number}"
+    db.query(FarmTask).filter(
+        FarmTask.farm_id == actual_farm_id,
+        FarmTask.description.like(f"%{day_prefix}%"),
+        FarmTask.status == "pending"
+    ).delete(synchronize_session=False)
+
     users = db.query(User).all()
-    user_map = {u.full_name: u.id for u in users}
 
     created_tasks = []
     for t in tasks_to_create:
-        assigned_user_id = user_map.get(t.get("assigned_to"))
+        assigned_name = t.get("assigned_to", "")
+        assigned_user_id = None
+        for u in users:
+            if u.full_name and (u.full_name.lower() in assigned_name.lower() or assigned_name.lower() in u.full_name.lower()):
+                assigned_user_id = u.id
+                break
+
         new_task = FarmTask(
             farm_id=actual_farm_id,
             title=t.get("title"),

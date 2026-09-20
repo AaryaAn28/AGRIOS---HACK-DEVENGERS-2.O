@@ -47,4 +47,13 @@ class ApiConstants {
   static const String emergencyProtocols = '/api/workforce-ops/emergency-protocols';
   static const String emergencySos = '/api/workforce-ops/emergency-sos';
   static const String emergencyReport = '/api/workforce-ops/emergency/safety-report';
+
+  // Digital Twin & Leaf ML
+  static const String diagnoseLeaf = '/api/agronomist/diagnose-leaf';
+  static String digitalTwinScene(String farmId) =>
+      '/api/digital-twin/scene-data/$farmId';
+  static String digitalTwinWorkers(String farmId) =>
+      '/api/digital-twin/workers/$farmId';
+  static String digitalTwinWeather(String farmId) =>
+      '/api/digital-twin/weather-state/$farmId';
 }

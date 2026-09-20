@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_text_styles.dart';
+import '../../services/api_service.dart';
 import '../../widgets/common_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/status_badge.dart';
@@ -47,6 +48,15 @@ class _DigitalTwin3dScreenState extends State<DigitalTwin3dScreen> with SingleTi
   // Selected Parcel Inspector
   Map<String, dynamic>? _selectedParcel;
 
+  // Live Backend Telemetry & Personnel
+  Map<String, dynamic>? _sceneData;
+  List<Map<String, dynamic>> _workers = [
+    {'id': 'worker-001', 'name': 'Sunita Devi', 'role': 'worker', 'avatar_color': '#f97316', 'fatigue_index': 42.0, 'position': {'x': -40.0, 'z': 30.0}},
+    {'id': 'farmer-001', 'name': 'Gurpreet Singh', 'role': 'farmer', 'avatar_color': '#10b981', 'fatigue_index': 28.0, 'position': {'x': 20.0, 'z': -20.0}},
+    {'id': 'agro-001', 'name': 'Dr. Priya Sharma', 'role': 'agronomist', 'avatar_color': '#3b82f6', 'fatigue_index': 35.0, 'position': {'x': 0.0, 'z': 0.0}},
+  ];
+  Map<String, dynamic>? _weatherState;
+
   late AnimationController _fishAnim;
 
   @override
@@ -54,6 +64,23 @@ class _DigitalTwin3dScreenState extends State<DigitalTwin3dScreen> with SingleTi
     super.initState();
     _fishAnim = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat();
     _recalculatePlantHealth();
+    _fetchSceneData();
+  }
+
+  Future<void> _fetchSceneData() async {
+    try {
+      final api = ApiService();
+      final scene = await api.getDigitalTwinScene();
+      final workers = await api.getDigitalTwinWorkers();
+      final weather = await api.getDigitalTwinWeather();
+      if (mounted) {
+        setState(() {
+          _sceneData = scene;
+          if (workers.isNotEmpty) _workers = workers;
+          _weatherState = weather;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -212,6 +239,7 @@ class _DigitalTwin3dScreenState extends State<DigitalTwin3dScreen> with SingleTi
                 isCadMode: _isCadEditMode,
                 outbreaks: _outbreaks,
                 fishPulse: _fishAnim.value,
+                workers: _workers,
               ),
             ),
           ),
@@ -241,6 +269,7 @@ class _DigitalTwin3dScreenState extends State<DigitalTwin3dScreen> with SingleTi
                   _buildHudBadge('HEALTHY', '$_healthyCount', const Color(0xFF10B981)),
                   _buildHudBadge('STRESSED', '$_stressedCount', const Color(0xFFF59E0B)),
                   _buildHudBadge('DEAD', '$_deadCount', const Color(0xFFEF4444)),
+                  _buildHudBadge('WEATHER', '${_weatherState?['temperature_c'] ?? 28.5}°C', const Color(0xFF38BDF8)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
@@ -527,6 +556,7 @@ class Farm3dPainter extends CustomPainter {
   final bool isCadMode;
   final List<Map<String, dynamic>> outbreaks;
   final double fishPulse;
+  final List<Map<String, dynamic>> workers;
 
   Farm3dPainter({
     required this.rotation,
@@ -539,6 +569,7 @@ class Farm3dPainter extends CustomPainter {
     required this.isCadMode,
     required this.outbreaks,
     required this.fishPulse,
+    required this.workers,
   });
 
   @override
@@ -672,6 +703,36 @@ class Farm3dPainter extends CustomPainter {
         p.lineTo(cadPoints[i].dx, cadPoints[i].dy);
       }
       canvas.drawPath(p, cadLinePaint);
+    }
+
+    // 10. Live Digital Twin Personnel / Active Workers 3D Pins
+    for (final w in workers) {
+      final pos = w['position'] as Map<String, dynamic>?;
+      final wx = (pos?['x'] as num?)?.toDouble() ?? 0.0;
+      final wz = (pos?['z'] as num?)?.toDouble() ?? 0.0;
+      final role = (w['role']?.toString() ?? 'worker').toLowerCase();
+
+      final pHead = project(wx, wz, 16);
+      final pBase = project(wx, wz, 2);
+
+      // Pin stem
+      canvas.drawLine(pBase, pHead, Paint()..color = Colors.white70..strokeWidth = 1.6);
+
+      // Pin color based on role
+      Color pinColor;
+      if (role == 'farmer') {
+        pinColor = const Color(0xFF10B981);
+      } else if (role == 'agronomist') {
+        pinColor = const Color(0xFF3B82F6);
+      } else {
+        pinColor = const Color(0xFFF97316);
+      }
+
+      // Pulsing beacon ring around active worker
+      final pulseRadius = (7.0 + math.sin(fishPulse * 5) * 2.5) * zoom;
+      canvas.drawCircle(pHead, pulseRadius, Paint()..color = pinColor.withValues(alpha: 0.35)..style = PaintingStyle.fill);
+      canvas.drawCircle(pHead, 5.5 * zoom, Paint()..color = pinColor..style = PaintingStyle.fill);
+      canvas.drawCircle(pHead, 5.5 * zoom, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 1.5);
     }
   }
 

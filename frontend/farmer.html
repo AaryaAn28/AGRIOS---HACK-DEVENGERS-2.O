@@ -307,30 +307,73 @@
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
-            <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; padding:2rem; text-align:center;">
-              <div style="font-size:3rem;">📷</div>
-              <h4 style="margin:8px 0; color:#0f172a;">Capture or Upload Leaf Sample</h4>
-              <p style="font-size:0.8rem; color:#64748b; margin-bottom:1rem;">Supports PNG, JPG up to 10MB. Evaluated against 42 regional cereal diseases.</p>
+            <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; padding:1.5rem; text-align:center;">
+              <div style="margin-bottom:10px; text-align:left;">
+                <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:4px;">Target Crop Species</label>
+                <select id="farmer-scan-crop" class="form-control" style="height:34px; font-size:0.82rem;" onchange="handleFarmerScanCropChange()">
+                  <option value="Wheat" selected>Wheat (Triticum aestivum)</option>
+                  <option value="Rice">Rice / Paddy (Oryza sativa)</option>
+                  <option value="Tomato">Tomato (Solanum lycopersicum)</option>
+                  <option value="Potato">Potato (Solanum tuberosum)</option>
+                  <option value="Maize">Maize / Corn (Zea mays)</option>
+                  <option value="Cotton">Cotton (Gossypium hirsutum)</option>
+                </select>
+              </div>
+
+              <div id="farmer-scan-dropzone" onclick="document.getElementById('leaf-upload-input').click()" style="cursor:pointer; padding:1rem; border-radius:6px; background:#ffffff; border:1px solid #e2e8f0; margin-bottom:10px;">
+                <div id="farmer-leaf-empty-prompt">
+                  <div style="font-size:2.5rem; margin-bottom:4px;">📷</div>
+                  <h4 style="margin:4px 0; font-size:0.95rem; color:#0f172a;">Capture or Upload Foliar Photo</h4>
+                  <p style="font-size:0.75rem; color:#64748b; margin:0;">Supports PNG, JPG up to 10MB • Evaluated via Biophysical ML Model</p>
+                </div>
+                <img id="farmer-leaf-preview" src="" alt="Foliar Sample Preview" style="display:none; max-height:140px; max-width:100%; border-radius:6px; object-fit:contain; margin:4px auto;">
+              </div>
+
               <input type="file" id="leaf-upload-input" accept="image/*" style="display:none;" onchange="handleLeafFileSelected(this)">
               <div style="display:flex; justify-content:center; gap:8px;">
-                <button class="btn-secondary" onclick="document.getElementById('leaf-upload-input').click()">📁 Select Image</button>
-                <button class="btn-primary" onclick="runAiDiagnosis()">⚡ Run Neural Diagnosis</button>
+                <button type="button" class="btn-secondary" style="height:32px; font-size:0.78rem;" onclick="document.getElementById('leaf-upload-input').click()">📁 Select Image</button>
+                <button type="button" class="btn-primary" style="height:32px; font-size:0.78rem;" onclick="runAiDiagnosis()">🔬 Run Neural Diagnosis</button>
               </div>
             </div>
 
-            <div id="ai-diagnosis-result-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.5rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="card-badge badge-success" id="ai-scan-status">Awaiting Leaf Input</span>
-                <span style="font-size:0.75rem; color:#64748b;" id="ai-scan-model">Vision Transformer v2.4</span>
+            <div id="ai-diagnosis-result-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem; display:flex; flex-direction:column; justify-content:center; min-height:280px;">
+              <!-- Initial Empty State: displayed BEFORE analysis is run -->
+              <div id="ai-diagnosis-empty-state" style="text-align:center; padding:2rem 1rem; color:#64748b;">
+                <div style="font-size:2.8rem; margin-bottom:8px;">🍃</div>
+                <strong style="font-size:0.95rem; color:#0f172a; display:block; margin-bottom:4px;">Awaiting Foliar Capture or Upload</strong>
+                <p style="font-size:0.8rem; color:#64748b; margin:0 auto; max-width:320px; line-height:1.4;">
+                  Upload or select a leaf photo on the left and click <strong>"Run Neural Diagnosis"</strong> to extract biophysical features and diagnose pathology.
+                </p>
               </div>
-              <h4 style="margin:10px 0 4px 0; font-size:1.1rem; color:#0f172a;" id="ai-disease-name">Puccinia striiformis (Yellow Stripe Rust)</h4>
-              <div style="font-size:0.85rem; color:#059669; font-weight:700;" id="ai-disease-conf">94.8% AI Diagnostic Confidence</div>
-              <p style="font-size:0.85rem; color:#475569; margin:10px 0;" id="ai-disease-desc">Fungal spore clusters detected on flag leaf. Optimal window for intervention: &lt;48 hours before heading stage.</p>
-              <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px; font-size:0.8rem; margin-bottom:12px;">
-                <strong>Recommended Treatment:</strong><br>
-                <span id="ai-disease-rx">Propiconazole 25% EC (Tilt) @ 200ml/acre in 200L water OR Pseudomonas fluorescens bio-spray.</span>
+
+              <!-- Active Diagnosis Content: displayed ONLY AFTER inference is run -->
+              <div id="ai-diagnosis-content" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span class="card-badge badge-success" id="ai-scan-status">Diagnosed</span>
+                  <span style="font-size:0.72rem; color:#64748b;" id="ai-scan-model">ICAR Biophysical ML Model</span>
+                </div>
+                <h4 style="margin:8px 0 2px 0; font-size:1.05rem; color:#0f172a;" id="ai-disease-name">Pathogen</h4>
+                <div style="font-size:0.8rem; color:#059669; font-weight:700;" id="ai-disease-conf">Confidence Score</div>
+
+                <!-- Biophysical metrics container -->
+                <div id="ai-biophysical-metrics-box" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; margin:8px 0;">
+                  <div style="font-size:0.7rem; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px;">🔬 Extracted Image Biophysical Indices</div>
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(95px, 1fr)); gap:4px; font-size:0.7rem;">
+                    <div style="background:#f8fafc; padding:3px 5px; border-radius:4px;"><span style="color:#166534; font-weight:700;">GLAI Green:</span> <span id="bio-glai">0%</span></div>
+                    <div style="background:#f8fafc; padding:3px 5px; border-radius:4px;"><span style="color:#b45309; font-weight:700;">Chlorosis:</span> <span id="bio-chlo">0%</span></div>
+                    <div style="background:#f8fafc; padding:3px 5px; border-radius:4px;"><span style="color:#b91c1c; font-weight:700;">Necrosis:</span> <span id="bio-nec">0%</span></div>
+                    <div style="background:#f8fafc; padding:3px 5px; border-radius:4px;"><span style="color:#ea580c; font-weight:700;">Rust Pustule:</span> <span id="bio-rust">0%</span></div>
+                  </div>
+                </div>
+
+                <p style="font-size:0.8rem; color:#475569; margin:8px 0; line-height:1.4;" id="ai-disease-desc"></p>
+                
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:0.78rem; margin-bottom:10px;">
+                  <strong style="color:#059669;">Prescribed Treatment:</strong><br>
+                  <span id="ai-disease-rx"></span>
+                </div>
+                <button class="btn-primary" style="width:100%; height:34px; font-size:0.8rem;" id="btn-order-fungicide" onclick="orderTreatmentInputs()">📦 Order Prescribed Fungicide Lot</button>
               </div>
-              <button class="btn-primary" style="width:100%;" onclick="orderTreatmentInputs()">📦 Order Prescribed Fungicide Lot</button>
             </div>
           </div>
         </div>
@@ -876,15 +919,27 @@
                 📅 View Granular Daily Tasks (Days ${s.start_day} – ${Math.min(s.start_day + 9, s.end_day)})
               </summary>
               <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
-                ${s.daily_schedule.map(d => `
-                  <div style="font-size:0.78rem; padding:6px 8px; background:#f8fafc; border-radius:4px; border-left:3px solid #059669;">
-                    <div style="font-weight:700; color:#0f172a;">Day ${d.day}: ${d.title}</div>
-                    <div style="color:#64748b; font-size:0.74rem;">${d.objective}</div>
-                    <div style="color:#334155; margin-top:3px;">
-                      ${d.tasks ? d.tasks.map(t => `<span style="display:inline-block; margin-right:8px;">• <strong>${t.assignee || 'Assigned'}:</strong> ${t.title} (${t.duration_hours}h)</span>`).join("") : ''}
+                ${s.daily_schedule.map(d => {
+                  const dayNum = d.day || d.day_number || '?';
+                  const dayTitle = d.title || d.theme || ('Day ' + dayNum + ' Directives');
+                  const dayObjective = d.objective || d.focus || d.description || 'Agronomic operational directives and monitoring.';
+                  return `
+                  <div style="font-size:0.78rem; padding:8px 10px; background:#f8fafc; border-radius:6px; border-left:3px solid #059669; margin-bottom:4px;">
+                    <div style="font-weight:700; color:#0f172a;">Day ${dayNum}: ${dayTitle}</div>
+                    <div style="color:#64748b; font-size:0.74rem; margin-top:2px;">${dayObjective}</div>
+                    <div style="color:#334155; margin-top:4px; display:flex; flex-wrap:wrap; gap:6px;">
+                      ${d.tasks ? d.tasks.map(t => {
+                        const assigneeName = t.assignee || t.assigned_to || (t.role || t.assigned_role || 'Field Operator');
+                        const taskHours = t.duration_hours || t.estimated_hours || 2.5;
+                        const roleColor = (t.role === 'farmer' || (assigneeName && assigneeName.includes('Farmer'))) ? '#d97706' : ((t.role === 'agronomist' || (assigneeName && assigneeName.includes('Agronomist'))) ? '#2563eb' : '#059669');
+                        return `<span style="display:inline-flex; align-items:center; gap:4px; background:#ffffff; border:1px solid #e2e8f0; border-radius:4px; padding:2px 6px;">
+                          <strong style="color:${roleColor};">${assigneeName}:</strong> ${t.title} 
+                          <span class="card-badge badge-neutral" style="font-size:0.65rem; padding:1px 4px;">${taskHours}h</span>
+                        </span>`;
+                      }).join("") : ''}
                     </div>
                   </div>
-                `).join("")}
+                `;}).join("")}
               </div>
             </details>
           ` : ''}
@@ -924,13 +979,27 @@
         return;
       }
 
-      // Filter tasks strictly by the Agronomist's assigned day (or emergency sprays)
-      let displayedTasks = tasks.filter(t => {
-        const text = `${t.title || ''} ${t.description || ''}`;
-        const isDayTask = text.includes(`Day ${activeDay}`) || text.includes(`Day ${activeDay}:`) || text.includes(`Day ${activeDay} `);
-        const isEmergencySpray = text.includes("RX-") || text.includes("Emergency Spray") || t.task_type === "spray";
+      // Filter tasks strictly by the Agronomist's assigned day using word-boundary regex
+      const dayRegex = new RegExp(`\\bDay\\s*${activeDay}\\b`, 'i');
+      const rawMatchingTasks = tasks.filter(t => {
+        const titleStr = t.title || '';
+        const descStr = t.description || '';
+        const fullText = `${titleStr} ${descStr}`.toLowerCase();
+        const isDayTask = dayRegex.test(titleStr) || dayRegex.test(descStr);
+        const isEmergencySpray = (t.task_type === "spray" || titleStr.includes("Emergency Spray") || titleStr.includes("RX-")) && dayRegex.test(fullText);
         return isDayTask || isEmergencySpray;
       });
+
+      // Deduplicate tasks by title so multiple dispatches don't stack duplicate rows
+      const seenTitles = new Set();
+      const displayedTasks = [];
+      for (const t of rawMatchingTasks) {
+        const norm = (t.title || '').trim().toLowerCase();
+        if (!seenTitles.has(norm)) {
+          seenTitles.add(norm);
+          displayedTasks.push(t);
+        }
+      }
 
       if (displayedTasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#64748b;">
@@ -1057,33 +1126,104 @@
     openCompleteTaskModal(taskId, "Field Operation");
   }
 
+  let farmerUploadedLeafImageBase64 = null;
+  let lastFarmerDiagnosisResult = null;
+
+  function handleFarmerScanCropChange() {
+    if (farmerUploadedLeafImageBase64) {
+      runAiDiagnosis();
+    }
+  }
+
   function handleLeafFileSelected(input) {
     if (input.files && input.files[0]) {
-      AgriosUI.showToast("Leaf Image Uploaded", `Loaded ${input.files[0].name}. Click 'Run Neural Diagnosis'.`, "🌿");
-      document.getElementById("ai-scan-status").innerText = "Image Loaded";
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        farmerUploadedLeafImageBase64 = e.target.result;
+        const prev = document.getElementById("farmer-leaf-preview");
+        const empty = document.getElementById("farmer-leaf-empty-prompt");
+        if (prev) {
+          prev.src = farmerUploadedLeafImageBase64;
+          prev.style.display = "block";
+        }
+        if (empty) empty.style.display = "none";
+        document.getElementById("ai-scan-status").innerText = "Image Loaded";
+        AgriosUI.showToast("Leaf Image Uploaded", `Loaded ${file.name}. Running biophysical ML inference...`, "🌿");
+        runAiDiagnosis();
+      };
+      reader.readAsDataURL(file);
     }
   }
 
   async function runAiDiagnosis() {
-    document.getElementById("ai-scan-status").innerText = "Running Vision Model...";
+    const statusEl = document.getElementById("ai-scan-status");
+    if (statusEl) {
+      statusEl.innerText = "Running Vision ML Model...";
+      statusEl.className = "card-badge badge-neutral";
+    }
+    const cropSelect = document.getElementById("farmer-scan-crop");
+    const crop = cropSelect ? cropSelect.value : "Wheat";
+
     try {
-      const res = await AgriosAPI.diagnoseLeaf({ crop_name: "Wheat" });
-      document.getElementById("ai-scan-status").innerText = "Diagnosed: High Confidence";
-      document.getElementById("ai-scan-status").className = "card-badge badge-warning";
+      const res = await AgriosAPI.diagnoseLeaf({
+        crop_name: crop,
+        image_data_url: farmerUploadedLeafImageBase64 || undefined,
+        field_parcel: "North Parcel #1"
+      });
+      lastFarmerDiagnosisResult = res;
+
+      if (statusEl) {
+        statusEl.innerText = res.pathogen_identified.includes("Healthy") ? "Diagnosed: Healthy" : "Diagnosed: Active Pathogen";
+        statusEl.className = res.pathogen_identified.includes("Healthy") ? "card-badge badge-success" : "card-badge badge-danger";
+      }
+
       document.getElementById("ai-disease-name").innerText = res.pathogen_identified;
       document.getElementById("ai-disease-conf").innerText = `${res.confidence_pct}% AI Diagnostic Confidence (${res.severity})`;
       document.getElementById("ai-disease-desc").innerText = res.pathogen_biology;
-      document.getElementById("ai-disease-rx").innerText = `${res.recommended_treatment.chemical} | Urgency: ${res.recommended_treatment.urgency}`;
-      AgriosUI.showToast("Diagnosis Complete", `Pathogen classified: ${res.pathogen_identified}`, "🔬");
+
+      const chem = res.recommended_treatment ? res.recommended_treatment.chemical : "Standard maintenance";
+      const org = res.recommended_treatment ? res.recommended_treatment.organic_alternative : "Bio-pesticide";
+      const urgency = res.recommended_treatment ? res.recommended_treatment.urgency : "Normal cadence";
+      document.getElementById("ai-disease-rx").innerHTML = `<strong>Chemical:</strong> ${chem}<br><strong>Bio-Alternative:</strong> ${org}<br><span style="color:#dc2626; font-weight:600;">⚡ ${urgency}</span>`;
+
+      // Update biophysical metrics box
+      const bioBox = document.getElementById("ai-biophysical-metrics-box");
+      if (bioBox && res.biophysical_metrics) {
+        const m = res.biophysical_metrics;
+        bioBox.style.display = "block";
+        const glaiEl = document.getElementById("bio-glai");
+        const chloEl = document.getElementById("bio-chlo");
+        const necEl = document.getElementById("bio-nec");
+        const rustEl = document.getElementById("bio-rust");
+        if (glaiEl) glaiEl.innerText = `${m.healthy_green_pct}%`;
+        if (chloEl) chloEl.innerText = `${m.chlorosis_pct}%`;
+        if (necEl) necEl.innerText = `${m.necrosis_lesion_pct}%`;
+        if (rustEl) rustEl.innerText = `${m.rust_pustule_pct}%`;
+      }
+
+      // Update order button
+      const orderBtn = document.getElementById("btn-order-fungicide");
+      if (orderBtn) {
+        const chemShort = chem.split("@")[0].trim();
+        orderBtn.innerText = `📦 Order Prescribed Fungicide: ${chemShort.slice(0, 32)}`;
+      }
+
+      AgriosUI.showToast("Diagnosis Complete", `Classified: ${res.pathogen_identified} (${res.confidence_pct}% confidence).`, "🔬");
     } catch (err) {
+      if (statusEl) {
+        statusEl.innerText = "Diagnosis Error";
+        statusEl.className = "card-badge badge-danger";
+      }
       AgriosUI.showToast("Diagnosis Failed", err.message, "❌");
     }
   }
 
   async function orderTreatmentInputs() {
     try {
-      await AgriosAPI.reorderResource({ resource_name: "Propiconazole 25% EC", quantity: 2, unit: "liters" });
-      AgriosUI.showToast("Order Dispatched", "Dispatched prescription supply order to IFFCO Kisan Seva Kendra.", "📦");
+      const chem = (lastFarmerDiagnosisResult?.recommended_treatment?.chemical || "Propiconazole 25% EC").split("@")[0].trim();
+      await AgriosAPI.reorderResource({ resource_name: chem, quantity: 2, unit: "liters" });
+      AgriosUI.showToast("Order Dispatched", `Dispatched prescription supply order for ${chem} to IFFCO Kisan Seva Kendra.`, "📦");
       switchTab("resources");
     } catch (err) {
       AgriosUI.showToast("Order Failed", err.message, "❌");

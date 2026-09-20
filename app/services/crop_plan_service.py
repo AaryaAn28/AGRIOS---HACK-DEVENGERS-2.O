@@ -909,6 +909,8 @@ def get_generic_crop_plan(crop_name: str, duration_days: int = 90) -> Dict[str, 
 
 
 class CropPlanService:
+    _CALIBRATED_PLANS: Dict[str, Any] = {}
+
     @staticmethod
     def _generate_daily_schedule_for_stage(
         stage: Dict[str, Any],
@@ -939,11 +941,16 @@ class CropPlanService:
                 sec_name = "North Nursery Pond A" if is_pisc else "North Sector (Field A)"
                 pathogen = "Argulus (Fish Louse) & Fin-Rot Lesions" if is_pisc else "Puccinia striiformis (Yellow Rust & Aphid Flush)"
                 presc = "Potassium Permanganate (2 ppm dip) + Bio-Neem Extract" if is_pisc else "Propiconazole 25% EC (200 ml/acre) + Bio-Neem Extract (500 ml/acre)"
+                theme_str = f"🚨 CRITICAL OUTBREAK: {sec_name}"
+                focus_str = f"Elevated outbreak of {pathogen} detected in {sec_name}. Immediate containment buffer and spray required."
 
                 daily_schedule.append({
                     "day": day,
-                    "theme": f"🚨 CRITICAL OUTBREAK: {sec_name}",
-                    "focus": f"Elevated outbreak of {pathogen} detected in {sec_name}. Immediate containment buffer and spray required.",
+                    "day_number": day,
+                    "theme": theme_str,
+                    "title": theme_str,
+                    "focus": focus_str,
+                    "objective": focus_str,
                     "pest_outbreak_active": True,
                     "outbreak_details": {
                         "sector": sec_name,
@@ -958,44 +965,56 @@ class CropPlanService:
                             "title": f"Emergency Spray Containment on {sec_name}",
                             "description": f"Apply {presc} directly targeting infected foliage/water margins.",
                             "assigned_to": w1_name,
+                            "assignee": w1_name,
                             "assigned_role": "worker",
+                            "role": "worker",
                             "category": "protection",
                             "priority": "urgent",
                             "status": "pending",
-                            "estimated_hours": 3.5
+                            "estimated_hours": 3.5,
+                            "duration_hours": 3.5
                         },
                         {
                             "task_id": f"TSK-D{day}-02",
                             "title": f"Establish 50m Protective Containment Buffer Zone around {sec_name}",
                             "description": "Stake physical quarantine perimeter and inspect neighboring parcels for spore drift.",
                             "assigned_to": w2_name,
+                            "assignee": w2_name,
                             "assigned_role": "worker",
+                            "role": "worker",
                             "category": "protection",
                             "priority": "high",
                             "status": "pending",
-                            "estimated_hours": 3.0
+                            "estimated_hours": 3.0,
+                            "duration_hours": 3.0
                         },
                         {
                             "task_id": f"TSK-D{day}-03",
                             "title": "Irrigation/Hydrology Sluice Isolation to Prevent Effluent Cross-Contamination",
                             "description": "Close sluice gates connecting North Sector to the central farm canal.",
                             "assigned_to": farmer_name,
+                            "assignee": farmer_name,
                             "assigned_role": "farmer",
+                            "role": "farmer",
                             "category": "irrigation",
                             "priority": "high",
                             "status": "pending",
-                            "estimated_hours": 2.5
+                            "estimated_hours": 2.5,
+                            "duration_hours": 2.5
                         },
                         {
                             "task_id": f"TSK-D{day}-04",
                             "title": "Pathogen AI Lab Telemetry Verification & State Biosecurity Advisory Broadcast",
                             "description": "Log high-resolution microscopic image analysis and broadcast circular to state registry.",
                             "assigned_to": agro_name,
+                            "assignee": agro_name,
                             "assigned_role": "agronomist",
+                            "role": "agronomist",
                             "category": "scouting",
                             "priority": "urgent",
                             "status": "pending",
-                            "estimated_hours": 2.0
+                            "estimated_hours": 2.0,
+                            "duration_hours": 2.0
                         }
                     ]
                 })
@@ -1018,10 +1037,16 @@ class CropPlanService:
                 t3_title = "Solar Tube Well Pump Flow Rate & Canal Gate Operational Check"
                 t4_title = f"Precision Agronomy {clean_crop} Physiological Stage Evaluation"
 
+            theme_str = f"Day {day}: {stage_name} (Pass #{day_offset})"
+            focus_str = f"{clean_crop} operational maintenance, irrigation control, and workforce task balancing."
+
             daily_schedule.append({
                 "day": day,
-                "theme": f"Day {day}: {stage_name} (Pass #{day_offset})",
-                "focus": f"{clean_crop} operational maintenance, irrigation control, and workforce task balancing.",
+                "day_number": day,
+                "theme": theme_str,
+                "title": theme_str,
+                "focus": focus_str,
+                "objective": focus_str,
                 "pest_outbreak_active": False,
                 "tasks": [
                     {
@@ -1029,44 +1054,56 @@ class CropPlanService:
                         "title": t1_title,
                         "description": f"Standard operational protocol for {clean_crop} Stage {st_num}.",
                         "assigned_to": w1_name,
+                        "assignee": w1_name,
                         "assigned_role": "worker",
+                        "role": "worker",
                         "category": "nutrition" if day_offset % 2 == 0 else "operations",
                         "priority": "high",
                         "status": "pending",
-                        "estimated_hours": 3.0
+                        "estimated_hours": 3.0,
+                        "duration_hours": 3.0
                     },
                     {
                         "task_id": f"TSK-D{day}-02",
                         "title": t2_title,
                         "description": f"Secondary field pass under supervision.",
                         "assigned_to": w2_name,
+                        "assignee": w2_name,
                         "assigned_role": "worker",
+                        "role": "worker",
                         "category": "scouting" if day_offset % 2 == 0 else "protection",
                         "priority": "medium",
                         "status": "pending",
-                        "estimated_hours": 2.5
+                        "estimated_hours": 2.5,
+                        "duration_hours": 2.5
                     },
                     {
                         "task_id": f"TSK-D{day}-03",
                         "title": t3_title,
                         "description": "Infrastructure, conveyance and mechanization validation.",
                         "assigned_to": farmer_name,
+                        "assignee": farmer_name,
                         "assigned_role": "farmer",
+                        "role": "farmer",
                         "category": "equipment",
                         "priority": "high",
                         "status": "pending",
-                        "estimated_hours": 2.5
+                        "estimated_hours": 2.5,
+                        "duration_hours": 2.5
                     },
                     {
                         "task_id": f"TSK-D{day}-04",
                         "title": t4_title,
                         "description": "Scientific verification and God-database calibration.",
                         "assigned_to": agro_name,
+                        "assignee": agro_name,
                         "assigned_role": "agronomist",
+                        "role": "agronomist",
                         "category": "telemetry",
                         "priority": "medium",
                         "status": "pending",
-                        "estimated_hours": 1.5
+                        "estimated_hours": 1.5,
+                        "duration_hours": 1.5
                     }
                 ]
             })
@@ -1314,11 +1351,22 @@ class CropPlanService:
             "status": "CALIBRATED_ACTIVE",
             "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }
+        farm_id = survey_data.get("farm_id") or "default-farm"
+        CropPlanService._CALIBRATED_PLANS[farm_id] = plan_result
+        CropPlanService._CALIBRATED_PLANS["latest"] = plan_result
+        return plan_result
 
     @staticmethod
     def get_day_context(farm_id: str, day_number: int, crop_name: Optional[str] = None) -> Dict[str, Any]:
-        """Returns the specific day's stage, theme, 4 tasks, and outbreak status."""
-        plan = CropPlanService.generate_master_plan(crop_name or "Wheat", 120)
+        """Returns the specific day's stage, theme, 4 tasks, and outbreak status derived from the 11-questionnaire engine."""
+        plan = None
+        if farm_id and farm_id in CropPlanService._CALIBRATED_PLANS:
+            plan = CropPlanService._CALIBRATED_PLANS[farm_id]
+        elif "latest" in CropPlanService._CALIBRATED_PLANS:
+            plan = CropPlanService._CALIBRATED_PLANS["latest"]
+
+        if not plan:
+            plan = CropPlanService.generate_master_plan(crop_name or "Wheat", 120)
         stages = plan.get("stages", [])
         
         target_stage = None
