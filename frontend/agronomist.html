@@ -447,6 +447,13 @@
               <button class="dt3d-toolbar-btn" data-weather="night" title="Atmosphere: Starry Night & Glowing Moon" onclick="window._dt3dSetWeather('night', this)">🌙</button>
               <button class="dt3d-toolbar-btn" data-weather="heatwave" title="Atmosphere: Arid Heatwave" onclick="window._dt3dSetWeather('heatwave', this)">🌡️</button>
               <div class="dt3d-toolbar-divider"></div>
+              <button class="dt3d-toolbar-btn" data-disaster="thunderstorm" title="Disaster: Severe Thunderstorm & Lightning" onclick="window._dt3dSetDisaster('thunderstorm', this)">⛈️</button>
+              <button class="dt3d-toolbar-btn" data-disaster="drought" title="Disaster: Severe Drought & Heatwave" onclick="window._dt3dSetDisaster('drought', this)">🏜️</button>
+              <button class="dt3d-toolbar-btn" data-disaster="hailstorm" title="Disaster: Hailstorm & Frost Wave" onclick="window._dt3dSetDisaster('hailstorm', this)">❄️</button>
+              <button class="dt3d-toolbar-btn" data-disaster="locusts" title="Disaster: 1,200 Locust Swarm Blight" onclick="window._dt3dSetDisaster('locusts', this)">🦗</button>
+              <button class="dt3d-toolbar-btn" data-disaster="flood" title="Disaster: Flash Flood & Inundation" onclick="window._dt3dSetDisaster('flood', this)">🌊</button>
+              <div class="dt3d-toolbar-divider"></div>
+              <button class="dt3d-toolbar-btn" id="dt3d-sound-btn" title="Toggle Booming Thunder Synthesizer" onclick="window._dt3dToggleSound(this)">🔊</button>
               <button class="dt3d-toolbar-btn" title="Cycle Atmosphere" onclick="window._dt3dCycleWeather()">🌤️</button>
               <button class="dt3d-toolbar-btn" title="Fullscreen" onclick="window._dt3dToggleFullscreen()">⛶</button>
             </div>
@@ -1052,7 +1059,7 @@
   let activeTab = "overview";
   let twinAdapter3D = null;
   let currentStep = 1;
-  const totalSteps = 8;
+  const totalSteps = 11;
   let isMandatoryOnboarding = false;
   let activeFarmId = "9fca8bd1-344e-46b1-b5f8-4a94ebd4167c";
   let activeCropPlan = null;
@@ -1073,6 +1080,7 @@
     district_basin: "Mahanadi River Basin (Cuttack/Jagatsinghpur)",
     advisory_mandate: "Senior Crop Scientist & Precision Agriculture Fellow",
     farming_classification: "Terrestrial Field Crops",
+    sub_type: "Open Field Cereal Grains",
     soil_texture: "Alluvial Silt Loam",
     soil_ph: 6.8,
     soil_npk: "Medium (N:280, P:22, K:240 kg/ha)",
@@ -1083,6 +1091,8 @@
     duration_days: 120,
     expected_yield: 24.5,
     worker_daily_hours_cap: 7.0,
+    weather_baseline: "clear",
+    disaster_contingency: "Severe Thunderstorm Protocol",
     mechanization: [
       "Tractor & Multi-Row Seed Drill",
       "Laser Land Leveler",
@@ -1169,6 +1179,12 @@
   const TAXONOMY_CONFIGS = {
     "Terrestrial Field Crops": {
       defaultCrop: "Wheat",
+      subtypes: [
+        { id: "Open Field Cereal Grains", label: "Open Field Cereal Grains (Wheat, Rice, Barley)", desc: "High-density monoculture grains with combine harvesting and laser leveling." },
+        { id: "Grain Legumes & Pulses", label: "Grain Legumes & Pulses (Chickpea, Moong, Pigeon Pea)", desc: "Nitrogen-fixing root nodules, moisture-stress resilient protein cropping." },
+        { id: "Oilseed Production Systems", label: "Oilseed Systems (Mustard, Groundnut, Soybean)", desc: "Critical sulfur/boron balanced nutrition for maximum lipid percentage." },
+        { id: "Commercial Fiber & Cash Crops", label: "Fiber & Cash Crops (Cotton, Sugarcane)", desc: "Long-season commercial crops requiring pest IPM and bollworm traps." }
+      ],
       crops: [
         { name: "Wheat", label: "Wheat (Triticum aestivum / PBW-550) • 120 Days", duration: 120, yield: 24.5 },
         { name: "Rice", label: "Paddy / Rice (Oryza sativa / Swarna Sub-1) • 135 Days", duration: 135, yield: 28.0 },
@@ -1211,6 +1227,12 @@
     },
     "Pisciculture & Aquaculture": {
       defaultCrop: "Pisciculture",
+      subtypes: [
+        { id: "Composite Freshwater Carp Polyculture", label: "Composite Carp Polyculture (Rohu + Catla + Mrigal)", desc: "3-tier trophic niche utilization (surface, column, benthic bottom)." },
+        { id: "Monoculture Intensification", label: "Intensive Monoculture (GIFT Tilapia / Pangasius)", desc: "High-density commercial feed conversion with paddlewheel aeration." },
+        { id: "Freshwater Giant Prawn / Scampi", label: "Giant Freshwater Prawn / Scampi (Macrobrachium)", desc: "High-value crustaceans with sandy-clay bottom and hideout shelters." },
+        { id: "Nursery Hatchery & Fingerling Rearing", label: "Nursery Hatchery & Fingerling Seed Rearing", desc: "Plankton-rich nursery ponds for fry conditioning and distribution." }
+      ],
       crops: [
         { name: "Pisciculture", label: "Composite Carp Polyculture (Rohu + Catla + Mrigal) • 195 Days", duration: 195, yield: 38.0 },
         { name: "Rohu", label: "Rohu Intensive Monoculture (Labeo rohita) • 195 Days", duration: 195, yield: 35.0 },
@@ -1253,6 +1275,12 @@
     },
     "Polyhouse & Protected Cultivation": {
       defaultCrop: "Capsicum",
+      subtypes: [
+        { id: "Climate-Controlled Polyhouse", label: "Climate-Controlled Dutch Polyhouse (Bell Pepper, Cherry Tomato)", desc: "VPD regulated 0.8-1.2 kPa, automated thermal shading, and venturi fertigation." },
+        { id: "Closed-Loop Hydroponics & NFT", label: "Closed-Loop Hydroponics NFT (Lettuce, Herbs, Microgreens)", desc: "Recirculating nutrient film channels with continuous EC/pH monitoring." },
+        { id: "Naturally Ventilated Polyhouse", label: "Naturally Ventilated Polyhouse (NVP)", desc: "Insect-proof monofilament netting, passive ridge ventilation." },
+        { id: "Hi-Tech Plug Plant Nursery", label: "Hi-Tech Plug Plant Nursery & Automated Misting", desc: "Sterilized cocopeat plug trays for commercial grafting & rootstock rearing." }
+      ],
       crops: [
         { name: "Capsicum", label: "Colored Bell Pepper / Capsicum (Capsicum annuum) • 120 Days", duration: 120, yield: 160.0 },
         { name: "Tomato", label: "Indeterminate Cherry Tomato (Solanum lycopersicum) • 90 Days", duration: 90, yield: 220.0 },
@@ -1292,6 +1320,12 @@
     },
     "Commercial Horticulture & Orchards": {
       defaultCrop: "Mango",
+      subtypes: [
+        { id: "High-Density Fruit Orchards", label: "Ultra High-Density Perennial Fruit Orchards (Mango, Guava, Citrus)", desc: "Canopy pruning architecture, under-canopy micro-jets, and high tree densities." },
+        { id: "Commercial Floriculture Groves", label: "Commercial Floriculture & Protected Cut Flowers", desc: "Perennial ornamental cuts with post-harvest cold chain and misting." },
+        { id: "Open Field Truck Horticulture", label: "Open Field Commercial Vegetables (Tomato, Chili, Onion)", desc: "Raised bed plastic mulch with dual lateral drip fertigation." },
+        { id: "Spices & Plantation Agriculture", label: "Perennial Plantation & Spices (Cardamom, Pepper, Ginger)", desc: "Shade tree intercropping with organic bio-stimulant foliar nutrition." }
+      ],
       crops: [
         { name: "Mango", label: "Mango (Amrapali / Mallika Ultra High Density) • 240 Days", duration: 240, yield: 75.0 },
         { name: "Guava", label: "Guava (Taiwan Pink / VNR Bihi High-Density) • 180 Days", duration: 180, yield: 90.0 },
@@ -1330,6 +1364,12 @@
     },
     "Terrace & Hill Agriculture": {
       defaultCrop: "Rajmash",
+      subtypes: [
+        { id: "Contour Stepped Alpine Terraces", label: "Contour Stepped Alpine Terraces (Rajmash, Buckwheat, Millets)", desc: "Stone retaining walls, slope contour furrows, and gravity watershed management." },
+        { id: "High-Altitude Hill Horticulture", label: "High-Altitude Hill Groves (Apple, Peach, Walnut)", desc: "Sloped temperate pomology with winter chilling requirement tracking." },
+        { id: "Highland Specialty Spices", label: "Highland Specialty Cash Crops (Organic Hill Ginger, Turmeric, Saffron)", desc: "High-elevation humus soil with raised ridge drainage to prevent rhizome rot." },
+        { id: "Watershed Bench Terracing", label: "Watershed Bench Terraces with Traditional Kuhl Channels", desc: "Gravity stream diversions with stone sluices connecting tiered plots." }
+      ],
       crops: [
         { name: "Rajmash", label: "High-Altitude Kidney Bean / Rajmash • 105 Days", duration: 105, yield: 14.0 },
         { name: "Buckwheat", label: "Himalayan Buckwheat / Kuttu • 75 Days", duration: 75, yield: 11.0 },
@@ -1369,13 +1409,16 @@
 
   const wizardSteps = [
     { num: 1, title: "Workforce & Farmer Cadre" },
-    { num: 2, title: "Jurisdiction & State" },
+    { num: 2, title: "Jurisdiction & Geodetics" },
     { num: 3, title: "Farming Classification" },
-    { num: 4, title: "Soil & Hydrology" },
-    { num: 5, title: "Season & Climate" },
-    { num: 6, title: "Crop Cultivar & Cycle" },
-    { num: 7, title: "Mechanization & Tools" },
-    { num: 8, title: "Biophysical Rules & Fatigue" }
+    { num: 4, title: "Enterprise Sub-Types" },
+    { num: 5, title: "Soil Profile & Hydrology" },
+    { num: 6, title: "Season & Agro-Climate" },
+    { num: 7, title: "Cultivar & Growth Duration" },
+    { num: 8, title: "Mechanization & IoT Nodes" },
+    { num: 9, title: "Biophysical Exertion Rules" },
+    { num: 10, title: "Atmosphere & Audio Simulation" },
+    { num: 11, title: "Disaster Contingency & Sign-Off" }
   ];
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -1634,6 +1677,39 @@
       heatwave: 'Arid Heatwave & Thermal Haze'
     };
     AgriosUI.showToast("Atmosphere Shifted", weatherLabels[mode] || mode.toUpperCase(), "🌤️");
+  };
+
+  window._dt3dSetDisaster = function(disasterType, btn) {
+    if (!twinAdapter3D) return;
+    const active = twinAdapter3D.setDisaster(disasterType);
+    
+    document.querySelectorAll('.dt3d-toolbar-btn[data-disaster]').forEach(b => {
+      b.classList.toggle('active', b.dataset.disaster === active);
+    });
+
+    const labels = {
+      thunderstorm: '⛈️ Severe Thunderstorm & Lightning Flash Active',
+      drought: '🏜️ Severe Drought & Arid Heatwave Active',
+      hailstorm: '❄️ Hailstorm & Frost Wave Active',
+      locusts: '🦗 1,200 Locust Swarm Blight Active',
+      flood: '🌊 Flash Flood Inundation Active'
+    };
+    if (active) {
+      AgriosUI.showToast("Disaster Simulation Triggered", labels[active] || active.toUpperCase(), "⚠️");
+    } else {
+      AgriosUI.showToast("Disaster Cleared", "Atmospheric conditions normalized to standard baseline.", "🌤️");
+    }
+  };
+
+  window._dt3dToggleSound = function(btn) {
+    if (!twinAdapter3D) return;
+    const unmuted = twinAdapter3D.toggleSound();
+    if (btn) {
+      btn.classList.toggle('active', unmuted);
+      btn.innerHTML = unmuted ? '🔊' : '🔇';
+      btn.title = unmuted ? 'Mute Booming Thunder Synthesizer' : 'Enable Booming Thunder Synthesizer';
+    }
+    AgriosUI.showToast(unmuted ? "Audio Synthesizer Enabled" : "Audio Synthesizer Muted", unmuted ? "Authentic native Web Audio thunder effects live." : "Sound disabled.", unmuted ? "🔊" : "🔇");
   };
 
   window._dt3dToggleFullscreen = function() {
@@ -2827,6 +2903,9 @@
     surveyState.farming_classification = cls;
     const cfg = TAXONOMY_CONFIGS[cls] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
     if (cfg) {
+      if (cfg.subtypes && cfg.subtypes.length > 0) {
+        surveyState.sub_type = cfg.subtypes[0].id;
+      }
       if (cfg.crops && cfg.crops.length > 0) {
         surveyState.crop_name = cfg.defaultCrop || cfg.crops[0].name;
         const cropObj = cfg.crops.find(c => c.name === surveyState.crop_name) || cfg.crops[0];
@@ -2842,6 +2921,22 @@
         surveyState.mechanization = cfg.mechanization.slice(0, 3).map(m => m.id);
       }
     }
+    const clsKeyMap = {
+      "Commercial Horticulture & Orchards": "horticulture",
+      "Polyhouse & Protected Cultivation": "polyhouse",
+      "Terrace & Hill Agriculture": "terrace",
+      "Pisciculture & Aquaculture": "aquaculture",
+      "Terrestrial Field Crops": "terrestrial"
+    };
+    const mappedCls = clsKeyMap[cls] || "terrestrial";
+    if (twinAdapter3D && typeof twinAdapter3D.setFarmingClassification === "function") {
+      twinAdapter3D.setFarmingClassification(mappedCls);
+    }
+    renderWizardStep();
+  }
+
+  function selectSubType(subTypeId) {
+    surveyState.sub_type = subTypeId;
     renderWizardStep();
   }
 
@@ -2871,10 +2966,24 @@
     if (durInput) durInput.value = kb.duration;
     if (yldInput) yldInput.value = kb.yield;
 
+    // Dynamically calibrate time slider maximum to match crop duration!
+    const slider = document.getElementById("dt3d-time-slider");
+    if (slider) {
+      slider.max = kb.duration;
+      if (parseInt(slider.value, 10) > kb.duration) {
+        slider.value = kb.duration;
+      }
+      const dayLabel = document.getElementById("dt3d-day-label");
+      if (dayLabel) dayLabel.innerText = `Day ${slider.value}`;
+    }
+
     const calibSelect = document.getElementById("calib-crop");
     if (calibSelect) calibSelect.value = crop;
     if (twinAdapter3D && typeof twinAdapter3D.setCrop === "function") {
       twinAdapter3D.setCrop(crop);
+    }
+    if (twinAdapter3D && typeof twinAdapter3D.setPlanDuration === "function") {
+      twinAdapter3D.setPlanDuration(kb.duration);
     }
   }
 
@@ -2885,6 +2994,14 @@
       surveyState.mechanization = surveyState.mechanization.filter(t => t !== toolId);
     }
   }
+
+  window._dt3dTestThunder = function() {
+    if (twinAdapter3D && twinAdapter3D.engine) {
+      twinAdapter3D.engine._initAudioContext();
+      twinAdapter3D.engine._playSynthesizedThunder();
+      AgriosUI.showToast("Synthesizing Thunder", "Native Web Audio procedural pink-noise resonant filter thunder fired.", "⚡");
+    }
+  };
 
   function renderWizardStep() {
     const stepper = document.getElementById("wizard-stepper-container");
@@ -2962,10 +3079,10 @@
         </div>
       `;
     } else if (currentStep === 2) {
-      // Step 2: Jurisdiction & Agro-Ecological State
+      // Step 2: Jurisdiction & Geodetic Baseline
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 2: Jurisdiction & Agro-Ecological State</h4>
-        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select state territory and agricultural basin to calibrate climate baselines and telemetry models.</p>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 2: Jurisdiction & Geodetic Baseline</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select state territory, agricultural basin, and precise geodetic coordinates to calibrate climate baselines and satellite models.</p>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
           <div class="input-group">
@@ -2987,6 +3104,17 @@
           </div>
         </div>
 
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">Geodetic Latitude (°N)</label>
+            <input type="text" class="form-control" id="wiz-lat" value="20.4625" readonly style="background:#f8fafc; color:#64748b;">
+          </div>
+          <div class="input-group">
+            <label style="font-weight:600;">Geodetic Longitude (°E)</label>
+            <input type="text" class="form-control" id="wiz-lon" value="85.8828" readonly style="background:#f8fafc; color:#64748b;">
+          </div>
+        </div>
+
         <div class="input-group" style="margin-top:0.75rem;">
           <label style="font-weight:600;">Scientific Advisory Mandate Title</label>
           <input type="text" class="form-control" id="wiz-mandate" value="${surveyState.advisory_mandate}" oninput="surveyState.advisory_mandate = this.value;">
@@ -3000,16 +3128,16 @@
     } else if (currentStep === 3) {
       // Step 3: Farming Classification (5 options)
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 3: Farming Classification & Taxonomy</h4>
-        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select the primary agricultural taxonomy applicable to your jurisdiction parcel.</p>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 3: Farming Classification & World Taxonomy</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Select the primary agricultural taxonomy applicable to your jurisdiction parcel. The 3D Digital Twin renders a bespoke world model for each classification.</p>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           ${[
             { id: "Terrestrial Field Crops", icon: "🌾", title: "Terrestrial Field Crops", desc: "Open-field grains, cereals, pulses, and oilseeds with mechanized harvesting." },
-            { id: "Commercial Horticulture & Orchards", icon: "🍎", title: "Commercial Horticulture", desc: "High-density fruit orchards, perennial groves, and commercial vegetables." },
-            { id: "Pisciculture & Aquaculture", icon: "🐟", title: "Pisciculture & Aquaculture", desc: "Freshwater carp polyculture, aerated farm ponds, and fingerling nursery." },
-            { id: "Terrace & Hill Agriculture", icon: "⛰️", title: "Terrace & Hill Farming", desc: "Contour stepped agriculture, watershed runoff terraces, and mountain slopes." },
-            { id: "Polyhouse & Protected Cultivation", icon: "🏛️", title: "Polyhouse & Protected", desc: "Climate-controlled greenhouse, nursery shade netting, and micro-sprinklers." }
+            { id: "Commercial Horticulture & Orchards", icon: "🍎", title: "Commercial Horticulture", desc: "High-density fruit orchards (Mango/Citrus/Guava), perennial groves, and vegetable truck farming." },
+            { id: "Pisciculture & Aquaculture", icon: "🐟", title: "Pisciculture & Aquaculture", desc: "Dual excavated carp aquaculture ponds, paddlewheel aerators, and jumping fish." },
+            { id: "Terrace & Hill Agriculture", icon: "⛰️", title: "Terrace & Hill Farming", desc: "4-tier stepped mountain terraces, dry-stone masonry retaining walls, and gravity Kuhl water channels." },
+            { id: "Polyhouse & Protected Cultivation", icon: "🏛️", title: "Polyhouse & Protected", desc: "Twin-bay curved arch greenhouse, raised NFT hydroponic benches, and suspended LED grow lights." }
           ].map(fc => `
             <div onclick="selectFarmingClassification('${fc.id}')" style="cursor:pointer; padding:12px; border-radius:8px; border:2px solid ${surveyState.farming_classification === fc.id ? '#10b981' : '#e2e8f0'}; background:${surveyState.farming_classification === fc.id ? '#ecfdf5' : '#ffffff'}; transition:all 0.15s;">
               <div style="display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.9rem; color:#0f172a;">
@@ -3021,7 +3149,37 @@
         </div>
       `;
     } else if (currentStep === 4) {
-      // Step 4: Soil Profile & Hydrology (Dynamic based on classification)
+      // Step 4: Enterprise Sub-Types & Systems
+      const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
+      const subtypes = currentCfg.subtypes || [];
+      if (!subtypes.some(s => s.id === surveyState.sub_type) && subtypes.length > 0) {
+        surveyState.sub_type = subtypes[0].id;
+      }
+
+      content.innerHTML = `
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 4: Enterprise Sub-Types & Cropping Systems</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
+          Specialized production system calibrated under <strong>${surveyState.farming_classification}</strong>:
+        </p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          ${subtypes.map(st => `
+            <div onclick="selectSubType('${st.id}')" style="cursor:pointer; padding:12px; border-radius:8px; border:2px solid ${surveyState.sub_type === st.id ? '#10b981' : '#e2e8f0'}; background:${surveyState.sub_type === st.id ? '#ecfdf5' : '#ffffff'}; transition:all 0.15s;">
+              <div style="font-weight:700; font-size:0.88rem; color:#0f172a; display:flex; align-items:center; justify-content:space-between;">
+                <span>${st.label}</span>
+                ${surveyState.sub_type === st.id ? '<span style="color:#059669; font-size:1.05rem;">✓</span>' : ''}
+              </div>
+              <p style="font-size:0.75rem; color:#64748b; margin:6px 0 0 0; line-height:1.35;">${st.desc}</p>
+            </div>
+          `).join("")}
+        </div>
+
+        <div style="margin-top:1.25rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.8rem; color:#475569;">
+          <strong>Active System Architecture:</strong> ${surveyState.sub_type || 'Standard System'} — All physiological crop coefficients ($K_c$), root depth zones, and fertilizer schedules automatically adapt to this cropping sub-type.
+        </div>
+      `;
+    } else if (currentStep === 5) {
+      // Step 5: Soil Profile & Hydrology (Dynamic based on classification)
       const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
       if (!currentCfg.soils.includes(surveyState.soil_texture)) {
         surveyState.soil_texture = currentCfg.defaultSoil;
@@ -3041,7 +3199,7 @@
 
       content.innerHTML = `
         <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">
-          Step 4: ${isAqua ? 'Pond Bed Edaphology & Hydrology' : (isProtected ? 'Growing Medium & Fertigation Controls' : 'Soil Profile & Hydrological Infrastructure')}
+          Step 5: ${isAqua ? 'Pond Bed Edaphology & Hydrology' : (isProtected ? 'Growing Medium & Fertigation Controls' : 'Soil Profile & Hydrological Infrastructure')}
         </h4>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
           Calibrated specifically for <strong>${surveyState.farming_classification}</strong>.
@@ -3086,14 +3244,14 @@
           </div>
         </div>
       `;
-    } else if (currentStep === 5) {
-      // Step 5: Season & Agro-Climate (Contextualized)
+    } else if (currentStep === 6) {
+      // Step 6: Season & Agro-Climate
       const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
       const isAqua = surveyState.farming_classification.includes("Pisciculture");
       const isProtected = surveyState.farming_classification.includes("Polyhouse");
 
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 5: Season & Agro-Climatic Window</h4>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 6: Season & Agro-Climatic Window</h4>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
           Select production season. Recommended for ${surveyState.farming_classification}: <strong>${currentCfg.defaultSeason}</strong>.
         </p>
@@ -3119,8 +3277,8 @@
           ${isAqua ? 'Pond water temp calibrated at 26°C–32°C. Critical DO threshold monitored at 4.0 mg/L via automated aerator controllers.' : (isProtected ? 'VPD set to 0.8–1.2 kPa with automated micro-fogging misting sensors.' : 'Annual precipitation window calibrated between 650 mm – 1150 mm. Relative humidity swings tracked via Sentinel-2 & AWS telemetry.')}
         </div>
       `;
-    } else if (currentStep === 6) {
-      // Step 6: Lead Crop Cultivar & Cycle Duration (STRICTLY Dynamic based on classification)
+    } else if (currentStep === 7) {
+      // Step 7: Cultivar Selection & Dynamic Life Cycle Duration
       const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
       
       const cropExists = currentCfg.crops.some(c => c.name === surveyState.crop_name);
@@ -3135,7 +3293,7 @@
 
       content.innerHTML = `
         <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">
-          Step 6: ${isAqua ? 'Target Aquatic Species & Culture Cycle' : 'Lead Crop Cultivar & Cycle Duration'}
+          Step 7: ${isAqua ? 'Target Aquatic Species & Culture Cycle' : 'Lead Crop Cultivar & Cycle Duration'}
         </h4>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
           Available species & cultivars specifically calibrated for <strong>${surveyState.farming_classification}</strong>:
@@ -3153,16 +3311,20 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem;">
           <div class="input-group">
             <label style="font-weight:600;">${isAqua ? 'Grow-Out Cycle Duration (Days)' : 'Target Cycle Duration (Days)'}</label>
-            <input type="number" class="form-control" id="wiz-crop-duration" value="${surveyState.duration_days}" onchange="surveyState.duration_days = parseInt(this.value) || 120;">
+            <input type="number" class="form-control" id="wiz-crop-duration" value="${surveyState.duration_days}" onchange="surveyState.duration_days = parseInt(this.value) || 120; const slider = document.getElementById('dt3d-time-slider'); if(slider){ slider.max = surveyState.duration_days; }">
           </div>
           <div class="input-group">
             <label style="font-weight:600;">${isAqua ? 'Target Biomass Yield (qtl/acre)' : 'Expected Yield Target (qtl/acre)'}</label>
             <input type="number" step="0.5" class="form-control" id="wiz-crop-yield" value="${surveyState.expected_yield}" onchange="surveyState.expected_yield = parseFloat(this.value) || 24.5;">
           </div>
         </div>
+
+        <div style="margin-top:1.25rem; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:12px; font-size:0.8rem; color:#065f46;">
+          <strong>Dynamic Growth Timeline Synchronization:</strong> The 3D Digital Twin time slider maximum will scale to <strong>${surveyState.duration_days} Days</strong>. Scrubbing the slider will morph the 3D meshes through all botanical growth stages.
+        </div>
       `;
-    } else if (currentStep === 7) {
-      // Step 7: Mechanization Tools (STRICTLY Dynamic based on classification)
+    } else if (currentStep === 8) {
+      // Step 8: Available Farm Implements, Machinery & IoT Nodes
       const currentCfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
       
       const validIds = currentCfg.mechanization.map(m => m.id);
@@ -3175,7 +3337,7 @@
 
       content.innerHTML = `
         <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">
-          Step 7: ${isAqua ? 'Available Aquaculture Equipment & Monitoring Tools' : 'Available Farm Tools & Mechanization'}
+          Step 8: ${isAqua ? 'Available Aquaculture Equipment & Monitoring Tools' : 'Available Farm Tools & Mechanization'}
         </h4>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">
           Equipment inventory specific to <strong>${surveyState.farming_classification}</strong>. Tasks will only specify verified implements.
@@ -3191,10 +3353,10 @@
           `).join("")}
         </div>
       `;
-    } else if (currentStep === 8) {
-      // Step 8: Biophysical Protection Rules & Sign-Off
+    } else if (currentStep === 9) {
+      // Step 9: Biophysical Protection Rules & Exertion Safety
       content.innerHTML = `
-        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 8: Biophysical Protection Rules & Engine Sign-Off</h4>
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 9: Biophysical Protection Rules & Exertion Safety</h4>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Configure safety shutoffs that safeguard field workers and farmers against physiological exhaustion and heat illness.</p>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
@@ -3214,13 +3376,86 @@
           </div>
         </div>
 
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="input-group">
+            <label style="font-weight:600;">Rainfall Work-Stop Threshold (%)</label>
+            <input type="number" class="form-control" value="60" min="20" max="95" onchange="surveyState.fatigue_rules.rain_lockdown_pct = parseInt(this.value) || 60;">
+            <span style="font-size:0.72rem; color:#64748b;">Halts electrical and field machinery operations during heavy storms.</span>
+          </div>
+
+          <div class="input-group">
+            <label style="font-weight:600;">Physical Fatigue Warning Index Cap (%)</label>
+            <input type="number" class="form-control" value="85" min="60" max="95" onchange="surveyState.fatigue_rules.fatigue_cap_pct = parseInt(this.value) || 85;">
+            <span style="font-size:0.72rem; color:#64748b;">Dispatches replacement workers when individual fatigue score exceeds threshold.</span>
+          </div>
+        </div>
+      `;
+    } else if (currentStep === 10) {
+      // Step 10: Atmospheric Weather Calibration & Native Thunder Audio
+      content.innerHTML = `
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 10: Atmospheric Weather & Audio Synthesizer Setup</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Configure default atmospheric lighting, solar haze, depth fog, and native acoustic thunder synthesizer for the 3D Agricultural Twin.</p>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:1.25rem;">
+          ${[
+            { id: "clear", icon: "☀️", label: "Clear High Noon", desc: "1.45x solar intensity, dry soil PBR" },
+            { id: "cloudy", icon: "☁️", label: "Overcast", desc: "14 drift clouds, diffused skylight" },
+            { id: "rain", icon: "🌧️", label: "Thunderstorm & Rain", desc: "2,800 rain streaks, wet soil sheen" },
+            { id: "dusk", icon: "🌅", label: "Golden Dusk", desc: "Orange sunset horizon & warm soil" },
+            { id: "night", icon: "🌙", label: "Starry Night", desc: "800 twinkling stars & glowing moon" },
+            { id: "heatwave", icon: "🌡️", label: "Arid Heatwave", desc: "Blistering sun & thermal haze" }
+          ].map(w => `
+            <div onclick="surveyState.weather_baseline='${w.id}'; if(twinAdapter3D) twinAdapter3D.setWeather('${w.id}'); renderWizardStep();" style="cursor:pointer; padding:10px; border-radius:8px; border:2px solid ${(surveyState.weather_baseline || 'clear') === w.id ? '#10b981' : '#e2e8f0'}; background:${(surveyState.weather_baseline || 'clear') === w.id ? '#ecfdf5' : '#ffffff'}; text-align:center;">
+              <div style="font-size:1.4rem;">${w.icon}</div>
+              <div style="font-weight:700; font-size:0.8rem; color:#0f172a; margin-top:3px;">${w.label}</div>
+              <div style="font-size:0.68rem; color:#64748b; margin-top:2px;">${w.desc}</div>
+            </div>
+          `).join("")}
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; font-size:0.88rem; color:#0f172a;">⚡ Native Web Audio Thunder Synthesizer</div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Procedural resonant pink-noise filter with bass boost and acoustic lag (zero external audio files).</div>
+          </div>
+          <button type="button" class="btn-primary" onclick="window._dt3dTestThunder()" style="height:34px; font-size:0.8rem; padding:0 12px; background:#0284c7; white-space:nowrap; border:none; border-radius:6px; color:white; cursor:pointer;">
+            ⚡ Test Thunder Clap
+          </button>
+        </div>
+      `;
+    } else if (currentStep === 11) {
+      // Step 11: Extreme Disaster Contingency Protocols & Engine Sign-Off
+      content.innerHTML = `
+        <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Step 11: Extreme Disaster Contingency & Precision Engine Activation</h4>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.25rem;">Verify biophysical contingency responses and emergency mitigation workflows across 5 high-impact catastrophe scenarios.</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.25rem;">
+          ${[
+            { id: "thunderstorm", icon: "⛈️", name: "Severe Thunderstorm & Supercell", trigger: "Rapid lightning flashes & booming sound", action: "Emergency hail netting, lightning grounding, field ditch clearance" },
+            { id: "drought", icon: "🏜️", name: "Severe Drought & Extreme Heatwave", trigger: "Blistering solar haze, procedural cracked soil", action: "Anti-transpirant sprays, mulching, split nocturnal work shifts" },
+            { id: "hailstorm", icon: "❄️", name: "Hailstorm & Sub-Zero Frost Wave", trigger: "750 bouncing ice hailstones, ground frost sheen", action: "Thermal smoke generators, foliar cryo-protectants, row covers" },
+            { id: "locusts", icon: "🦗", name: "1,200 Locust Swarm Blight", trigger: "1,200 particle vortex flocking across crops", action: "Biopesticide barrier curtains, acoustic sonic cannons, trenching" },
+            { id: "flood", icon: "🌊", name: "Flash Flood & Silt Inundation", trigger: "Muddy silt water plane rising to 0.72m submerging furrows", action: "High-capacity diesel dewatering pumps, stone bund reinforcement" }
+          ].map(d => `
+            <div style="padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:700; font-size:0.85rem; color:#0f172a;"><span style="font-size:1.1rem;">${d.icon}</span> ${d.name}</div>
+                <button type="button" class="btn-secondary" onclick="window._dt3dSetDisaster('${d.id}')" style="height:26px; font-size:0.7rem; padding:0 8px; cursor:pointer; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff;">Test 3D</button>
+              </div>
+              <div style="font-size:0.72rem; color:#64748b; margin-top:4px;"><strong>Visual:</strong> ${d.trigger}</div>
+              <div style="font-size:0.72rem; color:#065f46; margin-top:2px;"><strong>Protocol:</strong> ${d.action}</div>
+            </div>
+          `).join("")}
+        </div>
+
         <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:14px; margin-bottom:1rem;">
           <div style="font-weight:700; font-size:0.9rem; color:#065f46; margin-bottom:4px;">Ready to Synthesize Calibrated Precision Engine</div>
-          <div style="font-size:0.8rem; color:#047857; line-height:1.4;">
+          <div style="font-size:0.8rem; color:#047857; line-height:1.45;">
             ✓ <strong>Cadre Pool:</strong> ${registeredCadre.length} Registered Individuals (${registeredCadre.filter(c => c.role === 'worker').length} Workers, ${registeredCadre.filter(c => c.role === 'farmer').length} Farmers)<br>
-            ✓ <strong>Jurisdiction:</strong> ${surveyState.state} • ${surveyState.district_basin}<br>
-            ✓ <strong>Target Enterprise:</strong> ${surveyState.crop_name} (${surveyState.duration_days} Days) • Classification: ${surveyState.farming_classification}<br>
-            ✓ <strong>Hydrology:</strong> ${surveyState.water_source} • ${surveyState.irrigation_method}
+            ✓ <strong>Jurisdiction:</strong> ${surveyState.state} • ${surveyState.district_basin} (Lat: 20.4625° N, Lon: 85.8828° E)<br>
+            ✓ <strong>Enterprise:</strong> ${surveyState.crop_name} (${surveyState.duration_days} Days) • ${surveyState.sub_type || 'Standard System'}<br>
+            ✓ <strong>World Model:</strong> ${surveyState.farming_classification} (${surveyState.water_source} • ${surveyState.irrigation_method})<br>
+            ✓ <strong>Atmosphere & Disasters:</strong> Native Web Audio Synthesizer Active • 5 Disaster Protocols Calibrated
           </div>
         </div>
       `;
@@ -3268,6 +3503,9 @@
       state: surveyState.state,
       district_basin: surveyState.district_basin,
       farming_classification: surveyState.farming_classification,
+      sub_type: surveyState.sub_type,
+      weather_baseline: surveyState.weather_baseline || "clear",
+      disaster_contingency: surveyState.disaster_contingency || "Severe Thunderstorm Protocol",
       soil_texture: surveyState.soil_texture,
       soil_ph: parseFloat(surveyState.soil_ph) || 6.8,
       water_source: surveyState.water_source,
@@ -3302,6 +3540,17 @@
 
       isMandatoryOnboarding = false;
       document.getElementById("onboarding-wizard-modal").style.display = "none";
+
+      // Dynamically calibrate 3D time slider to match calibrated duration
+      const slider = document.getElementById("dt3d-time-slider");
+      if (slider && calibratedPlan.duration_days) {
+        slider.max = calibratedPlan.duration_days;
+        if (parseInt(slider.value, 10) > calibratedPlan.duration_days) {
+          slider.value = calibratedPlan.duration_days;
+        }
+        const dayLabel = document.getElementById("dt3d-day-label");
+        if (dayLabel) dayLabel.innerText = `Day ${slider.value}`;
+      }
 
       AgriosUI.showToast("Precision Engine Calibrated", `Master plan generated for ${calibratedPlan.crop_name} (${calibratedPlan.state}). Workforce load balanced.`, "🌱");
 

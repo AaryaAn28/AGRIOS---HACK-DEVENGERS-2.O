@@ -252,16 +252,38 @@ export class AgriosDigitalTwin3D {
     this.cloudMeshes = [];
     this.isDestroyed = false;
 
-    // Enterprise adaptation & special modes
+    // Enterprise adaptation & 5 3D Agricultural World Models
+    this.farmingClassification = 'terrestrial'; // 'terrestrial' | 'horticulture' | 'polyhouse' | 'aquaculture' | 'terrace'
     this.isAquaculture = false;
     this.outbreakBeaconGroup = null;
     this.surveyorMesh = null;
     this.surveyTrail = null;
+    this.horticultureTrees = [];
+    this.polyhouseStructure = null;
+    this.terraceTiers = [];
+    this.tomatoTrellises = [];
+    this.fishMeshes = [];
+    this.paddyWater = null;
+
+    // Web Audio Thunder Synthesizer & Sound State
+    this.soundMuted = false;
+    this._audioCtx = null;
+
+    // Atmospheric Disaster Engine State
+    this.activeDisaster = null;
+    this.disasterObjects = [];
+    this.hailData = null;
+    this.locustData = null;
+    this.heatShimmerData = null;
+    this.floodMesh = null;
+    this.frostOverlayMesh = null;
+    this._originalTerrainRoughness = 0.85;
 
     // Procedural texture caches
     this._soilTexture = null;
     this._grassTexture = null;
     this._roadTexture = null;
+    this._crackedSoilTexture = null;
 
     // ── CAD-Lite EDIT FARM Mode State ──
     this.isEditMode = false;
@@ -361,6 +383,7 @@ export class AgriosDigitalTwin3D {
     this._soilTexture = this._createProceduralSoilTexture();
     this._grassTexture = this._createProceduralGrassTexture();
     this._roadTexture = this._createProceduralRoadTexture();
+    this._crackedSoilTexture = this._createProceduralCrackedSoilTexture();
 
     // 7. Lighting & Atmospheric Sky Dome
     this._setupLighting();
@@ -585,6 +608,62 @@ export class AgriosDigitalTwin3D {
     return texture;
   }
 
+  _createProceduralCrackedSoilTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base parched arid red/brown clay
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Stippling dry sand granules
+    for (let i = 0; i < 22000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      ctx.fillStyle = Math.random() > 0.5 ? '#92400e' : (Math.random() > 0.5 ? '#b45309' : '#451a03');
+      ctx.fillRect(x, y, 1.5, 1.5);
+    }
+
+    // Polygonal Voronoi-like deep fissures & cracks
+    const points = [];
+    for (let i = 0; i < 38; i++) {
+      points.push({ x: Math.random() * 512, y: Math.random() * 512 });
+    }
+
+    ctx.strokeStyle = '#291104';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const dx = points[i].x - points[j].x;
+        const dy = points[i].y - points[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 110) {
+          ctx.moveTo(points[i].x, points[i].y);
+          // Jagged crack mid-points
+          const mx = (points[i].x + points[j].x) / 2 + (Math.random() - 0.5) * 16;
+          const my = (points[i].y + points[j].y) / 2 + (Math.random() - 0.5) * 16;
+          ctx.lineTo(mx, my);
+          ctx.lineTo(points[j].x, points[j].y);
+        }
+      }
+    }
+    ctx.stroke();
+
+    // Crack edge highlights (sunlit bevel)
+    ctx.strokeStyle = 'rgba(217, 119, 6, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(6, 6);
+    return texture;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // SCENE BUILDING
   // ─────────────────────────────────────────────────────────────
@@ -593,21 +672,63 @@ export class AgriosDigitalTwin3D {
 
     const cp = sceneData.crop_plan || {};
     const farmCrop = sceneData.farm?.crop_type || '';
-    const cleanCropName = (cp.crop_name || cp.crop_type || farmCrop || '').toLowerCase();
-    const farmingCls = (cp.farming_classification || '').toLowerCase();
-    this.isAquaculture = cleanCropName.includes('pisc') || cleanCropName.includes('carp') || 
-                         cleanCropName.includes('fish') || cleanCropName.includes('rohu') || 
-                         cleanCropName.includes('catla') || farmingCls.includes('pisc') || 
-                         farmingCls.includes('aqua');
+    const cleanCropName = (cp.crop_name || cp.crop_type || farmCrop || this.cropName || '').toLowerCase();
+    const farmingCls = (cp.farming_classification || this.farmingClassification || '').toLowerCase();
 
-    if (sceneData.crop_plan && sceneData.crop_plan.stages) {
+    // High-Fidelity 5 3D Agricultural Worlds Detection
+    if (farmingCls.includes('horticulture') || farmingCls.includes('orchard') || 
+        cleanCropName.includes('mango') || cleanCropName.includes('guava') || 
+        cleanCropName.includes('citrus') || cleanCropName.includes('pomegranate') || 
+        cleanCropName.includes('banana')) {
+      this.farmingClassification = 'horticulture';
+    } else if (farmingCls.includes('polyhouse') || farmingCls.includes('protected') || 
+               cleanCropName.includes('capsicum') || cleanCropName.includes('cucumber') || 
+               cleanCropName.includes('lettuce') || cleanCropName.includes('floriculture') ||
+               cleanCropName.includes('greenhouse')) {
+      this.farmingClassification = 'polyhouse';
+    } else if (farmingCls.includes('terrace') || farmingCls.includes('hill') || 
+               cleanCropName.includes('rajmash') || cleanCropName.includes('buckwheat') || 
+               cleanCropName.includes('ginger') || cleanCropName.includes('millet') ||
+               cleanCropName.includes('mountain')) {
+      this.farmingClassification = 'terrace';
+    } else if (cleanCropName.includes('pisc') || cleanCropName.includes('carp') || 
+               cleanCropName.includes('fish') || cleanCropName.includes('rohu') || 
+               cleanCropName.includes('catla') || cleanCropName.includes('tilapia') ||
+               cleanCropName.includes('scampi') || farmingCls.includes('pisc') || 
+               farmingCls.includes('aqua')) {
+      this.farmingClassification = 'aquaculture';
+    } else {
+      this.farmingClassification = 'terrestrial';
+    }
+    this.isAquaculture = (this.farmingClassification === 'aquaculture');
+
+    // Dynamic days calibration duration matching the crop plan
+    if (sceneData.crop_plan && sceneData.crop_plan.duration_days) {
+      this.maxDays = parseInt(sceneData.crop_plan.duration_days, 10) || 120;
+    } else if (sceneData.crop_plan && sceneData.crop_plan.stages && sceneData.crop_plan.stages.length > 0) {
       const lastStage = sceneData.crop_plan.stages[sceneData.crop_plan.stages.length - 1];
-      this.maxDays = lastStage ? (lastStage.end_day || 120) : (this.isAquaculture ? 195 : 120);
+      this.maxDays = lastStage ? (lastStage.end_day || 120) : 120;
+    } else if (this.farmingClassification === 'horticulture') {
+      this.maxDays = 240;
+    } else if (this.isAquaculture) {
+      this.maxDays = 195;
+    } else if (this.farmingClassification === 'terrace') {
+      this.maxDays = 105;
+    } else if (cleanCropName.includes('tomato')) {
+      this.maxDays = 90;
+    } else if (cleanCropName.includes('cotton')) {
+      this.maxDays = 155;
+    } else if (cleanCropName.includes('potato')) {
+      this.maxDays = 85;
+    } else if (cleanCropName.includes('rice')) {
+      this.maxDays = 135;
+    } else {
+      this.maxDays = 120;
     }
 
     this._clearGroups();
 
-    // Build scene hierarchy
+    // Build scene hierarchy according to 5 agricultural worlds
     this._buildTerrain();
     this._buildFarmBoundary(sceneData.boundary);
     this._buildFields(sceneData.spatial_objects);
@@ -619,7 +740,7 @@ export class AgriosDigitalTwin3D {
     this._buildWorkers(sceneData.workers);
     this._applyWeather(sceneData.weather);
 
-    console.log('[3D Twin] Scene built with', this.scene.children.length, 'top-level groups');
+    console.log(`[3D Twin] Built ${this.farmingClassification.toUpperCase()} World (Crop: ${cleanCropName || 'Wheat'}, Max Days: ${this.maxDays}) with`, this.scene.children.length, 'top-level groups');
   }
 
   _clearGroups() {
@@ -644,12 +765,23 @@ export class AgriosDigitalTwin3D {
     this.cloudMeshes = [];
     this.rainParticles = null;
     this.outbreakBeaconGroup = null;
+    this.horticultureTrees = [];
+    this.polyhouseStructure = null;
+    this.terraceTiers = [];
+    this.tomatoTrellises = [];
+    this.fishMeshes = [];
+    this.paddyWater = null;
+    this.disasterObjects = [];
   }
 
   // ─────────────────────────────────────────────────────────────
   // TERRAIN WITH PBR TEXTURE & VERTEX ELEVATIONS
   // ─────────────────────────────────────────────────────────────
   _buildTerrain() {
+    if (this.farmingClassification === 'terrace') {
+      this._buildTerraceTerrain();
+      return;
+    }
     const size = 150;
     const segments = 90;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
@@ -699,6 +831,71 @@ export class AgriosDigitalTwin3D {
     const terrain = new THREE.Mesh(geo, mat);
     terrain.receiveShadow = true;
     terrain.userData = { type: 'terrain' };
+    this.groups.terrain.add(terrain);
+    this._terrainMesh = terrain;
+  }
+
+  // Stepped 4-Tier Alpine Mountain Terrace Terrain
+  _buildTerraceTerrain() {
+    const size = 150;
+    const segments = 100;
+    const geo = new THREE.PlaneGeometry(size, size, segments, segments);
+    geo.rotateX(-Math.PI / 2);
+
+    const positions = geo.attributes.position;
+    const colors = new Float32Array(positions.count * 3);
+    const colorAttr = new THREE.BufferAttribute(colors, 3);
+
+    const soilColor = new THREE.Color(0x5d4037);
+    const mountainRockColor = new THREE.Color(0x455a64);
+    const alpineGrassColor = new THREE.Color(0x2e7d32);
+
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i);
+      const z = positions.getZ(i);
+
+      // 4-tier stepped mountain slope along Z axis (from Z=50 valley to Z=-50 mountain top)
+      let tierElevation = 0.5;
+      if (z < -24) {
+        tierElevation = 10.5; // Top alpine ridge tier
+      } else if (z < -2) {
+        tierElevation = 7.0;  // Mid-upper tier
+      } else if (z < 20) {
+        tierElevation = 3.6;  // Mid-lower tier
+      } else {
+        tierElevation = 0.6;  // Bottom valley tier
+      }
+
+      // Add rugged organic mountain noise at edges
+      const noise = this.noise.noise2D(x * 0.04, z * 0.04) * 0.4;
+      const elevation = tierElevation + noise;
+      positions.setY(i, elevation);
+
+      // Color based on elevation and slope
+      const t = Math.min(Math.max(elevation / 11.0, 0), 1);
+      let color = soilColor.clone().lerp(alpineGrassColor, 0.35 + t * 0.4);
+      if (Math.abs(z + 24) < 1.8 || Math.abs(z + 2) < 1.8 || Math.abs(z - 20) < 1.8) {
+        // Exposed cliff / stone retaining edge
+        color = mountainRockColor.clone().lerp(soilColor, 0.25);
+      }
+
+      colorAttr.setXYZ(i, color.r, color.g, color.b);
+    }
+
+    geo.setAttribute('color', colorAttr);
+    geo.computeVertexNormals();
+
+    const mat = new THREE.MeshStandardMaterial({
+      map: this._soilTexture,
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0.05,
+      side: THREE.FrontSide,
+    });
+
+    const terrain = new THREE.Mesh(geo, mat);
+    terrain.receiveShadow = true;
+    terrain.userData = { type: 'terrain', subtype: 'terrace_mountain' };
     this.groups.terrain.add(terrain);
     this._terrainMesh = terrain;
   }
@@ -774,13 +971,39 @@ export class AgriosDigitalTwin3D {
   // FIELDS (Polygonal & Grid Subdivisions)
   // ─────────────────────────────────────────────────────────────
   _buildFields(spatialObjects) {
-    if (this.isAquaculture) {
+    if (this.farmingClassification === 'aquaculture' || this.isAquaculture) {
       this._buildAquaculturePonds();
       return;
     }
+    if (this.farmingClassification === 'terrace') {
+      this._buildTerraceFields();
+      return;
+    }
+    if (this.farmingClassification === 'polyhouse') {
+      this._buildPolyhouseComplex();
+      return;
+    }
+    if (this.farmingClassification === 'horticulture') {
+      this._buildHorticultureOrchard();
+      return;
+    }
+
     const { minX, maxX, minZ, maxZ } = this.farmBounds;
     const farmW = maxX - minX;
     const farmH = maxZ - minZ;
+
+    const rawCropName = this.cropName || this.sceneData?.crop_plan?.crop_name || '';
+    const cleanCrop = rawCropName.toLowerCase();
+
+    // If crop is tomato, build wooden post & wire trellis architecture
+    if (cleanCrop.includes('tomato')) {
+      this._buildTomatoTrellises();
+    }
+
+    // If crop is rice/paddy, build flooded reflective basins
+    if (cleanCrop.includes('rice') || cleanCrop.includes('paddy')) {
+      this._buildPaddyBasins();
+    }
 
     // Check if custom fields exist in spatialObjects
     const customFields = (spatialObjects || []).filter(o => o.type === 'field' && o.vertices && o.vertices.length >= 3);
@@ -838,6 +1061,518 @@ export class AgriosDigitalTwin3D {
         }
       }
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 1. TERRACE & MOUNTAIN HILL AGRICULTURE WORLD ARCHITECTURE
+  // ─────────────────────────────────────────────────────────────
+  _buildTerraceFields() {
+    // 1. Dry-stone retaining walls along the 3 terrace step cliffs
+    const cliffZs = [
+      { z: 20, h: 3.0, bottomY: 0.6, name: "Terrace Retaining Wall A (Lower)" },
+      { z: -2, h: 3.4, bottomY: 3.6, name: "Terrace Retaining Wall B (Mid-Slope)" },
+      { z: -24, h: 3.5, bottomY: 7.0, name: "Terrace Retaining Wall C (Upper Alpine)" }
+    ];
+
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x475569,
+      roughness: 0.95,
+      metalness: 0.08
+    });
+
+    cliffZs.forEach((cw) => {
+      const wallGeo = new THREE.BoxGeometry(90, cw.h, 2.2);
+      const wall = new THREE.Mesh(wallGeo, wallMat);
+      wall.position.set(0, cw.bottomY + cw.h / 2, cw.z);
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      wall.userData = { type: 'infrastructure', subtype: 'retaining_wall', name: cw.name };
+      this.groups.infrastructure.add(wall);
+
+      // Wooden/stone access staircase cutting across the wall
+      const stairGeo = new THREE.BoxGeometry(3.2, cw.h * 1.15, 4.2);
+      const stairMat = new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.9 });
+      const stair = new THREE.Mesh(stairGeo, stairMat);
+      stair.position.set(22, cw.bottomY + cw.h / 2, cw.z);
+      stair.rotation.x = -0.35;
+      this.groups.infrastructure.add(stair);
+    });
+
+    // 2. Mountain Kuhl Water Channel (Gravity runoff sluice channel)
+    const kuhlMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.1,
+      metalness: 0.4,
+      transparent: true,
+      opacity: 0.85
+    });
+    const kuhlPts = [
+      new THREE.Vector3(-28, 10.8, -42),
+      new THREE.Vector3(-28, 7.3, -24),
+      new THREE.Vector3(-28, 3.9, -2),
+      new THREE.Vector3(-28, 0.9, 20),
+      new THREE.Vector3(-28, 0.6, 42)
+    ];
+
+    for (let i = 0; i < kuhlPts.length - 1; i++) {
+      const p1 = kuhlPts[i];
+      const p2 = kuhlPts[i + 1];
+      const dy = p2.y - p1.y;
+      const dz = p2.z - p1.z;
+      const len = Math.sqrt(dz * dz + dy * dy);
+      const waterSlice = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.15, len), kuhlMat);
+      waterSlice.position.set((p1.x + p2.x)/2, (p1.y + p2.y)/2, (p1.z + p2.z)/2);
+      waterSlice.rotation.x = Math.atan2(dy, dz);
+      this.groups.water.add(waterSlice);
+
+      const troughMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+      for (const side of [-0.9, 0.9]) {
+        const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, len), troughMat);
+        sideWall.position.set(((p1.x + p2.x)/2) + side, ((p1.y + p2.y)/2) + 0.15, (p1.z + p2.z)/2);
+        sideWall.rotation.x = Math.atan2(dy, dz);
+        this.groups.infrastructure.add(sideWall);
+      }
+    }
+
+    // Stone Sluice Gates on Kuhl
+    for (const p of [kuhlPts[1], kuhlPts[2], kuhlPts[3]]) {
+      const gateGeo = new THREE.BoxGeometry(2.2, 1.2, 0.4);
+      const gateMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+      const gate = new THREE.Mesh(gateGeo, gateMat);
+      gate.position.set(p.x, p.y + 0.6, p.z);
+      this.groups.infrastructure.add(gate);
+
+      const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 6, 12), new THREE.MeshStandardMaterial({ color: 0xeab308 }));
+      wheel.position.set(p.x, p.y + 1.3, p.z);
+      wheel.rotation.x = Math.PI / 2;
+      this.groups.infrastructure.add(wheel);
+    }
+
+    // 3. 4 Stepped Terrace Crop Plots
+    const tiers = [
+      { name: "Tier 1: Lower Alluvial Terrace", minZ: 21, maxZ: 42, y: 0.62, crop: "Hill Cabbage" },
+      { name: "Tier 2: Mid-Lower Kuhl Terrace", minZ: -1, maxZ: 19, y: 3.62, crop: "Rajmash Beans" },
+      { name: "Tier 3: Mid-Upper Slope Terrace", minZ: -23, maxZ: -3, y: 7.02, crop: "Buckwheat" },
+      { name: "Tier 4: Alpine Ridge Terrace", minZ: -42, maxZ: -25, y: 10.52, crop: "Finger Millet" }
+    ];
+
+    tiers.forEach((t, idx) => {
+      const fieldGeo = new THREE.PlaneGeometry(75, t.maxZ - t.minZ - 2);
+      fieldGeo.rotateX(-Math.PI / 2);
+      const fieldMat = new THREE.MeshStandardMaterial({
+        map: this._soilTexture,
+        color: new THREE.Color(0x3e2723).lerp(new THREE.Color(COLORS.soil), 0.35 + idx * 0.1),
+        roughness: 0.82
+      });
+      const fieldMesh = new THREE.Mesh(fieldGeo, fieldMat);
+      fieldMesh.position.set(4, t.y, (t.minZ + t.maxZ) / 2);
+      fieldMesh.receiveShadow = true;
+      fieldMesh.userData = {
+        type: 'field',
+        id: `terrace_${idx}`,
+        name: t.name,
+        area_acres: (2.8 + idx * 0.5).toFixed(1),
+        crop: t.crop,
+        elevation_m: t.y.toFixed(1)
+      };
+      this.groups.fields.add(fieldMesh);
+
+      const lbl = this._createLabel(`⛰️ ${t.name} (Alt: ${t.y.toFixed(1)}m)`, new THREE.Vector3(4, t.y + 1.6, (t.minZ + t.maxZ) / 2), '#34d399', '0.72rem', true);
+      this.groups.labels.add(lbl);
+    });
+
+    const kuhlLabel = this._createLabel('💧 Gravity Kuhl Sluice Channel', new THREE.Vector3(-28, 8.5, -14), '#38bdf8', '0.72rem', true);
+    this.groups.labels.add(kuhlLabel);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. COMMERCIAL HORTICULTURE & ORCHARD WORLD ARCHITECTURE
+  // ─────────────────────────────────────────────────────────────
+  _buildHorticultureOrchard() {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const rawCropName = this.cropName || this.sceneData?.crop_plan?.crop_name || 'Mango';
+    const cLower = rawCropName.toLowerCase();
+
+    let fruitColor = 0xf59e0b; // Mango golden
+    let fruitType = 'mango';
+    let fruitScale = 0.26;
+    if (cLower.includes('citrus') || cLower.includes('orange') || cLower.includes('lemon')) {
+      fruitColor = 0xf97316;
+      fruitType = 'citrus';
+      fruitScale = 0.24;
+    } else if (cLower.includes('guava')) {
+      fruitColor = 0xa3e635;
+      fruitType = 'guava';
+      fruitScale = 0.22;
+    } else if (cLower.includes('pomegranate')) {
+      fruitColor = 0xbe123c;
+      fruitType = 'pomegranate';
+      fruitScale = 0.25;
+    } else if (cLower.includes('banana')) {
+      fruitColor = 0xfacc15;
+      fruitType = 'banana';
+      fruitScale = 0.32;
+    }
+
+    // 1. Orchard grass base
+    const orchardGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(maxX - minX, maxZ - minZ),
+      new THREE.MeshStandardMaterial({ map: this._grassTexture, roughness: 0.9 })
+    );
+    orchardGround.rotateX(-Math.PI / 2);
+    orchardGround.position.set(0, 0.18, 0);
+    orchardGround.receiveShadow = true;
+    this.groups.fields.add(orchardGround);
+
+    // 2. High-density tree grid (6 rows x 8 trees = 48 trees)
+    const rows = 6;
+    const cols = 8;
+    const stepX = (maxX - minX - 16) / cols;
+    const stepZ = (maxZ - minZ - 16) / rows;
+
+    this.horticultureTrees = [];
+
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.95 });
+    const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.8 });
+    const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x40916c, roughness: 0.75 });
+    const fruitMat = new THREE.MeshStandardMaterial({ color: fruitColor, roughness: 0.3, metalness: 0.1 });
+    const sprinklerMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const sprayMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const tx = minX + 8 + c * stepX + (Math.random() - 0.5) * 0.7;
+        const tz = minZ + 8 + r * stepZ + (Math.random() - 0.5) * 0.7;
+
+        const treeGroup = new THREE.Group();
+        treeGroup.position.set(tx, 0.18, tz);
+
+        const trunkH = 2.4 + Math.random() * 0.5;
+        const trunkGeo = new THREE.CylinderGeometry(0.2, 0.34, trunkH, 8);
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = trunkH / 2;
+        trunk.castShadow = true;
+        treeGroup.add(trunk);
+
+        const mound = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.5, 1.8, 0.18, 12),
+          new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 })
+        );
+        mound.position.y = 0.09;
+        treeGroup.add(mound);
+
+        const canopyGroup = new THREE.Group();
+        canopyGroup.position.y = trunkH + 1.1;
+
+        for (let k = 0; k < 3; k++) {
+          const cGeo = new THREE.DodecahedronGeometry(1.3 + Math.random() * 0.25, 1);
+          const cMesh = new THREE.Mesh(cGeo, k % 2 === 0 ? foliageMat1 : foliageMat2);
+          cMesh.position.set(
+            (Math.random() - 0.5) * 1.1,
+            (Math.random() - 0.5) * 0.5,
+            (Math.random() - 0.5) * 1.1
+          );
+          cMesh.scale.set(1.2, 0.95, 1.2);
+          cMesh.castShadow = true;
+          canopyGroup.add(cMesh);
+        }
+        treeGroup.add(canopyGroup);
+
+        // Hanging Fruit Meshes
+        const fruits = [];
+        const fruitCount = 5 + Math.floor(Math.random() * 4);
+        for (let f = 0; f < fruitCount; f++) {
+          const fGeo = fruitType === 'mango' ? new THREE.ConeGeometry(fruitScale, fruitScale * 1.8, 8) : new THREE.SphereGeometry(fruitScale, 8, 8);
+          const fMesh = new THREE.Mesh(fGeo, fruitMat.clone());
+          const ang = Math.random() * Math.PI * 2;
+          const rad = 0.8 + Math.random() * 0.8;
+          const fy = trunkH + 0.4 + Math.random() * 1.1;
+          fMesh.position.set(Math.cos(ang) * rad, fy, Math.sin(ang) * rad);
+          fMesh.castShadow = true;
+          treeGroup.add(fMesh);
+          fruits.push(fMesh);
+        }
+
+        // Under-canopy micro-sprinkler
+        const sprinkler = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 6), sprinklerMat);
+        sprinkler.position.set(0.75, 0.22, 0.75);
+        treeGroup.add(sprinkler);
+
+        const sprayRing = new THREE.Mesh(new THREE.RingGeometry(0.25, 1.3, 16), sprayMat);
+        sprayRing.rotateX(-Math.PI / 2);
+        sprayRing.position.set(0.75, 0.21, 0.75);
+        treeGroup.add(sprayRing);
+
+        this.animatedObjects.push({
+          type: 'sprinklerPulse',
+          mesh: sprayRing,
+          speed: 2.2 + Math.random() * 0.8
+        });
+
+        treeGroup.userData = {
+          type: 'tree',
+          crop: rawCropName,
+          fruitType: fruitType,
+          fruits: fruits,
+          baseFruitColor: fruitColor
+        };
+
+        this.groups.crops.add(treeGroup);
+        this.horticultureTrees.push(treeGroup);
+      }
+    }
+
+    // 3. Harvest Crates stacked by access road
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.85 });
+    for (let cr = 0; cr < 6; cr++) {
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.9), crateMat);
+      crate.position.set(minX + 4 + cr * 1.5, 0.45, minZ + 4);
+      crate.castShadow = true;
+      this.groups.infrastructure.add(crate);
+    }
+
+    const orchardLabel = this._createLabel(`🍎 Commercial High-Density ${rawCropName} Orchard (${cols * rows} Trees)`, new THREE.Vector3(0, 7.5, 0), '#f59e0b', '0.78rem', true);
+    this.groups.labels.add(orchardLabel);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 3. POLYHOUSE & PROTECTED CULTIVATION COMPLEX ARCHITECTURE
+  // ─────────────────────────────────────────────────────────────
+  _buildPolyhouseComplex() {
+    const complexGroup = new THREE.Group();
+    complexGroup.position.set(0, 0, 0);
+
+    const bayWidth = 14;
+    const bayLength = 40;
+    const ridgeHeight = 6.2;
+    const gutterHeight = 4.0;
+    const bays = 2; // Twin-span multi-bay
+
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.3 });
+    const polyMat = new THREE.MeshStandardMaterial({
+      color: 0xd1fae5,
+      transparent: true,
+      opacity: 0.52,
+      roughness: 0.15,
+      metalness: 0.1,
+      side: THREE.DoubleSide
+    });
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.4 });
+    const gullyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
+    const plantGreenMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.5 });
+    const plantRedMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 });
+    const plantYellowMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 });
+    const ledMat = new THREE.MeshStandardMaterial({ color: 0xd946ef, emissive: 0xd946ef, emissiveIntensity: 0.95 });
+
+    for (let b = 0; b < bays; b++) {
+      const bayCenterX = -bayWidth / 2 + b * bayWidth;
+
+      const plinth = new THREE.Mesh(
+        new THREE.BoxGeometry(bayWidth, 0.4, bayLength),
+        new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 })
+      );
+      plinth.position.set(bayCenterX, 0.2, 0);
+      complexGroup.add(plinth);
+
+      // Arch structural ribs every 3.5m
+      for (let z = -bayLength / 2; z <= bayLength / 2; z += 3.5) {
+        for (const side of [-bayWidth / 2, bayWidth / 2]) {
+          const col = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, gutterHeight, 8), steelMat);
+          col.position.set(bayCenterX + side, gutterHeight / 2 + 0.4, z);
+          complexGroup.add(col);
+        }
+
+        const archCurve = new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(bayCenterX - bayWidth / 2, gutterHeight + 0.4, z),
+          new THREE.Vector3(bayCenterX, ridgeHeight + 1.2, z),
+          new THREE.Vector3(bayCenterX + bayWidth / 2, gutterHeight + 0.4, z)
+        );
+        const tubeGeo = new THREE.TubeGeometry(archCurve, 16, 0.07, 6, false);
+        const archTube = new THREE.Mesh(tubeGeo, steelMat);
+        complexGroup.add(archTube);
+      }
+
+      // Polycarbonate Roof Canopy Cover
+      const roofArchGeo = new THREE.CylinderGeometry(bayWidth / 2, bayWidth / 2, bayLength, 20, 1, true, 0, Math.PI);
+      roofArchGeo.rotateZ(Math.PI / 2);
+      roofArchGeo.rotateY(Math.PI / 2);
+      const roofCanopy = new THREE.Mesh(roofArchGeo, polyMat);
+      roofCanopy.position.set(bayCenterX, gutterHeight + 0.4, 0);
+      complexGroup.add(roofCanopy);
+
+      // Side Glazing Curtains
+      for (const side of [-bayWidth / 2, bayWidth / 2]) {
+        const sideWall = new THREE.Mesh(new THREE.PlaneGeometry(bayLength, gutterHeight), polyMat);
+        sideWall.position.set(bayCenterX + side, gutterHeight / 2 + 0.4, 0);
+        sideWall.rotation.y = Math.PI / 2;
+        complexGroup.add(sideWall);
+      }
+
+      // Hydroponic Raised Benches & NFT Gullies
+      const benchRows = 3;
+      const bWidth = 2.4;
+      for (let br = 0; br < benchRows; br++) {
+        const benchX = bayCenterX - bayWidth / 3 + br * (bayWidth / 3);
+        const benchTable = new THREE.Mesh(new THREE.BoxGeometry(bWidth, 0.75, bayLength - 4), benchMat);
+        benchTable.position.set(benchX, 0.75, 0);
+        complexGroup.add(benchTable);
+
+        for (let g = -bWidth / 2 + 0.4; g <= bWidth / 2 - 0.4; g += 0.55) {
+          const gully = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.12, bayLength - 4), gullyMat);
+          gully.position.set(benchX + g, 1.22, 0);
+          complexGroup.add(gully);
+
+          for (let pz = -bayLength / 2 + 3; pz <= bayLength / 2 - 3; pz += 1.4) {
+            const plantMesh = new THREE.Mesh(
+              new THREE.ConeGeometry(0.18, 0.42, 6),
+              (br === 0 ? plantGreenMat : (br === 1 ? plantRedMat : plantYellowMat))
+            );
+            plantMesh.position.set(benchX + g, 1.42, pz);
+            complexGroup.add(plantMesh);
+          }
+        }
+
+        // Suspended Pink LED Grow Light Bars
+        const ledBar = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, bayLength - 4), ledMat);
+        ledBar.position.set(benchX, gutterHeight + 0.7, 0);
+        complexGroup.add(ledBar);
+
+        const pinkLight = new THREE.PointLight(0xd946ef, 1.2, 14);
+        pinkLight.position.set(benchX, gutterHeight + 0.5, 0);
+        complexGroup.add(pinkLight);
+      }
+
+      // Exhaust Fans on North Wall
+      for (let f = -bayWidth / 4; f <= bayWidth / 4; f += bayWidth / 2) {
+        const fanCasing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 0.4), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9 }));
+        fanCasing.position.set(bayCenterX + f, gutterHeight * 0.7, -bayLength / 2);
+        complexGroup.add(fanCasing);
+
+        const fanBlade = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
+        fanBlade.position.set(bayCenterX + f, gutterHeight * 0.7, -bayLength / 2 - 0.22);
+        complexGroup.add(fanBlade);
+
+        this.animatedObjects.push({
+          type: 'spin',
+          mesh: fanBlade,
+          axis: 'z',
+          speed: 18.0
+        });
+      }
+    }
+
+    // Ultrasonic Fogger Mist Nozzles
+    const mistGeo = new THREE.SphereGeometry(1.2, 8, 8);
+    const mistMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.25 });
+    for (let m = -12; m <= 12; m += 8) {
+      const mistPuff = new THREE.Mesh(mistGeo, mistMat);
+      mistPuff.position.set(0, gutterHeight - 0.5, m);
+      complexGroup.add(mistPuff);
+
+      this.animatedObjects.push({
+        type: 'mistPulse',
+        mesh: mistPuff,
+        speed: 1.8
+      });
+    }
+
+    complexGroup.userData = {
+      type: 'polyhouse_complex',
+      name: 'Commercial Climate-Controlled Polyhouse Complex',
+      area_sqm: 1200,
+      bays: 2,
+      vpd_kpa: 1.05
+    };
+
+    this.groups.buildings.add(complexGroup);
+    this.polyhouseStructure = complexGroup;
+
+    const label = this._createLabel('🏛️ Multi-Span Protected Polyhouse (VPD: 1.05 kPa)', new THREE.Vector3(0, ridgeHeight + 3.2, 0), '#80cbc4', '0.78rem', true);
+    this.groups.labels.add(label);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 4. TOMATO TRELLIS POST & WIRE GRID ARCHITECTURE
+  // ─────────────────────────────────────────────────────────────
+  _buildTomatoTrellises() {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const trellisGroup = new THREE.Group();
+
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.9 });
+    const wireMat = new THREE.LineBasicMaterial({ color: 0x94a3b8 });
+    const vineMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 });
+    const tomatoMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.25, metalness: 0.1 });
+
+    const rows = 4;
+    const rowSpacing = (maxZ - minZ - 16) / rows;
+    const postSpacing = 6.0;
+
+    this.tomatoTrellises = [];
+
+    for (let r = 0; r < rows; r++) {
+      const rz = minZ + 8 + r * rowSpacing;
+      const wirePtsLevel1 = [];
+      const wirePtsLevel2 = [];
+      const wirePtsLevel3 = [];
+
+      for (let px = minX + 8; px <= maxX - 8; px += postSpacing) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.4, 6), postMat);
+        post.position.set(px, 1.2, rz);
+        post.castShadow = true;
+        trellisGroup.add(post);
+
+        wirePtsLevel1.push(new THREE.Vector3(px, 0.7, rz));
+        wirePtsLevel2.push(new THREE.Vector3(px, 1.3, rz));
+        wirePtsLevel3.push(new THREE.Vector3(px, 1.9, rz));
+      }
+
+      for (const wirePts of [wirePtsLevel1, wirePtsLevel2, wirePtsLevel3]) {
+        const wireGeo = new THREE.BufferGeometry().setFromPoints(wirePts);
+        trellisGroup.add(new THREE.Line(wireGeo, wireMat));
+      }
+
+      // Climbing tomato vines with red tomato fruits
+      for (let vx = minX + 9; vx < maxX - 9; vx += 1.3) {
+        const vineH = 1.8 + Math.random() * 0.3;
+        const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, vineH, 5), vineMat);
+        vine.position.set(vx, vineH / 2, rz + (Math.random() - 0.5) * 0.15);
+        trellisGroup.add(vine);
+
+        const fruitCount = 3 + Math.floor(Math.random() * 3);
+        for (let tf = 0; tf < fruitCount; tf++) {
+          const tMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16 + Math.random() * 0.06, 8, 8), tomatoMat);
+          const ty = 0.5 + Math.random() * 1.3;
+          tMesh.position.set(vx + (Math.random() - 0.5) * 0.35, ty, rz + (Math.random() - 0.5) * 0.25);
+          tMesh.castShadow = true;
+          trellisGroup.add(tMesh);
+          this.tomatoTrellises.push(tMesh);
+        }
+      }
+    }
+
+    trellisGroup.userData = { type: 'tomato_trellis', name: 'High-Tensile Wire Trellis Grid (Himsona Protected)' };
+    this.groups.fields.add(trellisGroup);
+
+    const label = this._createLabel('🍅 Protected Tomato Trellis Grid', new THREE.Vector3(0, 3.5, 0), '#ef4444', '0.75rem', true);
+    this.groups.labels.add(label);
+  }
+
+  // Flooded Reflective Basins for Paddy Rice
+  _buildPaddyBasins() {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const basinGeo = new THREE.PlaneGeometry(maxX - minX - 8, maxZ - minZ - 8);
+    basinGeo.rotateX(-Math.PI / 2);
+    const basinMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.1,
+      metalness: 0.35,
+      transparent: true,
+      opacity: 0.42
+    });
+    const basin = new THREE.Mesh(basinGeo, basinMat);
+    basin.position.set(0, 0.22, 0);
+    this.groups.water.add(basin);
+    this.paddyWater = basin;
   }
 
   _createPolygonField(vertices, fieldData, idx = 0) {
@@ -1950,8 +2685,20 @@ export class AgriosDigitalTwin3D {
     const rawCropName = cropPlan?.crop_name || cropPlan?.crop_type || plantingGrid?.crop || this.cropName || 'Wheat';
     const cropKey = normalizeCropKey(rawCropName);
 
-    if (cropKey === 'pisciculture' || this.isAquaculture || String(rawCropName).toLowerCase().includes('aqua')) {
+    if (this.farmingClassification === 'aquaculture' || cropKey === 'pisciculture' || this.isAquaculture || String(rawCropName).toLowerCase().includes('aqua')) {
       this._buildAquacultureFoliage();
+      return;
+    }
+    if (this.farmingClassification === 'horticulture') {
+      this._buildOrchardUndergrowth();
+      return;
+    }
+    if (this.farmingClassification === 'polyhouse') {
+      // Hydroponic plants are situated inside the polyhouse structure
+      return;
+    }
+    if (this.farmingClassification === 'terrace') {
+      this._buildTerraceCrops(cropKey, cropPlan);
       return;
     }
 
@@ -1997,6 +2744,10 @@ export class AgriosDigitalTwin3D {
     else if (cropKey === 'cotton') baseScale = 1.0;
     else if (cropKey === 'potato') baseScale = 1.0;
 
+    // Dynamic growth scale based on current day progress
+    const progress = Math.min(Math.max((this.currentDay || 30) / (this.maxDays || 120), 0.0), 1.0);
+    const dayGrowthScale = 0.22 + 0.93 * (3 * progress * progress - 2 * progress * progress * progress);
+
     for (let r = 0; r < totalRows && plantIdx < count; r++) {
       for (let c = 0; c < plantsPerRow && plantIdx < count; c++) {
         const x = minX + 4 + c * colSpacing + (Math.random() - 0.5) * 0.35;
@@ -2004,7 +2755,7 @@ export class AgriosDigitalTwin3D {
         const y = 0.15;
 
         dummy.position.set(x, y, z);
-        const s = baseScale * (0.88 + Math.random() * 0.25);
+        const s = baseScale * dayGrowthScale * (0.88 + Math.random() * 0.25);
         dummy.scale.set(s, s * (0.92 + Math.random() * 0.16), s);
         dummy.rotation.y = Math.random() * Math.PI * 2;
         dummy.updateMatrix();
@@ -2029,7 +2780,7 @@ export class AgriosDigitalTwin3D {
 
     instancedMesh.instanceMatrix.needsUpdate = true;
     if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
-    instancedMesh.userData = { type: 'crops', cropKey, cropName: rawCropName, totalPlants: plantIdx, stage: stageIndex };
+    instancedMesh.userData = { type: 'crops', cropKey, cropName: rawCropName, totalPlants: plantIdx, stage: stageIndex, baseScale };
     this.cropInstances = instancedMesh;
     this.groups.crops.add(instancedMesh);
 
@@ -2037,28 +2788,141 @@ export class AgriosDigitalTwin3D {
     this.animatedObjects.push({ type: 'cropSway', mesh: instancedMesh, count: plantIdx });
   }
 
+  // Stepped Alpine Crops across 4 Terrace Levels
+  _buildTerraceCrops(cropKey, cropPlan) {
+    const tiers = [
+      { minZ: 22, maxZ: 40, y: 0.64, count: 280 },
+      { minZ: 0, maxZ: 18, y: 3.64, count: 280 },
+      { minZ: -22, maxZ: -4, y: 7.04, count: 280 },
+      { minZ: -40, maxZ: -26, y: 10.54, count: 240 }
+    ];
+
+    const currentStage = this._getCurrentStage(cropPlan);
+    const stageIndex = currentStage ? currentStage.index : 2;
+    const geometry = getCropGeometry(cropKey, stageIndex);
+    const material = createCropMaterial();
+
+    const totalTerracePlants = 1080;
+    const instancedMesh = new THREE.InstancedMesh(geometry, material, totalTerracePlants);
+    instancedMesh.castShadow = true;
+    instancedMesh.receiveShadow = true;
+
+    const dummy = new THREE.Object3D();
+    let idx = 0;
+
+    const progress = Math.min(Math.max((this.currentDay || 30) / (this.maxDays || 105), 0.0), 1.0);
+    const dayGrowthScale = 0.22 + 0.93 * (3 * progress * progress - 2 * progress * progress * progress);
+    const healthyColor = new THREE.Color(1.0, 1.0, 1.0);
+
+    tiers.forEach((tier) => {
+      const rows = 7;
+      const cols = 40;
+      const rowStep = (tier.maxZ - tier.minZ) / rows;
+      const colStep = 70 / cols;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols && idx < totalTerracePlants; c++) {
+          const x = -31 + c * colStep + (Math.random() - 0.5) * 0.4;
+          const z = tier.minZ + r * rowStep + (Math.random() - 0.5) * 0.4;
+          dummy.position.set(x, tier.y, z);
+          const s = 1.05 * dayGrowthScale * (0.85 + Math.random() * 0.3);
+          dummy.scale.set(s, s, s);
+          dummy.rotation.y = Math.random() * Math.PI * 2;
+          dummy.updateMatrix();
+          instancedMesh.setMatrixAt(idx, dummy.matrix);
+          instancedMesh.setColorAt(idx, healthyColor);
+          idx++;
+        }
+      }
+    });
+
+    instancedMesh.instanceMatrix.needsUpdate = true;
+    if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
+    instancedMesh.userData = { type: 'crops', cropKey, totalPlants: idx, baseScale: 1.05 };
+    this.cropInstances = instancedMesh;
+    this.groups.crops.add(instancedMesh);
+
+    this.animatedObjects.push({ type: 'cropSway', mesh: instancedMesh, count: idx });
+  }
+
+  _buildOrchardUndergrowth() {
+    const { minX, maxX, minZ, maxZ } = this.farmBounds;
+    const cloverGeo = new THREE.CircleGeometry(0.5, 6);
+    cloverGeo.rotateX(-Math.PI / 2);
+    const cloverMat = new THREE.MeshStandardMaterial({ color: 0x40916c, roughness: 0.8 });
+
+    const cloverGroup = new THREE.Group();
+    for (let i = 0; i < 65; i++) {
+      const x = minX + 6 + Math.random() * (maxX - minX - 12);
+      const z = minZ + 6 + Math.random() * (maxZ - minZ - 12);
+      const cl = new THREE.Mesh(cloverGeo, cloverMat);
+      cl.position.set(x, 0.2, z);
+      cloverGroup.add(cl);
+    }
+    this.groups.crops.add(cloverGroup);
+  }
+
   setCrop(cropName) {
     this.cropName = cropName;
+    const cleanCrop = (cropName || '').toLowerCase();
+    let newClassification = 'terrestrial';
+
+    if (cleanCrop.includes('mango') || cleanCrop.includes('guava') || cleanCrop.includes('citrus') || cleanCrop.includes('pomegranate') || cleanCrop.includes('banana')) {
+      newClassification = 'horticulture';
+    } else if (cleanCrop.includes('capsicum') || cleanCrop.includes('cucumber') || cleanCrop.includes('lettuce') || cleanCrop.includes('floriculture') || cleanCrop.includes('polyhouse')) {
+      newClassification = 'polyhouse';
+    } else if (cleanCrop.includes('rajmash') || cleanCrop.includes('buckwheat') || cleanCrop.includes('ginger') || cleanCrop.includes('millet') || cleanCrop.includes('terrace')) {
+      newClassification = 'terrace';
+    } else if (cleanCrop.includes('pisc') || cleanCrop.includes('carp') || cleanCrop.includes('fish') || cleanCrop.includes('rohu') || cleanCrop.includes('catla') || cleanCrop.includes('tilapia') || cleanCrop.includes('aqua')) {
+      newClassification = 'aquaculture';
+    }
+
+    const classificationChanged = (newClassification !== this.farmingClassification);
+    this.farmingClassification = newClassification;
+    this.isAquaculture = (newClassification === 'aquaculture');
+
+    // Update plan data in memory
     if (this.sceneData) {
       if (!this.sceneData.planting_grid) this.sceneData.planting_grid = {};
       this.sceneData.planting_grid.crop = cropName;
-      if (this.sceneData.crop_plan) {
-        this.sceneData.crop_plan.crop_name = cropName;
-      }
+      if (!this.sceneData.crop_plan) this.sceneData.crop_plan = {};
+      this.sceneData.crop_plan.crop_name = cropName;
+      this.sceneData.crop_plan.farming_classification = newClassification;
     }
-    const cropKey = normalizeCropKey(cropName);
-    this.isAquaculture = cropKey === 'pisciculture' || String(cropName).toLowerCase().includes('aqua');
 
-    // Clear and rebuild crops with new 3D graphics
-    while (this.groups.crops.children.length > 0) {
-      const child = this.groups.crops.children[0];
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) child.material.dispose();
-      this.groups.crops.remove(child);
+    // Set duration
+    if (newClassification === 'horticulture') this.maxDays = 240;
+    else if (newClassification === 'aquaculture') this.maxDays = 195;
+    else if (newClassification === 'terrace') this.maxDays = 105;
+    else if (cleanCrop.includes('tomato')) this.maxDays = 90;
+    else if (cleanCrop.includes('potato')) this.maxDays = 85;
+    else if (cleanCrop.includes('rice')) this.maxDays = 135;
+    else this.maxDays = 120;
+
+    if (classificationChanged || cleanCrop.includes('tomato')) {
+      this.buildScene(this.sceneData || { farm: { crop_type: cropName } });
+    } else {
+      while (this.groups.crops.children.length > 0) {
+        const child = this.groups.crops.children[0];
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+        this.groups.crops.remove(child);
+      }
+      this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'cropSway');
+      this._buildCrops(this.sceneData?.planting_grid, this.sceneData?.crop_plan);
     }
-    this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'cropSway');
-    this._buildCrops(this.sceneData?.planting_grid, this.sceneData?.crop_plan);
-    console.log('[3D Twin] Switched crop 3D visuals to:', cropName, '(', cropKey, ')');
+
+    console.log(`[3D Twin] Switched crop visuals to: ${cropName} (${this.farmingClassification.toUpperCase()} World, Max Days: ${this.maxDays})`);
+  }
+
+  setFarmingClassification(cls) {
+    this.farmingClassification = cls;
+    this.isAquaculture = (cls === 'aquaculture');
+    if (this.sceneData) {
+      if (!this.sceneData.crop_plan) this.sceneData.crop_plan = {};
+      this.sceneData.crop_plan.farming_classification = cls;
+    }
+    this.buildScene(this.sceneData || {});
   }
 
   _buildAquacultureFoliage() {
@@ -2641,6 +3505,39 @@ export class AgriosDigitalTwin3D {
       this.moonMesh.material.dispose();
       this.moonMesh = null;
     }
+
+    // Clean up disaster meshes & particle systems
+    if (this.disasterObjects && this.disasterObjects.length > 0) {
+      this.disasterObjects.forEach(obj => {
+        this.groups.weather.remove(obj);
+        obj.traverse(c => {
+          if (c.geometry) c.geometry.dispose();
+          if (c.material) {
+            if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+            else c.material.dispose();
+          }
+        });
+      });
+      this.disasterObjects = [];
+    }
+    this.hailData = null;
+    this.hailMesh = null;
+    this.locustData = null;
+    this.locustMesh = null;
+    this.heatShimmerData = null;
+    this.heatShimmerMesh = null;
+    this.floodWater = null;
+
+    // Reset terrain material to default procedural soil texture if altered
+    if (this._terrainMesh && this._terrainMesh.material && this._proceduralSoilTexture) {
+      if (this._terrainMesh.material.map !== this._proceduralSoilTexture) {
+        this._terrainMesh.material.map = this._proceduralSoilTexture;
+        this._terrainMesh.material.roughness = 0.85;
+        this._terrainMesh.material.metalness = 0.04;
+        this._terrainMesh.material.color.setHex(0xffffff);
+        this._terrainMesh.material.needsUpdate = true;
+      }
+    }
   }
 
   _addClouds(count, tintColor = 0xf8fafc) {
@@ -2754,16 +3651,21 @@ export class AgriosDigitalTwin3D {
     this._sunLight.intensity = 3.2;
     this._sunLight.color.setHex(0xffffff);
 
+    // Trigger authentic acoustic thunder synthesis with realistic speed-of-sound acoustic lag
     setTimeout(() => {
-      if (this.currentWeather !== 'rain') return;
+      this._playSynthesizedThunder();
+    }, 280);
+
+    setTimeout(() => {
+      if (this.currentWeather !== 'rain' && this.activeDisaster !== 'thunderstorm') return;
       this._ambientLight.intensity = 0.4;
       this._sunLight.intensity = 0.5;
       setTimeout(() => {
-        if (this.currentWeather !== 'rain') return;
+        if (this.currentWeather !== 'rain' && this.activeDisaster !== 'thunderstorm') return;
         this._ambientLight.intensity = 2.0;
         this._sunLight.intensity = 2.8;
         setTimeout(() => {
-          if (this.currentWeather !== 'rain') return;
+          if (this.currentWeather !== 'rain' && this.activeDisaster !== 'thunderstorm') return;
           this._ambientLight.intensity = origAmb;
           this._sunLight.intensity = origSun;
           this._sunLight.color.setHex(0x64748b);
@@ -2801,6 +3703,417 @@ export class AgriosDigitalTwin3D {
     moon.position.set(-60, 115, -60);
     this.moonMesh = moon;
     this.groups.weather.add(moon);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // WEB AUDIO API NATIVE THUNDER ACOUSTIC SYNTHESIZER
+  // ─────────────────────────────────────────────────────────────
+  _initAudioContext() {
+    if (!this._audioCtx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this._audioCtx = new AudioCtx();
+      }
+    }
+    if (this._audioCtx && this._audioCtx.state === 'suspended') {
+      this._audioCtx.resume();
+    }
+  }
+
+  toggleSound() {
+    this.soundMuted = !this.soundMuted;
+    if (!this.soundMuted) {
+      this._initAudioContext();
+    }
+    return !this.soundMuted;
+  }
+
+  _playSynthesizedThunder() {
+    if (this.soundMuted) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const duration = 3.2 + Math.random() * 1.5;
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const output = buffer.getChannelData(0);
+
+      // Procedural pink/brown noise acoustic generator (Paul Kellet's algorithm)
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.12;
+        b6 = white * 0.115926;
+      }
+
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+
+      // Resonant dynamic sweep lowpass filter
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.value = 4.8;
+      const now = ctx.currentTime;
+      filter.frequency.setValueAtTime(185, now);
+      filter.frequency.exponentialRampToValueAtTime(36, now + duration);
+
+      // Lowshelf bass boost for deep gut rumble
+      const bassBoost = ctx.createBiquadFilter();
+      bassBoost.type = 'lowshelf';
+      bassBoost.frequency.value = 95;
+      bassBoost.gain.value = 9.5;
+
+      // Dynamic envelope shaper
+      const gainNode = ctx.createGain();
+      gainNode.gain.setValueAtTime(0.001, now);
+      // Sharp initial acoustic shockwave
+      gainNode.gain.exponentialRampToValueAtTime(0.85, now + 0.05);
+      // Secondary shockwave
+      gainNode.gain.exponentialRampToValueAtTime(0.65, now + 0.4);
+      // Extended rolling thunder reverberation
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      noiseSource.connect(filter);
+      filter.connect(bassBoost);
+      bassBoost.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      noiseSource.start(now);
+      noiseSource.stop(now + duration);
+    } catch (e) {
+      console.warn('[3D Twin Audio] Thunder synthesis unavailable:', e);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ATMOSPHERIC DISASTER SIMULATION ENGINE
+  // ─────────────────────────────────────────────────────────────
+  setDisaster(disasterType) {
+    if (this.activeDisaster === disasterType) {
+      this.activeDisaster = null;
+      this._applyWeather({ condition: this.currentWeather || 'clear' });
+      return null;
+    }
+
+    this.activeDisaster = disasterType;
+    switch (disasterType) {
+      case 'thunderstorm':
+        this._setWeatherThunderstorm();
+        break;
+      case 'drought':
+        this._setWeatherDrought();
+        break;
+      case 'hailstorm':
+        this._setWeatherHailstorm();
+        break;
+      case 'locusts':
+      case 'locust_swarm':
+        this._setWeatherLocustSwarm();
+        break;
+      case 'flood':
+      case 'flash_flood':
+        this._setWeatherFlood();
+        break;
+      default:
+        this.activeDisaster = null;
+        this._applyWeather({ condition: this.currentWeather || 'clear' });
+        break;
+    }
+    return this.activeDisaster;
+  }
+
+  _setWeatherThunderstorm() {
+    this._clearWeatherEffects();
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.15;
+      this._sunLight.color.setHex(0x475569);
+      this._sunLight.position.set(20, 50, 15);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.22;
+      this._ambientLight.color.setHex(0x1e293b);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0x0f172a);
+      this.scene.fog.density = 0.0095;
+    }
+    this._updateSkyDome([
+      { stop: 0.0, color: '#020617' },
+      { stop: 0.25, color: '#090d16' },
+      { stop: 0.60, color: '#1e293b' },
+      { stop: 1.0, color: '#334155' }
+    ], { x: 20, y: 50, z: 15 }, 0x334155, 6, false);
+
+    if (this._terrainMesh && this._terrainMesh.material) {
+      this._terrainMesh.material.roughness = 0.12;
+      this._terrainMesh.material.metalness = 0.40;
+    }
+
+    this._addClouds(24, 0x1e293b);
+    this._addRainStreaks();
+    this._lightningTimer = 1.5;
+    this._triggerLightningFlash();
+  }
+
+  _setWeatherDrought() {
+    this._clearWeatherEffects();
+    if (this._sunLight) {
+      this._sunLight.intensity = 2.45;
+      this._sunLight.color.setHex(0xffedd5);
+      this._sunLight.position.set(45, 110, 35);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.88;
+      this._ambientLight.color.setHex(0xfde68a);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0xd97706);
+      this.scene.fog.density = 0.0055;
+    }
+    this._updateSkyDome([
+      { stop: 0.0, color: '#ea580c' },
+      { stop: 0.35, color: '#f97316' },
+      { stop: 0.70, color: '#fbbf24' },
+      { stop: 0.90, color: '#fef08a' },
+      { stop: 1.0, color: '#fff7ed' }
+    ], { x: 45, y: 120, z: 35 }, 0xffedd5, 16, false);
+
+    // Apply procedural cracked soil texture & baked dry soil
+    if (this._terrainMesh && this._terrainMesh.material) {
+      if (this._crackedSoilTexture) {
+        this._terrainMesh.material.map = this._crackedSoilTexture;
+      }
+      this._terrainMesh.material.roughness = 0.98;
+      this._terrainMesh.material.metalness = 0.01;
+      this._terrainMesh.material.color.setHex(0xecd9c6);
+      this._terrainMesh.material.needsUpdate = true;
+    }
+
+    // Heat shimmer particles rising from ground
+    this._addHeatShimmerParticles();
+  }
+
+  _addHeatShimmerParticles() {
+    const count = 320;
+    const positions = new Float32Array(count * 3);
+    this.heatShimmerData = [];
+
+    for (let i = 0; i < count; i++) {
+      const rx = (Math.random() - 0.5) * 140;
+      const ry = 0.2 + Math.random() * 8.0;
+      const rz = (Math.random() - 0.5) * 120;
+      const speed = 1.4 + Math.random() * 2.2;
+      const baseAlpha = 0.3 + Math.random() * 0.4;
+
+      positions[i * 3] = rx;
+      positions[i * 3 + 1] = ry;
+      positions[i * 3 + 2] = rz;
+
+      this.heatShimmerData.push({ x: rx, y: ry, z: rz, speed, baseAlpha, seed: Math.random() * 10 });
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xfde047,
+      size: 0.85,
+      transparent: true,
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending
+    });
+    this.heatShimmerMesh = new THREE.Points(geo, mat);
+    this.groups.weather.add(this.heatShimmerMesh);
+    this.disasterObjects.push(this.heatShimmerMesh);
+  }
+
+  _setWeatherHailstorm() {
+    this._clearWeatherEffects();
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.65;
+      this._sunLight.color.setHex(0xe0f2fe);
+      this._sunLight.position.set(30, 65, 25);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.48;
+      this._ambientLight.color.setHex(0xbae6fd);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0x93c5fd);
+      this.scene.fog.density = 0.0075;
+    }
+    this._updateSkyDome([
+      { stop: 0.0, color: '#082f49' },
+      { stop: 0.35, color: '#0369a1' },
+      { stop: 0.70, color: '#38bdf8' },
+      { stop: 1.0, color: '#e0f2fe' }
+    ], { x: 30, y: 70, z: 25 }, 0xe0f2fe, 10, false);
+
+    // Frost sheen on terrain
+    if (this._terrainMesh && this._terrainMesh.material) {
+      this._terrainMesh.material.roughness = 0.28;
+      this._terrainMesh.material.metalness = 0.25;
+      this._terrainMesh.material.color.setHex(0xdbeafe);
+      this._terrainMesh.material.needsUpdate = true;
+    }
+
+    this._addClouds(16, 0xcffafe);
+    this._addHailstones();
+  }
+
+  _addHailstones() {
+    const count = 750;
+    const hailGeo = new THREE.DodecahedronGeometry(0.18, 0);
+    const hailMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.15,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.92
+    });
+
+    this.hailMesh = new THREE.InstancedMesh(hailGeo, hailMat, count);
+    this.hailMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+    this.hailData = [];
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < count; i++) {
+      const x = (Math.random() - 0.5) * 150;
+      const y = Math.random() * 45 + 0.2;
+      const z = (Math.random() - 0.5) * 130;
+      const speed = 48 + Math.random() * 24;
+      const vy = -speed;
+      const vx = -6 + (Math.random() - 0.5) * 4;
+      const vz = -3 + (Math.random() - 0.5) * 4;
+
+      dummy.position.set(x, y, z);
+      const s = 0.7 + Math.random() * 0.6;
+      dummy.scale.set(s, s, s);
+      dummy.updateMatrix();
+      this.hailMesh.setMatrixAt(i, dummy.matrix);
+
+      this.hailData.push({ x, y, z, vx, vy, vz, baseSpeed: speed, bounces: 0 });
+    }
+    this.hailMesh.instanceMatrix.needsUpdate = true;
+    this.groups.weather.add(this.hailMesh);
+    this.disasterObjects.push(this.hailMesh);
+  }
+
+  _setWeatherLocustSwarm() {
+    this._clearWeatherEffects();
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.85;
+      this._sunLight.color.setHex(0xfef08a);
+      this._sunLight.position.set(50, 75, 40);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.55;
+      this._ambientLight.color.setHex(0xd97706);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0xb45309);
+      this.scene.fog.density = 0.007;
+    }
+    this._updateSkyDome([
+      { stop: 0.0, color: '#451a03' },
+      { stop: 0.35, color: '#78350f' },
+      { stop: 0.70, color: '#b45309' },
+      { stop: 1.0, color: '#fef3c7' }
+    ], { x: 50, y: 80, z: 40 }, 0xfde68a, 12, false);
+
+    this._addClouds(6, 0x92400e);
+    this._addLocustSwarm();
+  }
+
+  _addLocustSwarm() {
+    const count = 1200;
+    const locustGeo = new THREE.ConeGeometry(0.08, 0.32, 4);
+    locustGeo.rotateX(Math.PI / 2);
+    const locustMat = new THREE.MeshStandardMaterial({
+      color: 0xa16207,
+      roughness: 0.65,
+      metalness: 0.2
+    });
+
+    this.locustMesh = new THREE.InstancedMesh(locustGeo, locustMat, count);
+    this.locustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+    this.locustData = [];
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 8 + Math.random() * 45;
+      const x = Math.cos(angle) * radius;
+      const y = 1.2 + Math.random() * 7.5;
+      const z = Math.sin(angle) * radius;
+      const speed = 12 + Math.random() * 16;
+      const orbitSpeed = (0.2 + Math.random() * 0.4) * (Math.random() > 0.5 ? 1 : -1);
+
+      dummy.position.set(x, y, z);
+      dummy.updateMatrix();
+      this.locustMesh.setMatrixAt(i, dummy.matrix);
+
+      this.locustData.push({
+        angle,
+        radius,
+        y,
+        baseY: y,
+        speed,
+        orbitSpeed,
+        flutterSpeed: 18 + Math.random() * 14,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    this.locustMesh.instanceMatrix.needsUpdate = true;
+    this.groups.weather.add(this.locustMesh);
+    this.disasterObjects.push(this.locustMesh);
+  }
+
+  _setWeatherFlood() {
+    this._clearWeatherEffects();
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.25;
+      this._sunLight.color.setHex(0x64748b);
+      this._sunLight.position.set(30, 50, 20);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.32;
+      this._ambientLight.color.setHex(0x334155);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0x475569);
+      this.scene.fog.density = 0.0082;
+    }
+    this._updateSkyDome([
+      { stop: 0.0, color: '#0f172a' },
+      { stop: 0.40, color: '#1e293b' },
+      { stop: 0.80, color: '#334155' },
+      { stop: 1.0, color: '#475569' }
+    ], { x: 30, y: 55, z: 20 }, 0x64748b, 8, false);
+
+    this._addClouds(20, 0x475569);
+    this._addRainStreaks();
+
+    // Silt-laden muddy flood water plane inundating fields
+    const floodGeo = new THREE.PlaneGeometry(160, 140, 24, 24);
+    floodGeo.rotateX(-Math.PI / 2);
+    const floodMat = new THREE.MeshStandardMaterial({
+      color: 0x5a3e2b,
+      roughness: 0.12,
+      metalness: 0.25,
+      transparent: true,
+      opacity: 0.88
+    });
+    this.floodWater = new THREE.Mesh(floodGeo, floodMat);
+    this.floodWater.position.set(0, 0.72, 0);
+    this.groups.weather.add(this.floodWater);
+    this.disasterObjects.push(this.floodWater);
   }
 
   _createLabel(text, position, color = '#e2e8f0', fontSize = '0.7rem', bold = false) {
@@ -3535,6 +4848,7 @@ export class AgriosDigitalTwin3D {
 
   setDay(dayNumber) {
     this.currentDay = parseInt(dayNumber, 10) || 1;
+    const progress = Math.min(Math.max(this.currentDay / (this.maxDays || 120), 0.02), 1.0);
 
     // 1. Check for active disease outbreak on this day
     const activeDisease = this.diseaseSchedule ? this.diseaseSchedule[this.currentDay] : null;
@@ -3554,33 +4868,101 @@ export class AgriosDigitalTwin3D {
       stressedCount = Math.round(totalPlants * activeDisease.stressedPct);
       deadCount = totalPlants - healthyCount - stressedCount;
     } else {
-      const progress = Math.min(this.currentDay / (this.maxDays || 120), 1.0);
       stressedCount = Math.round(15 + progress * 40);
       deadCount = Math.round(progress * 12);
       healthyCount = totalPlants - stressedCount - deadCount;
     }
 
-    // Update planting grid numbers in memory
+    // 3. Update Terrestrial & Terrace field crops
     if (this.sceneData) {
       if (!this.sceneData.planting_grid) this.sceneData.planting_grid = {};
       this.sceneData.planting_grid.healthy_plants = healthyCount;
       this.sceneData.planting_grid.stressed_plants = stressedCount;
       this.sceneData.planting_grid.dead_plants = deadCount;
 
-      while (this.groups.crops.children.length > 0) {
-        const child = this.groups.crops.children[0];
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) child.material.dispose();
-        this.groups.crops.remove(child);
+      if (this.farmingClassification === 'terrestrial' || this.farmingClassification === 'terrace') {
+        while (this.groups.crops.children.length > 0) {
+          const child = this.groups.crops.children[0];
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+          this.groups.crops.remove(child);
+        }
+        this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'cropSway');
+
+        if (this.farmingClassification === 'terrace') {
+          this._buildTerraceCrops();
+        } else {
+          this._buildCrops(this.sceneData.planting_grid, this.sceneData.crop_plan);
+        }
       }
-      this.animatedObjects = this.animatedObjects.filter(a => a.type !== 'cropSway');
-      this._buildCrops(this.sceneData.planting_grid, this.sceneData.crop_plan);
     }
 
-    // 3. Notify external UI callback
+    // 4. Scale Commercial Horticulture Fruits & Canopy
+    if (this.horticultureTrees && this.horticultureTrees.length > 0) {
+      const fruitProgress = Math.max(0, (progress - 0.2) / 0.8);
+      this.horticultureTrees.forEach(tree => {
+        if (tree.userData && tree.userData.fruits) {
+          tree.userData.fruits.forEach(f => {
+            if (progress < 0.2) {
+              f.visible = false;
+            } else {
+              f.visible = true;
+              const fScale = 0.2 + fruitProgress * 0.95;
+              f.scale.set(fScale, fScale, fScale);
+              if (f.material && tree.userData.baseFruitColor) {
+                const unripeColor = new THREE.Color(0x65a30d);
+                const ripeColor = new THREE.Color(tree.userData.baseFruitColor);
+                f.material.color.copy(unripeColor).lerp(ripeColor, fruitProgress);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // 5. Scale Tomato Trellis Vines & Fruits
+    if (this.tomatoTrellises && this.tomatoTrellises.length > 0) {
+      const tomatoProgress = Math.max(0, (progress - 0.2) / 0.8);
+      this.tomatoTrellises.forEach(t => {
+        if (progress < 0.2) {
+          t.visible = false;
+        } else {
+          t.visible = true;
+          const tScale = 0.25 + tomatoProgress * 0.9;
+          t.scale.set(tScale, tScale, tScale);
+          if (t.material) {
+            const unripe = new THREE.Color(0x4ade80);
+            const ripe = new THREE.Color(0xef4444);
+            t.material.color.copy(unripe).lerp(ripe, tomatoProgress);
+          }
+        }
+      });
+    }
+
+    // 6. Scale Aquaculture Fish
+    if (this.fishMeshes && this.fishMeshes.length > 0) {
+      const fishScale = 0.35 + progress * 0.95;
+      this.fishMeshes.forEach(f => {
+        f.scale.set(fishScale, fishScale, fishScale);
+      });
+    }
+
+    // 7. Scale Polyhouse Hydroponic Greens
+    if (this.polyhouseStructure) {
+      this.polyhouseStructure.traverse(child => {
+        if (child.isMesh && child.geometry && child.geometry.type === 'ConeGeometry') {
+          const plantScale = 0.3 + progress * 0.95;
+          child.scale.set(plantScale, plantScale, plantScale);
+        }
+      });
+    }
+
+    // 8. Notify external UI callback
     if (this.onDayStateChange) {
       this.onDayStateChange({
         day: this.currentDay,
+        maxDays: this.maxDays || 120,
+        progress: progress,
         disease: activeDisease,
         plantCounts: {
           total: totalPlants,
@@ -4199,10 +5581,10 @@ export class AgriosDigitalTwin3D {
     }
 
     // Thunderstorm Lightning Flash Timer
-    if (this.currentWeather === 'rain') {
-      this._lightningTimer = (this._lightningTimer || 8.0) - delta;
+    if (this.currentWeather === 'rain' || this.activeDisaster === 'thunderstorm') {
+      this._lightningTimer = (this._lightningTimer || 6.0) - delta;
       if (this._lightningTimer <= 0) {
-        this._lightningTimer = 6.0 + Math.random() * 8.0;
+        this._lightningTimer = this.activeDisaster === 'thunderstorm' ? (2.5 + Math.random() * 4.0) : (6.0 + Math.random() * 8.0);
         this._triggerLightningFlash();
       }
     }
@@ -4210,6 +5592,97 @@ export class AgriosDigitalTwin3D {
     // Starfield Twinkle in Night Mode
     if (this.starField && this.starField.material) {
       this.starField.material.opacity = 0.7 + Math.sin(elapsed * 2.5) * 0.2;
+    }
+
+    // 6. Hailstones dynamic falling & ground bouncing
+    if (this.hailMesh && this.hailData) {
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < this.hailData.length; i++) {
+        const h = this.hailData[i];
+        h.y += h.vy * delta;
+        h.x += h.vx * delta;
+        h.z += h.vz * delta;
+
+        if (h.y <= 0.22) {
+          h.y = 0.22;
+          if (h.bounces < 2) {
+            h.vy = -h.vy * 0.35;
+            h.bounces++;
+          } else {
+            h.y = 40 + Math.random() * 12;
+            h.x = (Math.random() - 0.5) * 150;
+            h.z = (Math.random() - 0.5) * 130;
+            h.vy = -h.baseSpeed;
+            h.bounces = 0;
+          }
+        }
+
+        dummy.position.set(h.x, h.y, h.z);
+        const s = 0.7 + (i % 5) * 0.12;
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+        this.hailMesh.setMatrixAt(i, dummy.matrix);
+      }
+      this.hailMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // 7. Locust Swarm vortex flocking (1,200 particle swarm)
+    if (this.locustMesh && this.locustData) {
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < this.locustData.length; i++) {
+        const loc = this.locustData[i];
+        loc.angle += loc.orbitSpeed * delta;
+        loc.y = loc.baseY + Math.sin(elapsed * 3.5 + loc.phase) * 1.4;
+        const lx = Math.cos(loc.angle) * loc.radius;
+        const lz = Math.sin(loc.angle) * loc.radius;
+
+        dummy.position.set(lx, loc.y, lz);
+        dummy.rotation.y = -loc.angle + (loc.orbitSpeed > 0 ? Math.PI / 2 : -Math.PI / 2);
+        dummy.rotation.z = Math.sin(elapsed * loc.flutterSpeed) * 0.25;
+        dummy.updateMatrix();
+        this.locustMesh.setMatrixAt(i, dummy.matrix);
+      }
+      this.locustMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // 8. Heat Shimmer particles rising from arid soil
+    if (this.heatShimmerMesh && this.heatShimmerData) {
+      const pos = this.heatShimmerMesh.geometry.attributes.position.array;
+      for (let i = 0; i < this.heatShimmerData.length; i++) {
+        const hs = this.heatShimmerData[i];
+        hs.y += hs.speed * delta;
+        if (hs.y > 14.0) {
+          hs.y = 0.25;
+          hs.x = (Math.random() - 0.5) * 140;
+          hs.z = (Math.random() - 0.5) * 120;
+        }
+        pos[i * 3] = hs.x + Math.sin(elapsed * 2.5 + hs.seed) * 0.35;
+        pos[i * 3 + 1] = hs.y;
+        pos[i * 3 + 2] = hs.z + Math.cos(elapsed * 2.5 + hs.seed) * 0.35;
+      }
+      this.heatShimmerMesh.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // 9. Flood Water undulating silt surge
+    if (this.floodWater) {
+      this.floodWater.position.y = 0.72 + Math.sin(elapsed * 1.8) * 0.05;
+    }
+
+    // 10. Micro-sprinkler pulses & mist puffs
+    for (const anim of this.animatedObjects) {
+      if (anim.type === 'sprinklerPulse' && anim.mesh) {
+        const ringScale = 0.9 + Math.sin(elapsed * anim.speed) * 0.35;
+        anim.mesh.scale.set(ringScale, ringScale, ringScale);
+        if (anim.mesh.material) {
+          anim.mesh.material.opacity = 0.25 + Math.sin(elapsed * anim.speed) * 0.2;
+        }
+      } else if (anim.type === 'mistPulse' && anim.mesh) {
+        const mistScale = 0.8 + Math.sin(elapsed * anim.speed) * 0.3;
+        anim.mesh.scale.set(mistScale, mistScale, mistScale);
+        if (anim.mesh.material) {
+          anim.mesh.material.opacity = 0.15 + Math.sin(elapsed * anim.speed) * 0.1;
+        }
+      }
     }
   }
 

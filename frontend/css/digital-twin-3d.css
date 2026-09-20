@@ -116,6 +116,25 @@
   color: #10b981;
 }
 
+.dt3d-toolbar-btn[data-disaster].active {
+  background: rgba(239, 68, 68, 0.35) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.8) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+  animation: dt3d-disaster-pulse 1.8s infinite;
+}
+
+@keyframes dt3d-disaster-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); transform: scale(1); }
+  50% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.85); transform: scale(1.08); }
+}
+
+#dt3d-sound-btn.active {
+  background: rgba(14, 165, 233, 0.35) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.7) !important;
+}
+
 .dt3d-toolbar-divider {
   height: 1px;
   background: rgba(148, 163, 184, 0.2);

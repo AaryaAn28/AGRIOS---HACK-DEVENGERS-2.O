@@ -534,6 +534,63 @@ class AgriosDigitalTwinAdapter {
   }
 
   /**
+   * Set or toggle atmospheric disaster simulation
+   * @param {'thunderstorm'|'drought'|'hailstorm'|'locusts'|'flood'} disasterType
+   */
+  setDisaster(disasterType) {
+    if (this.engine && typeof this.engine.setDisaster === 'function') {
+      const active = this.engine.setDisaster(disasterType);
+      if (active) {
+        const disasterTitles = {
+          thunderstorm: '⛈️ Severe Thunderstorm & Lightning',
+          drought: '🏜️ Severe Drought & Heatwave',
+          hailstorm: '❄️ Hailstorm & Frost Wave',
+          locusts: '🦗 1,200 Locust Swarm Blight',
+          flood: '🌊 Flash Flood & Inundation'
+        };
+        const badge = document.getElementById('dt3d-weather-badge');
+        if (badge) {
+          badge.innerHTML = `<span style="color:#ef4444; font-weight:700;">${disasterTitles[disasterType] || 'DISASTER ALERT'}</span>`;
+        }
+      } else {
+        this._updateWeatherBadge({ condition: this.engine.currentWeather || 'clear' });
+      }
+      return active;
+    }
+    return null;
+  }
+
+  /**
+   * Toggle Web Audio native synthesizer sound
+   */
+  toggleSound() {
+    if (this.engine && typeof this.engine.toggleSound === 'function') {
+      return this.engine.toggleSound();
+    }
+    return false;
+  }
+
+  /**
+   * Switch agricultural world classification
+   * @param {'terrestrial'|'horticulture'|'polyhouse'|'aquaculture'|'terrace'} cls
+   */
+  setFarmingClassification(cls) {
+    if (this.engine && typeof this.engine.setFarmingClassification === 'function') {
+      this.engine.setFarmingClassification(cls);
+    }
+  }
+
+  /**
+   * Calibrate total growth duration days
+   * @param {number} maxDays
+   */
+  setPlanDuration(maxDays) {
+    if (this.engine && typeof this.engine.setPlanDuration === 'function') {
+      this.engine.setPlanDuration(maxDays);
+    }
+  }
+
+  /**
    * Toggle 3D North Sector pest outbreak warning beacon
    */
   setOutbreakBeacon(active, sector) {
