@@ -453,7 +453,7 @@ class _BookingLandingScreenState extends State<BookingLandingScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.successContainer,
+            color: AppColors.successBg,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
