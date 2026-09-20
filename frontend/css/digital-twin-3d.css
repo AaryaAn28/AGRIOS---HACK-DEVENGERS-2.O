@@ -816,3 +816,38 @@
   animation: dt3d-radar-pulse 2s infinite ease-in-out;
 }
 
+/* --- Name Toggle & Tractor Toolbar Enhancements --- */
+#btn-toggle-names.active {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+}
+
+#btn-toggle-tractor.active {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4) !important;
+  animation: dt3d-tractor-glow 2s infinite alternate;
+}
+
+@keyframes dt3d-tractor-glow {
+  0% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.3); }
+  100% { box-shadow: 0 0 14px rgba(16, 185, 129, 0.7); }
+}
+
+.dt3d-toolbar-btn[data-action="names"].active {
+  color: #64748b;
+  opacity: 0.6;
+}
+
+.dt3d-toolbar-btn[data-action="tractor"].active {
+  background: #059669;
+  border-color: #34d399;
+  color: #ffffff;
+}
+
+.dt3d-toolbar-btn[data-action="animals"]:hover {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px #10b981);
+}

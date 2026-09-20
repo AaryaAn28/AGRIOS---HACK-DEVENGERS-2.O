@@ -317,26 +317,13 @@
       <!-- TAB 3: 3D DIGITAL TWIN & FARM CALIBRATION -->
       <div id="tab-fieldcalibration" class="vizitor-tab-content">
 
-        <!-- Walk & Calibrate Header Bar (Collapsible) -->
+        <!-- Walk & Calibrate Header Bar (Cleaned Up Viewport Controls) -->
         <div class="dt3d-calibrate-bar" id="dt3d-calibrate-bar">
           <div>
             <h3>🚀 Walk & Calibrate Field Boundary</h3>
-            <p>Trace GPS perimeter and build the 3D Digital Twin.</p>
+            <p>Trace GPS perimeter and calibrate the 3D Digital Twin.</p>
           </div>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <div style="display:flex; gap:6px; align-items:center;">
-              <input type="text" id="calib-farm-name" value="Greenfield Model Farm" class="form-control" style="width:180px; height:34px; font-size:0.8rem;">
-              <input type="number" id="calib-acres" step="0.5" value="14.5" class="form-control" style="width:80px; height:34px; font-size:0.8rem;" placeholder="Acres">
-              <select id="calib-crop" class="form-control" onchange="window._dt3dChangeCrop(this.value)" style="width:140px; height:34px; font-size:0.8rem;">
-                <option value="Wheat" selected>Wheat</option>
-                <option value="Rice">Rice / Paddy</option>
-                <option value="Tomato">Tomato</option>
-                <option value="Maize">Maize</option>
-                <option value="Potato">Potato</option>
-                <option value="Cotton">Cotton</option>
-                <option value="Pisciculture">Pisciculture (Aquaculture)</option>
-              </select>
-            </div>
             <button class="btn-primary" id="btn-open-walk-modal" onclick="if(window.AgriosCalibrator) window.AgriosCalibrator.openModal()" style="height:34px; font-size:0.8rem; background:linear-gradient(135deg, #059669, #0284c7); font-weight:700; white-space:nowrap; border-radius:8px; box-shadow:0 2px 10px rgba(5,150,105,0.35); display:inline-flex; align-items:center; gap:6px;">
               <span>📱</span> Hold Phone & Walk (1st-Time Setup)
             </button>
@@ -346,11 +333,12 @@
             <button class="dt3d-edit-toggle-btn" id="btn-edit-farm-toggle" onclick="window._dt3dToggleEditMode()" title="Toggle CAD World Editor" style="height:34px;">
               <span>📐</span> EDIT FARM
             </button>
-            <div style="font-size:0.72rem; color:#64748b;">
-              <span class="card-badge badge-success" id="twin-healthy-count" style="font-size:0.68rem;">1180 Healthy</span>
-              <span class="card-badge badge-warning" id="twin-stressed-count" style="font-size:0.68rem;">20 Stressed</span>
-              <span class="card-badge badge-danger" id="twin-dead-count" style="font-size:0.68rem;">0 Dead</span>
-            </div>
+            <button class="btn-secondary" id="btn-toggle-names" onclick="window._dt3dToggleWorkerNames(this)" style="height:34px; font-size:0.8rem; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; border-radius:6px; cursor:pointer;" title="Hide or Show Personnel Name Tags in 3D View">
+              <span id="lbl-names-icon">👤🏷️</span> <span id="lbl-names-text">Hide Names</span>
+            </button>
+            <button class="btn-secondary" id="btn-toggle-tractor" onclick="window._dt3dToggleTractor(this)" style="height:34px; font-size:0.8rem; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; border-radius:6px; cursor:pointer;" title="Start or Stop Active 3D Tractor Field Operations">
+              <span>🚜</span> <span id="lbl-tractor-text">Start Tractor</span>
+            </button>
           </div>
         </div>
 
@@ -453,7 +441,10 @@
               <button class="dt3d-toolbar-btn" data-disaster="locusts" title="Disaster: 1,200 Locust Swarm Blight" onclick="window._dt3dSetDisaster('locusts', this)">🦗</button>
               <button class="dt3d-toolbar-btn" data-disaster="flood" title="Disaster: Flash Flood & Inundation" onclick="window._dt3dSetDisaster('flood', this)">🌊</button>
               <div class="dt3d-toolbar-divider"></div>
-              <button class="dt3d-toolbar-btn" id="dt3d-sound-btn" title="Toggle Booming Thunder Synthesizer" onclick="window._dt3dToggleSound(this)">🔊</button>
+              <button class="dt3d-toolbar-btn" id="dt3d-names-btn" data-action="names" title="Toggle Personnel Name Tags (Hide/Show Names)" onclick="window._dt3dToggleWorkerNames(this)">👤🏷️</button>
+              <button class="dt3d-toolbar-btn" id="dt3d-tractor-btn" data-action="tractor" title="Toggle 3D Tractor Field Plowing & Engine" onclick="window._dt3dToggleTractor(this)">🚜</button>
+              <button class="dt3d-toolbar-btn" id="dt3d-animal-btn" data-action="animals" title="Livestock Pasture Grazing & Gentle Lowing" onclick="window._dt3dTriggerCuteAnimal(this)">🐄</button>
+              <button class="dt3d-toolbar-btn" id="dt3d-sound-btn" title="Toggle Audio Synthesizer (Birds, Rain, Engine, Thunder)" onclick="window._dt3dToggleSound(this)">🔊</button>
               <button class="dt3d-toolbar-btn" title="Cycle Atmosphere" onclick="window._dt3dCycleWeather()">🌤️</button>
               <button class="dt3d-toolbar-btn" title="Fullscreen" onclick="window._dt3dToggleFullscreen()">⛶</button>
             </div>
@@ -1218,10 +1209,12 @@
       defaultIrrigationMethod: "Automated Drip Lines (Water-Efficient)",
       defaultSeason: "Rabi",
       mechanization: [
-        { id: "Tractor & Multi-Row Seed Drill", icon: "🚜", label: "Tractor & Multi-Row Zero-Till Seed Drill" },
+        { id: "Tractor & Heavy Rotavator", icon: "🚜", label: "55 HP 4WD Tractor & Heavy-Duty Rotavator / Disk Harrow" },
+        { id: "Knapsack Battery Sprayers", icon: "🎒", label: "Knapsack Battery Backpack Sprayers & Lance" },
+        { id: "Livestock Pasture Paddock", icon: "🐄", label: "Livestock Pasture Paddock & Grazing Station" },
         { id: "Laser Land Leveler", icon: "📐", label: "Laser Land Leveler & Precision Grader" },
         { id: "Solar Drip Fertigation Automation", icon: "💧", label: "Solar Drip Fertigation Automated Manifold" },
-        { id: "Drone & Knapsack Battery Sprayers", icon: "🚁", label: "Drone & Battery-Assisted Knapsack Sprayers" },
+        { id: "Drone & Knapsack Battery Sprayers", icon: "🚁", label: "Drone & Aerial Precision Multispectral Sprayer" },
         { id: "Combine Harvester & Straw Baler", icon: "🌾", label: "Combine Harvester with Super SMS Straw Baler" }
       ]
     },
@@ -1229,6 +1222,7 @@
       defaultCrop: "Pisciculture",
       subtypes: [
         { id: "Composite Freshwater Carp Polyculture", label: "Composite Carp Polyculture (Rohu + Catla + Mrigal)", desc: "3-tier trophic niche utilization (surface, column, benthic bottom)." },
+        { id: "Intensive Biofloc Circular Geomembrane Tanks", label: "Intensive Biofloc Circular Geomembrane Tanks", desc: "Central bottom drain, continuous regenerative blowers, and zero-exchange microbial floc." },
         { id: "Monoculture Intensification", label: "Intensive Monoculture (GIFT Tilapia / Pangasius)", desc: "High-density commercial feed conversion with paddlewheel aeration." },
         { id: "Freshwater Giant Prawn / Scampi", label: "Giant Freshwater Prawn / Scampi (Macrobrachium)", desc: "High-value crustaceans with sandy-clay bottom and hideout shelters." },
         { id: "Nursery Hatchery & Fingerling Rearing", label: "Nursery Hatchery & Fingerling Seed Rearing", desc: "Plankton-rich nursery ponds for fry conditioning and distribution." }
@@ -1277,6 +1271,7 @@
       defaultCrop: "Capsicum",
       subtypes: [
         { id: "Climate-Controlled Polyhouse", label: "Climate-Controlled Dutch Polyhouse (Bell Pepper, Cherry Tomato)", desc: "VPD regulated 0.8-1.2 kPa, automated thermal shading, and venturi fertigation." },
+        { id: "Dutch Bucket & Cocopeat Hydroponics", label: "Dutch Bucket & Cocopeat Hydroponics (Vine Crops)", desc: "Dual siphon Dutch buckets with automated drip emitters and recirculating manifold." },
         { id: "Closed-Loop Hydroponics & NFT", label: "Closed-Loop Hydroponics NFT (Lettuce, Herbs, Microgreens)", desc: "Recirculating nutrient film channels with continuous EC/pH monitoring." },
         { id: "Naturally Ventilated Polyhouse", label: "Naturally Ventilated Polyhouse (NVP)", desc: "Insect-proof monofilament netting, passive ridge ventilation." },
         { id: "Hi-Tech Plug Plant Nursery", label: "Hi-Tech Plug Plant Nursery & Automated Misting", desc: "Sterilized cocopeat plug trays for commercial grafting & rootstock rearing." }
@@ -1322,12 +1317,14 @@
       defaultCrop: "Mango",
       subtypes: [
         { id: "High-Density Fruit Orchards", label: "Ultra High-Density Perennial Fruit Orchards (Mango, Guava, Citrus)", desc: "Canopy pruning architecture, under-canopy micro-jets, and high tree densities." },
+        { id: "High-Wire Vineyard & Trellising", label: "High-Wire Vineyard & Trellising (Grapes, Passion Fruit, Kiwi)", desc: "Heavy galvanized wire trellises with organic canopy shading and hanging fruit clusters." },
         { id: "Commercial Floriculture Groves", label: "Commercial Floriculture & Protected Cut Flowers", desc: "Perennial ornamental cuts with post-harvest cold chain and misting." },
         { id: "Open Field Truck Horticulture", label: "Open Field Commercial Vegetables (Tomato, Chili, Onion)", desc: "Raised bed plastic mulch with dual lateral drip fertigation." },
         { id: "Spices & Plantation Agriculture", label: "Perennial Plantation & Spices (Cardamom, Pepper, Ginger)", desc: "Shade tree intercropping with organic bio-stimulant foliar nutrition." }
       ],
       crops: [
         { name: "Mango", label: "Mango (Amrapali / Mallika Ultra High Density) • 240 Days", duration: 240, yield: 75.0 },
+        { name: "Grapes", label: "Table Grapes (Vitis vinifera / Thompson Seedless) • 135 Days", duration: 135, yield: 110.0 },
         { name: "Guava", label: "Guava (Taiwan Pink / VNR Bihi High-Density) • 180 Days", duration: 180, yield: 90.0 },
         { name: "Pomegranate", label: "Pomegranate (Bhagwa Super-Red) • 160 Days", duration: 160, yield: 65.0 },
         { name: "Citrus", label: "Kinnow Mandarin / Sweet Orange (Citrus reticulata) • 210 Days", duration: 210, yield: 85.0 },
@@ -1348,14 +1345,14 @@
       ],
       defaultWaterSource: "Deep Borewell with Solar Submersible Pump",
       irrigationMethods: [
-        "Sub-Surface Pressure Compensating Double-Ring Drip",
-        "Micro-Jet Under-Canopy Mini-Sprinklers",
-        "Basin Flooding with Mulch Ring Safeguards"
+        "Under-Canopy Pulsating Micro-Sprinklers",
+        "Dual-Lateral Pressure-Compensating Drip Irrigation",
+        "Automated Soil-Tension Triggered Basin Flooding"
       ],
-      defaultIrrigationMethod: "Sub-Surface Pressure Compensating Double-Ring Drip",
+      defaultIrrigationMethod: "Under-Canopy Pulsating Micro-Sprinklers",
       defaultSeason: "Perennial",
       mechanization: [
-        { id: "Tractor-Mounted Orchard Mist Blower Sprayer", icon: "🚜", label: "Tractor-Mounted PTO Air-Blast Orchard Mist Sprayer" },
+        { id: "Orchard Mist Sprayer Tractor", icon: "🚜", label: "Narrow-Track Orchard Tractor with Air-Blast Axial Mist Sprayer" },
         { id: "Hydraulic Tree Pruner & Lopping Boom", icon: "✂️", label: "Pneumatic / Hydraulic Canopy Pruning & Lopping Boom" },
         { id: "Soil Moisture Tensiometer Array", icon: "📡", label: "Multi-Depth Wireless Soil Moisture Tensiometer Array" },
         { id: "Post-Harvest Fruit Sorting Conveyor", icon: "🍎", label: "Rotary Roller Grading & Electronic Weight Sizing Conveyor" },
@@ -1366,12 +1363,14 @@
       defaultCrop: "Rajmash",
       subtypes: [
         { id: "Contour Stepped Alpine Terraces", label: "Contour Stepped Alpine Terraces (Rajmash, Buckwheat, Millets)", desc: "Stone retaining walls, slope contour furrows, and gravity watershed management." },
+        { id: "Contour Tea & Coffee Mountain Hedgerows", label: "Contour Tea & Coffee Mountain Hedgerows (Camellia / Arabica)", desc: "Double hedge contours planted along slope contour lines with mountain fog interceptors." },
         { id: "High-Altitude Hill Horticulture", label: "High-Altitude Hill Groves (Apple, Peach, Walnut)", desc: "Sloped temperate pomology with winter chilling requirement tracking." },
         { id: "Highland Specialty Spices", label: "Highland Specialty Cash Crops (Organic Hill Ginger, Turmeric, Saffron)", desc: "High-elevation humus soil with raised ridge drainage to prevent rhizome rot." },
         { id: "Watershed Bench Terracing", label: "Watershed Bench Terraces with Traditional Kuhl Channels", desc: "Gravity stream diversions with stone sluices connecting tiered plots." }
       ],
       crops: [
         { name: "Rajmash", label: "High-Altitude Kidney Bean / Rajmash • 105 Days", duration: 105, yield: 14.0 },
+        { name: "Tea & Coffee", label: "Mountain Tea & Arabica Coffee Hedgerow (Camellia sinensis) • 365 Days", duration: 365, yield: 45.0 },
         { name: "Buckwheat", label: "Himalayan Buckwheat / Kuttu • 75 Days", duration: 75, yield: 11.0 },
         { name: "Ginger", label: "Organic Hill Ginger & Turmeric Rhizome • 220 Days", duration: 220, yield: 95.0 },
         { name: "Finger Millet", label: "Mountain Finger Millet / Mandua • 115 Days", duration: 115, yield: 16.5 },
@@ -1709,7 +1708,41 @@
       btn.innerHTML = unmuted ? '🔊' : '🔇';
       btn.title = unmuted ? 'Mute Booming Thunder Synthesizer' : 'Enable Booming Thunder Synthesizer';
     }
-    AgriosUI.showToast(unmuted ? "Audio Synthesizer Enabled" : "Audio Synthesizer Muted", unmuted ? "Authentic native Web Audio thunder effects live." : "Sound disabled.", unmuted ? "🔊" : "🔇");
+    AgriosUI.showToast(unmuted ? "Audio Synthesizer Enabled" : "Audio Synthesizer Muted", unmuted ? "Authentic native Web Audio acoustic synthesis live." : "Sound disabled.", unmuted ? "🔊" : "🔇");
+  };
+
+  window._dt3dToggleWorkerNames = function(btn) {
+    if (!twinAdapter3D) return;
+    const isVisible = twinAdapter3D.toggleWorkerNames();
+    const toolbarBtn = document.getElementById("dt3d-names-btn");
+    const topBarBtn = document.getElementById("btn-toggle-names");
+    [btn, toolbarBtn, topBarBtn].forEach(b => {
+      if (!b) return;
+      b.classList.toggle("active", !isVisible);
+      const textSpan = b.querySelector('#lbl-names-text');
+      if (textSpan) textSpan.innerText = isVisible ? "Hide Names" : "Show Names";
+    });
+    AgriosUI.showToast(isVisible ? "Personnel Names Shown" : "Personnel Names Hidden", isVisible ? "Floating 3D name badges visible." : "Clean viewport without floating name tags.", "👤");
+  };
+
+  window._dt3dToggleTractor = function(btn) {
+    if (!twinAdapter3D) return;
+    const isRunning = twinAdapter3D.toggleTractor();
+    const toolbarBtn = document.getElementById("dt3d-tractor-btn");
+    const topBarBtn = document.getElementById("btn-toggle-tractor");
+    [btn, toolbarBtn, topBarBtn].forEach(b => {
+      if (!b) return;
+      b.classList.toggle("active", isRunning);
+      const textSpan = b.querySelector('#lbl-tractor-text');
+      if (textSpan) textSpan.innerText = isRunning ? "Stop Tractor" : "Start Tractor";
+    });
+    AgriosUI.showToast(isRunning ? "3D Tractor Active" : "3D Tractor Parked", isRunning ? "Tractor plowing field rows with active diesel acoustics." : "Tractor stationary in equipment depot.", "🚜");
+  };
+
+  window._dt3dTriggerCuteAnimal = function(btn) {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.triggerCuteAnimal();
+    AgriosUI.showToast("Livestock Grazing", "Gentle pasture lowing and clover grazing active.", "🐄");
   };
 
   window._dt3dToggleFullscreen = function() {
@@ -2548,12 +2581,21 @@
     btn.innerText = "Building 3D Twin...";
 
     const user = AgriosAPI.getCurrentUser() || { id: "agro_usr_001" };
+    const farmNameInput = document.getElementById("calib-farm-name");
+    const acresInput = document.getElementById("calib-acres");
+    const cropInput = document.getElementById("calib-crop");
+
+    const farmName = (farmNameInput ? farmNameInput.value.trim() : null) || localStorage.getItem("agrios_calibrated_farm_name") || "Greenfield Model Farm";
+    const areaAcres = parseFloat(acresInput ? acresInput.value : null) || parseFloat(localStorage.getItem("agrios_calibrated_acres")) || 14.5;
+    const cropType = (cropInput ? cropInput.value : null) || surveyState?.crop_name || localStorage.getItem("agrios_calibrated_crop") || "Wheat";
+    const targetDays = surveyState?.duration_days || 120;
+
     const payload = {
       agronomist_id: user.id,
-      farm_name: document.getElementById("calib-farm-name").value.trim(),
-      area_acres: parseFloat(document.getElementById("calib-acres").value),
-      crop_type: document.getElementById("calib-crop").value,
-      target_duration_days: 120
+      farm_name: farmName,
+      area_acres: areaAcres,
+      crop_type: cropType,
+      target_duration_days: targetDays
     };
 
     try {
@@ -2863,6 +2905,23 @@
     document.getElementById("onboarding-wizard-modal").style.display = "none";
   }
 
+  function syncCadreTo3DModel() {
+    if (twinAdapter3D && typeof twinAdapter3D.syncWorkersRoster === 'function') {
+      const allWorkers = registeredCadre.map((c, i) => ({
+        id: c.id || ('cadre_' + i),
+        name: c.name,
+        role: c.role || 'worker',
+        position: { x: -22 + (i * 9) % 44, z: -15 + Math.floor(i / 5) * 10 },
+        current_task: { 
+          title: c.role === 'farmer' ? 'Field Oversight' : (i % 2 === 0 ? 'Emergency Spraying' : 'Furrow Maintenance'), 
+          type: c.role === 'farmer' ? 'inspecting' : (i % 2 === 0 ? 'spraying' : 'watering') 
+        },
+        fatigue_index: 25 + (i * 7) % 45
+      }));
+      twinAdapter3D.syncWorkersRoster(allWorkers);
+    }
+  }
+
   function addCadreMember() {
     const nameInput = document.getElementById("cadre-new-name");
     const roleInput = document.getElementById("cadre-new-role");
@@ -2875,8 +2934,11 @@
     const role = roleInput ? roleInput.value : "worker";
     const cap = parseFloat(capInput ? capInput.value : 7.0) || 7.0;
 
-    registeredCadre.push({ name, role, daily_hours_cap: cap });
+    const newId = 'cadre_' + Date.now();
+    registeredCadre.push({ id: newId, name, role, daily_hours_cap: cap });
     renderWizardStep();
+    syncCadreTo3DModel();
+    AgriosUI.showToast("Personnel Added", `${name} (${role}) dynamically added to 3D farm model.`, "👷");
   }
 
   function removeCadreMember(idx) {
@@ -2884,8 +2946,10 @@
       AgriosUI.showToast("Minimum Personnel", "At least 1 field worker or farmer must remain registered.", "⚠️");
       return;
     }
-    registeredCadre.splice(idx, 1);
+    const removed = registeredCadre.splice(idx, 1)[0];
     renderWizardStep();
+    syncCadreTo3DModel();
+    AgriosUI.showToast("Personnel Removed", `${removed.name} removed from 3D model.`, "ℹ️");
   }
 
   function updateBasinDropdown(state) {

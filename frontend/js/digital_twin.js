@@ -600,6 +600,36 @@ class AgriosDigitalTwinAdapter {
   }
 
   /**
+   * Toggle 3D floating worker/personnel name tags
+   */
+  toggleWorkerNames() {
+    if (this.engine && typeof this.engine.toggleWorkerLabels === 'function') {
+      return this.engine.toggleWorkerLabels();
+    }
+    return true;
+  }
+
+  /**
+   * Toggle 3D Tractor field operations & engine acoustics
+   */
+  toggleTractor() {
+    if (this.engine && typeof this.engine.toggleTractor === 'function') {
+      return this.engine.toggleTractor();
+    }
+    return false;
+  }
+
+  /**
+   * Trigger cute countryside livestock lowing and grazing focus
+   */
+  triggerCuteAnimal() {
+    if (this.engine && typeof this.engine.triggerCuteAnimal === 'function') {
+      return this.engine.triggerCuteAnimal();
+    }
+    return false;
+  }
+
+  /**
    * Run simulated GPS boundary walk with surveyor avatar
    */
   simulateWalkCalibration(onProgress, onComplete) {

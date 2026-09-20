@@ -265,9 +265,35 @@ export class AgriosDigitalTwin3D {
     this.fishMeshes = [];
     this.paddyWater = null;
 
-    // Web Audio Thunder Synthesizer & Sound State
+    // Personnel name tags visibility
+    this.showWorkerLabels = true;
+
+    // Interactive 3D Tractor State & Plowing Operations
+    this.tractorMesh = null;
+    this.tractorActive = false;
+    this.tractorWheels = [];
+    this.tractorSmokeParticles = [];
+    this._tractorSoundNodes = null;
+
+    // Pasture Paddock & Grazing Livestock
+    this.pastureGroup = null;
+    this.livestockMeshes = [];
+
+    // Water Spraying Particle System
+    this.sprayParticlesPool = [];
+
+    // Web Audio Native Synthesizer & Procedural Ambience State
     this.soundMuted = false;
     this._audioCtx = null;
+    this._ambientSoundNodes = {
+      birdTimer: null,
+      rainSource: null,
+      rainGain: null,
+      heatwaveSource: null,
+      heatwaveGain: null,
+      nightSource: null,
+      nightGain: null
+    };
 
     // Atmospheric Disaster Engine State
     this.activeDisaster = null;
@@ -738,6 +764,8 @@ export class AgriosDigitalTwin3D {
     this._buildInfrastructure(sceneData.spatial_objects);
     this._buildCrops(sceneData.planting_grid, sceneData.crop_plan);
     this._buildWorkers(sceneData.workers);
+    this._buildTractor();
+    this._buildPastureZone();
     this._applyWeather(sceneData.weather);
 
     console.log(`[3D Twin] Built ${this.farmingClassification.toUpperCase()} World (Crop: ${cleanCropName || 'Wheat'}, Max Days: ${this.maxDays}) with`, this.scene.children.length, 'top-level groups');
@@ -772,6 +800,10 @@ export class AgriosDigitalTwin3D {
     this.fishMeshes = [];
     this.paddyWater = null;
     this.disasterObjects = [];
+    this.tractorMesh = null;
+    this.pastureGroup = null;
+    this.livestockMeshes = [];
+    this.tractorSmokeParticles = [];
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -2406,6 +2438,315 @@ export class AgriosDigitalTwin3D {
     this._createCameraTower(0, maxZ + 2, 'PTZ-Camera-03');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 3D TRACTOR & AGRICULTURAL IMPLEMENT MODEL
+  // ─────────────────────────────────────────────────────────────
+  _buildTractor() {
+    const group = new THREE.Group();
+    group.position.set(-18, 0, 0); // located on farm arterial lane
+
+    const tractorMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.35, metalness: 0.6 }); // AGRIOS emerald
+    const chassisMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8, metalness: 0.5 });
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4, metalness: 0.7 }); // yellow rims
+
+    // 1. Chassis frame
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 3.4), chassisMat);
+    chassis.position.y = 0.85;
+    chassis.castShadow = true;
+    group.add(chassis);
+
+    // 2. Engine hood
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 2.0), tractorMat);
+    hood.position.set(0, 1.4, 0.6);
+    hood.castShadow = true;
+    group.add(hood);
+
+    // Radiator front grille & lights
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.1), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 }));
+    grille.position.set(0, 1.4, 1.62);
+    group.add(grille);
+
+    const lightGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12);
+    lightGeo.rotateX(Math.PI / 2);
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfef08a, emissiveIntensity: 0.6 });
+    const headL = new THREE.Mesh(lightGeo, lightMat);
+    headL.position.set(-0.45, 1.5, 1.65);
+    const headR = new THREE.Mesh(lightGeo, lightMat);
+    headR.position.set(0.45, 1.5, 1.65);
+    group.add(headL, headR);
+
+    // 3. Driver Cabin / ROPS Arch
+    const ropsArch = new THREE.Group();
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.3 });
+    const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.1, 8), pipeMat);
+    leftPost.position.set(-0.65, 2.0, -0.6);
+    const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.1, 8), pipeMat);
+    rightPost.position.set(0.65, 2.0, -0.6);
+    const crossBar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.36, 8), pipeMat);
+    crossBar.rotateZ(Math.PI / 2);
+    crossBar.position.set(0, 3.0, -0.6);
+    ropsArch.add(leftPost, rightPost, crossBar);
+    group.add(ropsArch);
+
+    // Seat & Steering wheel
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.5), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
+    seat.position.set(0, 1.45, -0.5);
+    group.add(seat);
+
+    const steeringCol = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6), pipeMat);
+    steeringCol.rotateX(-0.5);
+    steeringCol.position.set(0, 1.6, -0.1);
+    const wheelTorus = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 16), pipeMat);
+    wheelTorus.rotateX(Math.PI / 3);
+    wheelTorus.position.set(0, 1.85, -0.15);
+    group.add(steeringCol, wheelTorus);
+
+    // 4. Exhaust pipe & Animated Smoke Emitter
+    const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.4, 8), pipeMat);
+    exhaust.position.set(0.55, 2.3, 0.8);
+    const exhaustCap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.12), pipeMat);
+    exhaustCap.position.set(0.55, 3.02, 0.8);
+    group.add(exhaust, exhaustCap);
+
+    // Smoke particles
+    const smokeParticles = [];
+    const smokeMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.35 });
+    for (let i = 0; i < 8; i++) {
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.08 + Math.random() * 0.06, 6, 6), smokeMat.clone());
+      sp.position.set(0.55, 3.05 + i * 0.18, 0.8 - i * 0.08);
+      sp.userData = { initialY: 3.05, life: i * 0.2, maxLife: 1.6 };
+      group.add(sp);
+      smokeParticles.push(sp);
+    }
+    this.tractorSmokeParticles = smokeParticles;
+
+    // 5. Wheels (2 Large Rear, 2 Smaller Front)
+    this.tractorWheels = [];
+    const createWheel = (radius, width, x, y, z) => {
+      const wGroup = new THREE.Group();
+      wGroup.position.set(x, y, z);
+
+      // Tire
+      const tireGeo = new THREE.CylinderGeometry(radius, radius, width, 16);
+      tireGeo.rotateZ(Math.PI / 2);
+      const tire = new THREE.Mesh(tireGeo, tireMat);
+      tire.castShadow = true;
+      wGroup.add(tire);
+
+      // Rim
+      const rimGeo = new THREE.CylinderGeometry(radius * 0.65, radius * 0.65, width * 1.05, 12);
+      rimGeo.rotateZ(Math.PI / 2);
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      wGroup.add(rim);
+
+      group.add(wGroup);
+      this.tractorWheels.push(wGroup);
+      return wGroup;
+    };
+
+    // Rear drive wheels (large)
+    createWheel(0.9, 0.55, -0.95, 0.9, -0.85);
+    createWheel(0.9, 0.55, 0.95, 0.9, -0.85);
+    // Front steer wheels (smaller)
+    createWheel(0.52, 0.35, -0.85, 0.52, 1.25);
+    createWheel(0.52, 0.35, 0.85, 0.52, 1.25);
+
+    // 6. Rear 3-Point Hitch Implement (Disk Harrow)
+    const hitch = new THREE.Group();
+    hitch.position.set(0, 0.6, -1.9);
+    const harrowBar = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.12), chassisMat);
+    hitch.add(harrowBar);
+    const discMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.2 });
+    for (let d = -4; d <= 4; d++) {
+      if (d === 0) continue;
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.03, 16), discMat);
+      disc.rotateZ(Math.PI / 2);
+      disc.rotateY(0.25 * Math.sign(d));
+      disc.position.set(d * 0.25, 0, 0);
+      hitch.add(disc);
+    }
+    group.add(hitch);
+
+    // Floating Label
+    const lbl = this._createLabel('🚜 55HP 4WD Precision Tractor', new THREE.Vector3(0, 3.4, 0), '#10b981', '0.7rem', true);
+    lbl.visible = this.showWorkerLabels;
+    group.add(lbl);
+    group._nameLabel = lbl;
+
+    group.userData = {
+      type: 'tractor',
+      speed: 3.2,
+      pathT: 0,
+      active: false
+    };
+
+    this.groups.infrastructure.add(group);
+    this.tractorMesh = group;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PASTURE PADDOCK & GRAZING LIVESTOCK (Cattle / Cows / Calves)
+  // ─────────────────────────────────────────────────────────────
+  _buildPastureZone() {
+    const group = new THREE.Group();
+    const px = 24, pz = 16, pw = 18, pd = 14;
+
+    // 1. Lush clover pasture ground patch
+    const patchGeo = new THREE.PlaneGeometry(pw, pd);
+    patchGeo.rotateX(-Math.PI / 2);
+    const patchMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.9 });
+    const patch = new THREE.Mesh(patchGeo, patchMat);
+    patch.position.set(px, 0.02, pz);
+    patch.receiveShadow = true;
+    group.add(patch);
+
+    // 2. Post-and-rail wooden fence
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.85 });
+
+    const halfW = pw / 2, halfD = pd / 2;
+    const posts = [
+      { x: px - halfW, z: pz - halfD }, { x: px, z: pz - halfD }, { x: px + halfW, z: pz - halfD },
+      { x: px + halfW, z: pz }, { x: px + halfW, z: pz + halfD },
+      { x: px, z: pz + halfD }, { x: px - halfW, z: pz + halfD }, { x: px - halfW, z: pz }
+    ];
+
+    posts.forEach(pt => {
+      const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 6), postMat);
+      pMesh.position.set(pt.x, 0.6, pt.z);
+      pMesh.castShadow = true;
+      group.add(pMesh);
+    });
+
+    const createRail = (x1, z1, x2, z2) => {
+      const dx = x2 - x1, dz = z2 - z1;
+      const len = Math.hypot(dx, dz);
+      const angle = Math.atan2(dx, dz);
+      for (const y of [0.45, 0.85]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, len), railMat);
+        rail.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+        rail.rotation.y = angle;
+        group.add(rail);
+      }
+    };
+
+    createRail(px - halfW, pz - halfD, px + halfW, pz - halfD);
+    createRail(px + halfW, pz - halfD, px + halfW, pz + halfD);
+    createRail(px + halfW, pz + halfD, px - halfW, pz + halfD);
+    createRail(px - halfW, pz + halfD, px - halfW, pz - halfD);
+
+    // 3. Water trough
+    const trough = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 0.8), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6 }));
+    trough.position.set(px - halfW + 1.8, 0.3, pz - halfD + 1.8);
+    const troughWater = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.6), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.2 }));
+    troughWater.rotateX(-Math.PI / 2);
+    troughWater.position.set(px - halfW + 1.8, 0.5, pz - halfD + 1.8);
+    group.add(trough, troughWater);
+
+    // 4. Grazing Cattle (Holstein-Friesian & Brown Jersey Cows)
+    this.livestockMeshes = [];
+    const cowConfigs = [
+      { x: px - 3, z: pz - 2, rot: 0.4, scale: 1.0, isJersey: false },
+      { x: px + 3, z: pz + 2, rot: -0.8, scale: 1.05, isJersey: true },
+      { x: px, z: pz + 3, rot: 2.1, scale: 0.75, isJersey: false } // calf
+    ];
+
+    cowConfigs.forEach((cfg, idx) => {
+      const cow = new THREE.Group();
+      cow.position.set(cfg.x, 0, cfg.z);
+      cow.rotation.y = cfg.rot;
+      cow.scale.setScalar(cfg.scale);
+
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: cfg.isJersey ? 0x9a3412 : 0xf8fafc,
+        roughness: 0.8
+      });
+
+      // Body torso
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.1, 2.2), bodyMat);
+      body.position.y = 1.25;
+      body.castShadow = true;
+      cow.add(body);
+
+      // Black patches if Holstein
+      if (!cfg.isJersey) {
+        const patchMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+        const patch1 = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.6, 0.8), patchMat);
+        patch1.position.set(0, 1.3, 0.2);
+        const patch2 = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.45, 0.6), patchMat);
+        patch2.position.set(0, 1.2, -0.6);
+        cow.add(patch1, patch2);
+      }
+
+      // 4 Legs
+      const legMat = new THREE.MeshStandardMaterial({ color: cfg.isJersey ? 0x7c2d12 : 0xf8fafc, roughness: 0.8 });
+      const hoofMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+      const legOffsets = [
+        { x: -0.45, z: 0.7 }, { x: 0.45, z: 0.7 },
+        { x: -0.45, z: -0.7 }, { x: 0.45, z: -0.7 }
+      ];
+      legOffsets.forEach(lo => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.8, 6), legMat);
+        leg.position.set(lo.x, 0.4, lo.z);
+        leg.castShadow = true;
+        const hoof = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.12, 6), hoofMat);
+        hoof.position.set(lo.x, 0.06, lo.z);
+        cow.add(leg, hoof);
+      });
+
+      // Articulated Head & Neck Group (bobs down to graze grass)
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 1.5, 1.0);
+
+      const neck = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.75), bodyMat);
+      neck.position.set(0, 0, 0.3);
+      headGroup.add(neck);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.55, 0.75), bodyMat);
+      head.position.set(0, -0.1, 0.75);
+      headGroup.add(head);
+
+      const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.45), new THREE.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.7 })); // pink nose
+      muzzle.position.set(0, -0.22, 1.1);
+      headGroup.add(muzzle);
+
+      // Ears
+      const earMat = new THREE.MeshStandardMaterial({ color: cfg.isJersey ? 0x9a3412 : 0x0f172a });
+      const earL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.12), earMat);
+      earL.position.set(-0.45, 0.1, 0.65);
+      const earR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.12), earMat);
+      earR.position.set(0.45, 0.1, 0.65);
+      headGroup.add(earL, earR);
+
+      cow.add(headGroup);
+
+      // Tail
+      const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.9, 5), bodyMat);
+      tail.position.set(0, 1.0, -1.15);
+      tail.rotateX(-0.3);
+      cow.add(tail);
+
+      cow.userData = {
+        type: 'cattle',
+        headGroup: headGroup,
+        tail: tail,
+        bobPhase: idx * 1.8
+      };
+
+      group.add(cow);
+      this.livestockMeshes.push(cow);
+    });
+
+    const lbl = this._createLabel('🐄 Sustainable Agro-Pastoral Paddock', new THREE.Vector3(px, 2.8, pz), '#15803d', '0.7rem', true);
+    lbl.visible = this.showWorkerLabels;
+    group.add(lbl);
+    group._nameLabel = lbl;
+
+    this.groups.infrastructure.add(group);
+    this.pastureGroup = group;
+  }
+
   // Autonomous Precision Agricultural Survey Drone with Scanning Laser Cone
   _createAutonomousDrone(x = 0, y = 16, z = 0) {
     const drone = new THREE.Group();
@@ -3025,7 +3366,18 @@ export class AgriosDigitalTwin3D {
         rightArm: workerGroup._rightArm,
         leftLeg: workerGroup._leftLeg,
         rightLeg: workerGroup._rightLeg,
-        sprayMist: workerGroup._sprayMist
+        sprayMist: workerGroup._sprayMist,
+        sprayParticles: workerGroup._sprayParticles,
+        nameLabel: workerGroup._nameLabel,
+        isWalking: true,
+        walkPhase: Math.random() * 10,
+        speed: 1.1 + Math.random() * 0.4,
+        direction: Math.random() > 0.5 ? 1 : -1,
+        minX: -26,
+        maxX: 26,
+        minZ: -20,
+        maxZ: 20,
+        patrolAxis: worker.role === 'farmer' ? 'z' : 'x'
       });
     });
   }
@@ -3166,6 +3518,35 @@ export class AgriosDigitalTwin3D {
       sprayMist = new THREE.Mesh(coneGeo, mistMat);
       sprayMist.position.set(0.45, 0.7, 0.9);
       group.add(sprayMist);
+
+      // Dynamic water droplet particle cascade
+      const sprayCount = 48;
+      const sprayGeo = new THREE.BufferGeometry();
+      const sprayPos = new Float32Array(sprayCount * 3);
+      const sprayVels = [];
+      for (let pi = 0; pi < sprayCount; pi++) {
+        sprayPos[pi * 3 + 0] = 0.45;
+        sprayPos[pi * 3 + 1] = 0.7;
+        sprayPos[pi * 3 + 2] = 0.9;
+        sprayVels.push({
+          x: (Math.random() - 0.5) * 0.35,
+          y: -1.2 - Math.random() * 1.5,
+          z: 0.8 + Math.random() * 0.6,
+          life: Math.random()
+        });
+      }
+      sprayGeo.setAttribute('position', new THREE.BufferAttribute(sprayPos, 3));
+      const sprayMat = new THREE.PointsMaterial({
+        color: 0x38bdf8,
+        size: 0.12,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+      });
+      const sprayParticles = new THREE.Points(sprayGeo, sprayMat);
+      sprayParticles.userData = { vels: sprayVels };
+      group.add(sprayParticles);
+      group._sprayParticles = sprayParticles;
     } else if (worker.role === 'agronomist') {
       // Telemetry digital spectrometer tablet
       const tabletGeo = new THREE.BoxGeometry(0.38, 0.28, 0.04);
@@ -3200,7 +3581,9 @@ export class AgriosDigitalTwin3D {
       '0.68rem',
       true
     );
+    label.visible = this.showWorkerLabels;
     group.add(label);
+    group._nameLabel = label;
 
     group.userData = {
       type: 'worker',
@@ -3252,7 +3635,18 @@ export class AgriosDigitalTwin3D {
           rightArm: newGroup._rightArm,
           leftLeg: newGroup._leftLeg,
           rightLeg: newGroup._rightLeg,
-          sprayMist: newGroup._sprayMist
+          sprayMist: newGroup._sprayMist,
+          sprayParticles: newGroup._sprayParticles,
+          nameLabel: newGroup._nameLabel,
+          isWalking: true,
+          walkPhase: Math.random() * 10,
+          speed: 1.1 + Math.random() * 0.4,
+          direction: Math.random() > 0.5 ? 1 : -1,
+          minX: -26,
+          maxX: 26,
+          minZ: -20,
+          maxZ: 20,
+          patrolAxis: worker.role === 'farmer' ? 'z' : 'x'
         };
         this.workerMeshes.push(wObj);
         console.log(`[3D Twin] Dynamic workforce sync: spawned ${worker.name} (${worker.role})`);
@@ -3276,6 +3670,22 @@ export class AgriosDigitalTwin3D {
     });
   }
 
+  // Toggle Visibility of Floating 3D Personnel Name Tags
+  toggleWorkerLabels() {
+    this.showWorkerLabels = !this.showWorkerLabels;
+    this.workerMeshes.forEach(w => {
+      if (w.nameLabel) w.nameLabel.visible = this.showWorkerLabels;
+      if (w.group && w.group._nameLabel) w.group._nameLabel.visible = this.showWorkerLabels;
+    });
+    if (this.tractorMesh && this.tractorMesh._nameLabel) {
+      this.tractorMesh._nameLabel.visible = this.showWorkerLabels;
+    }
+    if (this.pastureGroup && this.pastureGroup._nameLabel) {
+      this.pastureGroup._nameLabel.visible = this.showWorkerLabels;
+    }
+    return this.showWorkerLabels;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // NEXT-GEN WEATHER ENGINE & ATMOSPHERIC AESTHETICS
   // ─────────────────────────────────────────────────────────────
@@ -3292,6 +3702,10 @@ export class AgriosDigitalTwin3D {
       case 'night': this._setWeatherNight(); break;
       case 'heatwave': this._setWeatherHeatwave(); break;
       default: this._setWeatherClear(); break;
+    }
+    this.syncWeatherSound();
+    if (this.currentDay) {
+      this.setDay(this.currentDay);
     }
   }
 
@@ -3724,8 +4138,437 @@ export class AgriosDigitalTwin3D {
     this.soundMuted = !this.soundMuted;
     if (!this.soundMuted) {
       this._initAudioContext();
+      this.syncWeatherSound();
+      if (this.tractorActive) {
+        this._startTractorSound();
+      }
+    } else {
+      this.syncWeatherSound();
+      this._stopTractorSound();
     }
     return !this.soundMuted;
+  }
+
+  // Dynamic Audio Routing based on active weather and disasters
+  syncWeatherSound() {
+    if (this.soundMuted) {
+      this._stopAmbientBirds();
+      this._stopRainSound();
+      this._stopHeatwaveSound();
+      this._stopNightSound();
+      if (!this.tractorActive) this._stopTractorSound();
+      return;
+    }
+    this._initAudioContext();
+
+    const w = this.currentWeather;
+    const d = this.activeDisaster;
+
+    if (d === 'thunderstorm' || w === 'rain') {
+      this._stopAmbientBirds();
+      this._stopHeatwaveSound();
+      this._stopNightSound();
+      this._startRainSound();
+    } else if (d === 'drought' || w === 'heatwave') {
+      this._stopAmbientBirds();
+      this._stopRainSound();
+      this._stopNightSound();
+      this._startHeatwaveSound();
+    } else if (w === 'night') {
+      this._stopAmbientBirds();
+      this._stopRainSound();
+      this._stopHeatwaveSound();
+      this._startNightSound();
+    } else {
+      // Clear sky, golden hour, or pleasant daylight
+      this._stopRainSound();
+      this._stopHeatwaveSound();
+      this._stopNightSound();
+      this._startAmbientBirds();
+    }
+  }
+
+  // Procedural FM Bird Song Synthesizer (Authentic High-Pitch Warbles & Chirps)
+  _playBirdChirp() {
+    if (this.soundMuted) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const now = ctx.currentTime;
+
+      // FM Carrier & Modulator
+      const carrier = ctx.createOscillator();
+      const modulator = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      const mainGain = ctx.createGain();
+
+      carrier.type = 'sine';
+      modulator.type = 'sine';
+
+      const baseFreq = 2600 + Math.random() * 1200;
+      carrier.frequency.setValueAtTime(baseFreq, now);
+      carrier.frequency.exponentialRampToValueAtTime(baseFreq * 1.35, now + 0.05);
+      carrier.frequency.exponentialRampToValueAtTime(baseFreq * 0.85, now + 0.12);
+
+      modulator.frequency.setValueAtTime(25 + Math.random() * 20, now);
+      modGain.gain.setValueAtTime(250 + Math.random() * 150, now);
+
+      mainGain.gain.setValueAtTime(0.001, now);
+      mainGain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+      mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
+      carrier.connect(mainGain);
+      mainGain.connect(ctx.destination);
+
+      carrier.start(now);
+      modulator.start(now);
+      carrier.stop(now + 0.16);
+      modulator.stop(now + 0.16);
+
+      // Natural echo warble chirp
+      if (Math.random() > 0.4) {
+        const echoCarrier = ctx.createOscillator();
+        const echoGain = ctx.createGain();
+        echoCarrier.type = 'sine';
+        const echoTime = now + 0.18;
+        echoCarrier.frequency.setValueAtTime(baseFreq * 1.15, echoTime);
+        echoCarrier.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, echoTime + 0.1);
+        echoGain.gain.setValueAtTime(0.001, echoTime);
+        echoGain.gain.exponentialRampToValueAtTime(0.12, echoTime + 0.02);
+        echoGain.gain.exponentialRampToValueAtTime(0.001, echoTime + 0.11);
+        echoCarrier.connect(echoGain);
+        echoGain.connect(ctx.destination);
+        echoCarrier.start(echoTime);
+        echoCarrier.stop(echoTime + 0.12);
+      }
+    } catch (_) {}
+  }
+
+  _startAmbientBirds() {
+    if (this._ambientSoundNodes.birdTimer) return;
+    const scheduleNext = () => {
+      if (this.soundMuted || this.currentWeather === 'rain' || this.currentWeather === 'night' || this.activeDisaster) {
+        return;
+      }
+      this._playBirdChirp();
+      const delay = 3500 + Math.random() * 4500;
+      this._ambientSoundNodes.birdTimer = setTimeout(scheduleNext, delay);
+    };
+    this._ambientSoundNodes.birdTimer = setTimeout(scheduleNext, 1200);
+  }
+
+  _stopAmbientBirds() {
+    if (this._ambientSoundNodes.birdTimer) {
+      clearTimeout(this._ambientSoundNodes.birdTimer);
+      this._ambientSoundNodes.birdTimer = null;
+    }
+  }
+
+  // Continuous Rain Wash & Droplet Transients Synthesizer
+  _startRainSound() {
+    if (this.soundMuted || this._ambientSoundNodes.rainSource) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const bufferSize = ctx.sampleRate * 2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1400, ctx.currentTime);
+      filter.Q.value = 0.85;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 1.0);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      source.start();
+      this._ambientSoundNodes.rainSource = source;
+      this._ambientSoundNodes.rainGain = gain;
+    } catch (_) {}
+  }
+
+  _stopRainSound() {
+    if (!this._ambientSoundNodes.rainSource) return;
+    try {
+      const { rainSource, rainGain } = this._ambientSoundNodes;
+      const now = this._audioCtx.currentTime;
+      rainGain.gain.linearRampToValueAtTime(0.001, now + 0.5);
+      setTimeout(() => {
+        try { rainSource.stop(); } catch (_) {}
+      }, 550);
+    } catch (_) {}
+    this._ambientSoundNodes.rainSource = null;
+    this._ambientSoundNodes.rainGain = null;
+  }
+
+  // Arid Heatwave Wind & Cicadas Synthesizer
+  _startHeatwaveSound() {
+    if (this.soundMuted || this._ambientSoundNodes.heatwaveSource) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const now = ctx.currentTime;
+
+      // Hot dry wind noise
+      const bufferSize = ctx.sampleRate * 2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800, now);
+      filter.Q.value = 4.5;
+
+      // Rhythmic summer cicadas
+      const cicadaOsc = ctx.createOscillator();
+      cicadaOsc.type = 'sine';
+      cicadaOsc.frequency.setValueAtTime(4600, now);
+
+      const cicadaLfo = ctx.createOscillator();
+      cicadaLfo.type = 'square';
+      cicadaLfo.frequency.setValueAtTime(7.5, now);
+
+      const cicadaGain = ctx.createGain();
+      cicadaGain.gain.setValueAtTime(0.06, now);
+      cicadaLfo.connect(cicadaGain.gain);
+
+      const mainGain = ctx.createGain();
+      mainGain.gain.setValueAtTime(0.001, now);
+      mainGain.gain.linearRampToValueAtTime(0.18, now + 1.0);
+
+      source.connect(filter);
+      filter.connect(mainGain);
+      cicadaOsc.connect(cicadaGain);
+      cicadaGain.connect(mainGain);
+      mainGain.connect(ctx.destination);
+
+      source.start();
+      cicadaOsc.start();
+      cicadaLfo.start();
+
+      this._ambientSoundNodes.heatwaveSource = { source, cicadaOsc, cicadaLfo };
+      this._ambientSoundNodes.heatwaveGain = mainGain;
+    } catch (_) {}
+  }
+
+  _stopHeatwaveSound() {
+    if (!this._ambientSoundNodes.heatwaveSource) return;
+    try {
+      const { heatwaveSource, heatwaveGain } = this._ambientSoundNodes;
+      const now = this._audioCtx.currentTime;
+      heatwaveGain.gain.linearRampToValueAtTime(0.001, now + 0.4);
+      setTimeout(() => {
+        try {
+          heatwaveSource.source.stop();
+          heatwaveSource.cicadaOsc.stop();
+          heatwaveSource.cicadaLfo.stop();
+        } catch (_) {}
+      }, 450);
+    } catch (_) {}
+    this._ambientSoundNodes.heatwaveSource = null;
+    this._ambientSoundNodes.heatwaveGain = null;
+  }
+
+  // Nocturnal Summer Night Crickets & Owl Chime
+  _startNightSound() {
+    if (this.soundMuted || this._ambientSoundNodes.nightSource) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(4300, now);
+
+      const lfo = ctx.createOscillator();
+      lfo.type = 'square';
+      lfo.frequency.setValueAtTime(14, now);
+
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(0.04, now);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 1.0);
+
+      lfo.connect(lfoGain.gain);
+      osc.connect(lfoGain);
+      lfoGain.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      lfo.start();
+
+      this._ambientSoundNodes.nightSource = { osc, lfo };
+      this._ambientSoundNodes.nightGain = gain;
+    } catch (_) {}
+  }
+
+  _stopNightSound() {
+    if (!this._ambientSoundNodes.nightSource) return;
+    try {
+      const { nightSource, nightGain } = this._ambientSoundNodes;
+      const now = this._audioCtx.currentTime;
+      nightGain.gain.linearRampToValueAtTime(0.001, now + 0.4);
+      setTimeout(() => {
+        try {
+          nightSource.osc.stop();
+          nightSource.lfo.stop();
+        } catch (_) {}
+      }, 450);
+    } catch (_) {}
+    this._ambientSoundNodes.nightSource = null;
+    this._ambientSoundNodes.nightGain = null;
+  }
+
+  // Authentic 2-Cylinder Diesel Tractor Engine Rumble (Chug-Chug-Chug)
+  _startTractorSound() {
+    if (this.soundMuted || this._tractorSoundNodes) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const now = ctx.currentTime;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = 'sawtooth';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(48, now);
+      osc2.frequency.setValueAtTime(51.5, now);
+
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.type = 'square';
+      lfo.frequency.setValueAtTime(8.5, now);
+      lfoGain.gain.setValueAtTime(0.4, now);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(190, now);
+      filter.Q.value = 2.4;
+
+      const mainGain = ctx.createGain();
+      mainGain.gain.setValueAtTime(0.001, now);
+      mainGain.gain.linearRampToValueAtTime(0.25, now + 0.5);
+
+      lfo.connect(mainGain.gain);
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(mainGain);
+      mainGain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      lfo.start(now);
+
+      this._tractorSoundNodes = { osc1, osc2, lfo, mainGain, filter };
+    } catch (_) {}
+  }
+
+  _stopTractorSound() {
+    if (!this._tractorSoundNodes) return;
+    try {
+      const { osc1, osc2, lfo, mainGain } = this._tractorSoundNodes;
+      const now = this._audioCtx.currentTime;
+      mainGain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+      setTimeout(() => {
+        try {
+          osc1.stop();
+          osc2.stop();
+          lfo.stop();
+        } catch (_) {}
+      }, 350);
+    } catch (_) {}
+    this._tractorSoundNodes = null;
+  }
+
+  // Cattle / Livestock Formant Lowing Synthesizer (Gentle Moo)
+  _playCowMoo() {
+    if (this.soundMuted) return;
+    try {
+      this._initAudioContext();
+      if (!this._audioCtx) return;
+      const ctx = this._audioCtx;
+      const now = ctx.currentTime;
+      const dur = 1.6;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(165, now);
+      osc.frequency.exponentialRampToValueAtTime(132, now + dur);
+
+      const f1 = ctx.createBiquadFilter();
+      f1.type = 'bandpass';
+      f1.frequency.setValueAtTime(460, now);
+      f1.Q.value = 4.2;
+
+      const f2 = ctx.createBiquadFilter();
+      f2.type = 'bandpass';
+      f2.frequency.setValueAtTime(860, now);
+      f2.Q.value = 3.8;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      osc.connect(f1);
+      osc.connect(f2);
+      f1.connect(gain);
+      f2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + dur);
+    } catch (_) {}
+  }
+
+  // Interactive 3D Tractor Field Patrol Toggle
+  toggleTractor() {
+    this.tractorActive = !this.tractorActive;
+    if (this.tractorActive) {
+      this._startTractorSound();
+    } else {
+      this._stopTractorSound();
+    }
+    return this.tractorActive;
+  }
+
+  // Trigger Cute Countryside Animal Grazing Action
+  triggerCuteAnimal() {
+    this._playCowMoo();
+    if (this.livestockMeshes.length > 0) {
+      this.livestockMeshes.forEach(cow => {
+        if (cow.userData && cow.userData.headGroup) {
+          cow.userData.headGroup.rotation.x = -0.35; // lifts head to look at camera
+        }
+      });
+    }
+    return true;
   }
 
   _playSynthesizedThunder() {
@@ -3773,11 +4616,8 @@ export class AgriosDigitalTwin3D {
       // Dynamic envelope shaper
       const gainNode = ctx.createGain();
       gainNode.gain.setValueAtTime(0.001, now);
-      // Sharp initial acoustic shockwave
       gainNode.gain.exponentialRampToValueAtTime(0.85, now + 0.05);
-      // Secondary shockwave
       gainNode.gain.exponentialRampToValueAtTime(0.65, now + 0.4);
-      // Extended rolling thunder reverberation
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
       noiseSource.connect(filter);
@@ -3825,6 +4665,10 @@ export class AgriosDigitalTwin3D {
         this.activeDisaster = null;
         this._applyWeather({ condition: this.currentWeather || 'clear' });
         break;
+    }
+    this.syncWeatherSound();
+    if (this.currentDay) {
+      this.setDay(this.currentDay);
     }
     return this.activeDisaster;
   }
@@ -4972,6 +5816,63 @@ export class AgriosDigitalTwin3D {
         }
       });
     }
+
+    // 9. Dynamic Biophysical Indices Calculation (Real Non-Hardcoded Telemetry)
+    let ndviMean = 0.32 + 0.53 * Math.sin(Math.min(Math.max((progress - 0.15) / 0.50, 0), 1) * Math.PI / 2);
+    let canopyPct = 12.0 + 74.0 * Math.sin(Math.min(Math.max((progress - 0.10) / 0.60, 0), 1) * Math.PI / 2);
+    let lai = 0.4 + 4.2 * Math.sin(Math.min(Math.max((progress - 0.12) / 0.55, 0), 1) * Math.PI / 2);
+    let stressIndex = 0.08 + (deadCount + stressedCount) / Math.max(1, totalPlants) * 0.75;
+    let soilMoisture = 52.0 - (progress * 18.0);
+
+    // Dynamic weather and disaster modifiers
+    if (this.currentWeather === 'rain') {
+      soilMoisture = Math.min(95, soilMoisture + 35);
+      ndviMean = Math.min(0.92, ndviMean + 0.04);
+    } else if (this.currentWeather === 'heatwave') {
+      soilMoisture = Math.max(12, soilMoisture - 24);
+      stressIndex = Math.min(0.88, stressIndex + 0.28);
+    }
+
+    if (this.activeDisaster === 'drought') {
+      ndviMean = Math.max(0.14, ndviMean * 0.45);
+      canopyPct = Math.max(8.0, canopyPct * 0.4);
+      stressIndex = 0.92;
+      soilMoisture = 9.5;
+    } else if (this.activeDisaster === 'locusts' || this.activeDisaster === 'locust_swarm') {
+      canopyPct = 5.2;
+      lai = 0.3;
+      ndviMean = 0.18;
+      stressIndex = 0.96;
+    } else if (this.activeDisaster === 'hailstorm') {
+      canopyPct = Math.max(15, canopyPct * 0.55);
+      stressIndex = 0.78;
+    } else if (this.activeDisaster === 'flood' || this.activeDisaster === 'flash_flood') {
+      soilMoisture = 98.0;
+      stressIndex = 0.72;
+    } else if (activeDisease) {
+      ndviMean = Math.max(0.25, ndviMean * (1.0 - activeDisease.stressedPct * 0.5));
+      stressIndex = Math.min(0.95, stressIndex + activeDisease.stressedPct * 0.7);
+    }
+
+    const computedTelemetry = {
+      leaf_area_index: parseFloat(lai.toFixed(1)),
+      canopy_coverage_pct: parseFloat(canopyPct.toFixed(1)),
+      ndvi_mean: parseFloat(ndviMean.toFixed(2)),
+      stress_index: parseFloat(stressIndex.toFixed(2)),
+      soil_moisture_pct: parseFloat(soilMoisture.toFixed(1)),
+      current_day: this.currentDay,
+      healthy_plants: healthyCount,
+      stressed_plants: stressedCount,
+      dead_plants: deadCount
+    };
+
+    if (this.sceneData) {
+      this.sceneData.telemetry = { ...(this.sceneData.telemetry || {}), ...computedTelemetry };
+    }
+
+    if (typeof this.onTelemetryUpdate === 'function') {
+      this.onTelemetryUpdate(computedTelemetry);
+    }
   }
 
   setPlanDuration(maxDays) {
@@ -5459,7 +6360,7 @@ export class AgriosDigitalTwin3D {
       }
     }
 
-    // 2. Articulated Worker Dynamic Animation State Machine
+    // 2. Articulated Worker Dynamic Animation State Machine & Walking Kinematics
     for (const w of this.workerMeshes) {
       const phase = w.animPhase || 0;
       const taskType = (w.data.current_task?.type || '').toLowerCase();
@@ -5469,32 +6370,173 @@ export class AgriosDigitalTwin3D {
         // Resting / Seated state
         w.group.position.y = 0.1;
         if (w.torso) w.torso.rotation.x = 0.1;
-      } else if (taskType === 'spraying') {
-        // Working: Oscillating spray wand & pulsating mist
-        if (w.rightArm) {
-          w.rightArm.rotation.y = Math.sin(elapsed * 2.8 + phase) * 0.45;
-          w.rightArm.rotation.x = -0.6 + Math.sin(elapsed * 1.4) * 0.1;
-        }
-        if (w.torso) w.torso.rotation.y = Math.sin(elapsed * 2.8 + phase) * 0.18;
-        if (w.sprayMist) {
-          w.sprayMist.scale.setScalar(0.85 + Math.sin(elapsed * 6) * 0.3);
-          w.sprayMist.material.opacity = 0.35 + Math.sin(elapsed * 8) * 0.25;
-        }
-      } else if (taskType === 'watering' || taskType === 'irrigation') {
-        // Working: Bending forward & inspecting lines
-        if (w.torso) w.torso.rotation.x = 0.3 + Math.sin(elapsed * 1.8 + phase) * 0.14;
-        if (w.rightArm) w.rightArm.rotation.x = -0.8 + Math.sin(elapsed * 1.8) * 0.2;
-      } else if (taskType === 'inspecting' || w.data.role === 'agronomist') {
-        // Working: Holding telemetry tablet & tilting head
-        if (w.rightArm) w.rightArm.rotation.x = -1.05;
-        if (w.leftArm) w.leftArm.rotation.x = -0.9;
-        if (w.head) w.head.rotation.x = 0.22 + Math.sin(elapsed * 1.2) * 0.08;
       } else {
-        // Idle: Subtle chest breathing & looking around
-        const bob = Math.sin(elapsed * 2 + phase) * 0.05;
-        w.group.position.y = bob;
-        if (w.head) w.head.rotation.y = Math.sin(elapsed * 0.6 + phase) * 0.25;
-        if (w.torso) w.torso.scale.x = 1.0 + Math.sin(elapsed * 1.5 + phase) * 0.02;
+        // Walking Locomotion along furrow patrol axis
+        const walkSpeed = (w.speed || 1.2) * (w.direction || 1);
+        if (w.patrolAxis === 'z') {
+          w.group.position.z += walkSpeed * delta;
+          if (w.group.position.z > (w.maxZ || 20)) {
+            w.direction = -1;
+            w.group.rotation.y = Math.PI;
+          } else if (w.group.position.z < (w.minZ || -20)) {
+            w.direction = 1;
+            w.group.rotation.y = 0;
+          }
+        } else {
+          w.group.position.x += walkSpeed * delta;
+          if (w.group.position.x > (w.maxX || 26)) {
+            w.direction = -1;
+            w.group.rotation.y = -Math.PI / 2;
+          } else if (w.group.position.x < (w.minX || -26)) {
+            w.direction = 1;
+            w.group.rotation.y = Math.PI / 2;
+          }
+        }
+
+        const walkCycle = elapsed * ((w.speed || 1.2) * 4.2) + (w.walkPhase || 0);
+        if (w.leftLeg) w.leftLeg.rotation.x = Math.sin(walkCycle) * 0.55;
+        if (w.rightLeg) w.rightLeg.rotation.x = -Math.sin(walkCycle) * 0.55;
+
+        // Arm swing when not engaged in specific tools
+        if (taskType !== 'spraying' && taskType !== 'inspecting' && w.data.role !== 'agronomist') {
+          if (w.leftArm) w.leftArm.rotation.x = -Math.sin(walkCycle) * 0.45;
+          if (w.rightArm && taskType !== 'watering') w.rightArm.rotation.x = Math.sin(walkCycle) * 0.45;
+        }
+
+        // Stride vertical bounce
+        w.group.position.y = Math.abs(Math.sin(walkCycle)) * 0.08;
+
+        if (taskType === 'spraying') {
+          // Working: Oscillating spray wand & pulsating mist
+          if (w.rightArm) {
+            w.rightArm.rotation.y = Math.sin(elapsed * 2.8 + phase) * 0.45;
+            w.rightArm.rotation.x = -0.6 + Math.sin(elapsed * 1.4) * 0.1;
+          }
+          if (w.torso) w.torso.rotation.y = Math.sin(elapsed * 2.8 + phase) * 0.18;
+          if (w.sprayMist) {
+            w.sprayMist.scale.setScalar(0.85 + Math.sin(elapsed * 6) * 0.3);
+            w.sprayMist.material.opacity = 0.35 + Math.sin(elapsed * 8) * 0.25;
+          }
+          // Dynamic water droplet cascade from spray nozzle
+          if (w.sprayParticles && w.sprayParticles.geometry && w.sprayParticles.userData.vels) {
+            const pos = w.sprayParticles.geometry.attributes.position.array;
+            const vels = w.sprayParticles.userData.vels;
+            for (let i = 0; i < vels.length; i++) {
+              const v = vels[i];
+              v.life += delta * 1.8;
+              if (v.life >= 1.0) {
+                v.life = 0;
+                pos[i * 3 + 0] = 0.45;
+                pos[i * 3 + 1] = 0.7;
+                pos[i * 3 + 2] = 0.9;
+              } else {
+                pos[i * 3 + 0] += v.x * delta;
+                pos[i * 3 + 1] += v.y * delta;
+                pos[i * 3 + 2] += v.z * delta;
+              }
+            }
+            w.sprayParticles.geometry.attributes.position.needsUpdate = true;
+          }
+        } else if (taskType === 'watering' || taskType === 'irrigation') {
+          // Working: Bending forward & inspecting lines
+          if (w.torso) w.torso.rotation.x = 0.3 + Math.sin(elapsed * 1.8 + phase) * 0.14;
+          if (w.rightArm) w.rightArm.rotation.x = -0.8 + Math.sin(elapsed * 1.8) * 0.2;
+        } else if (taskType === 'inspecting' || w.data.role === 'agronomist') {
+          // Working: Holding telemetry tablet & tilting head
+          if (w.rightArm) w.rightArm.rotation.x = -1.05;
+          if (w.leftArm) w.leftArm.rotation.x = -0.9;
+          if (w.head) w.head.rotation.x = 0.22 + Math.sin(elapsed * 1.2) * 0.08;
+        } else {
+          // Idle / patrolling looking around
+          if (w.head) w.head.rotation.y = Math.sin(elapsed * 0.8 + phase) * 0.22;
+        }
+      }
+    }
+
+    // 2b. Interactive 3D Precision Tractor Operations & Plowing
+    if (this.tractorMesh && this.tractorActive) {
+      const tData = this.tractorMesh.userData || {};
+      tData.pathT = (tData.pathT || 0) + delta * 0.12;
+
+      // Rectangular patrol along arterial lanes and headlands
+      const pT = tData.pathT % 4.0;
+      const rMinX = -28, rMaxX = 28, rMinZ = -22, rMaxZ = 22;
+      let targetX, targetZ, rotY;
+
+      if (pT < 1.0) {
+        // North Road: (-28, -22) -> (28, -22)
+        const f = pT;
+        targetX = rMinX + f * (rMaxX - rMinX);
+        targetZ = rMinZ;
+        rotY = Math.PI / 2;
+      } else if (pT < 2.0) {
+        // East Headland: (28, -22) -> (28, 22)
+        const f = pT - 1.0;
+        targetX = rMaxX;
+        targetZ = rMinZ + f * (rMaxZ - rMinZ);
+        rotY = 0;
+      } else if (pT < 3.0) {
+        // South Road: (28, 22) -> (-28, 22)
+        const f = pT - 2.0;
+        targetX = rMaxX - f * (rMaxX - rMinX);
+        targetZ = rMaxZ;
+        rotY = -Math.PI / 2;
+      } else {
+        // West Headland: (-28, 22) -> (-28, -22)
+        const f = pT - 3.0;
+        targetX = rMinX;
+        targetZ = rMaxZ - f * (rMaxZ - rMinZ);
+        rotY = Math.PI;
+      }
+
+      this.tractorMesh.position.x = targetX;
+      this.tractorMesh.position.z = targetZ;
+      this.tractorMesh.rotation.y = rotY;
+
+      // Wheels rotation around axle
+      if (this.tractorWheels) {
+        this.tractorWheels.forEach(wh => {
+          wh.rotation.x += delta * 7.5;
+        });
+      }
+
+      // Exhaust smoke puffs ascending, expanding, and fading
+      if (this.tractorSmokeParticles) {
+        this.tractorSmokeParticles.forEach(sp => {
+          sp.userData.life = (sp.userData.life || 0) + delta * 1.8;
+          if (sp.userData.life >= (sp.userData.maxLife || 1.6)) {
+            sp.userData.life = 0;
+            sp.position.set(0.55, sp.userData.initialY || 3.05, 0.8);
+            sp.scale.set(1, 1, 1);
+            if (sp.material) sp.material.opacity = 0.45;
+          } else {
+            const prog = sp.userData.life / (sp.userData.maxLife || 1.6);
+            sp.position.y += delta * 1.4;
+            sp.position.z -= delta * 0.6;
+            const s = 1.0 + prog * 2.5;
+            sp.scale.set(s, s, s);
+            if (sp.material) sp.material.opacity = (1.0 - prog) * 0.4;
+          }
+        });
+      }
+    }
+
+    // 2c. Sustainable Agro-Pastoral Livestock Grazing & Tail Swishing
+    if (this.livestockMeshes && this.livestockMeshes.length > 0) {
+      for (const cow of this.livestockMeshes) {
+        const u = cow.userData;
+        if (!u) continue;
+        const phase = u.bobPhase || 0;
+        // Head dips down to nibble clover grass
+        if (u.headGroup) {
+          const grazing = Math.sin(elapsed * 0.9 + phase);
+          u.headGroup.rotation.x = -0.15 + grazing * 0.32;
+          u.headGroup.rotation.y = Math.sin(elapsed * 1.4 + phase) * 0.08;
+        }
+        // Tail swishes side to side
+        if (u.tail) {
+          u.tail.rotation.z = Math.sin(elapsed * 3.5 + phase) * 0.35;
+        }
       }
     }
 
