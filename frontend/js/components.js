@@ -53,19 +53,49 @@ const AgriosUI = {
     }, duration);
   },
 
+  toggleMobileSidebar() {
+    const sidebar = document.querySelector(".sidebar");
+    let backdrop = document.getElementById("mobile-sidebar-backdrop");
+    if (!backdrop) {
+      backdrop = document.createElement("div");
+      backdrop.id = "mobile-sidebar-backdrop";
+      backdrop.className = "mobile-sidebar-backdrop";
+      backdrop.onclick = () => AgriosUI.closeMobileSidebar();
+      document.body.appendChild(backdrop);
+    }
+    if (sidebar) {
+      sidebar.classList.toggle("mobile-open");
+      backdrop.classList.toggle("active", sidebar.classList.contains("mobile-open"));
+      document.body.classList.toggle("sidebar-locked", sidebar.classList.contains("mobile-open"));
+    }
+  },
+
+  closeMobileSidebar() {
+    const sidebar = document.querySelector(".sidebar");
+    const backdrop = document.getElementById("mobile-sidebar-backdrop");
+    if (sidebar) sidebar.classList.remove("mobile-open");
+    if (backdrop) backdrop.classList.remove("active");
+    document.body.classList.remove("sidebar-locked");
+  },
+
   // VIZITOR Header bar: With live notification bell, language switcher, help modal, and global search
   renderNavbar(currentPortalName = "Farmer Portal", activePage = "home") {
     const user = AgriosAPI.getCurrentUser() || { full_name: "Agronomist", role: "agronomist" };
     const lang = (window.AgriosI18n && window.AgriosI18n.currentLang) || localStorage.getItem("agrios_lang") || "en";
-    const helpLabel = window.AgriosI18n ? window.AgriosI18n.t("nav_help") : "Help Guide";
+    const helpLabel = window.AgriosI18n ? window.AgriosI18n.t("nav_help") : "Help";
     const logoutLabel = window.AgriosI18n ? window.AgriosI18n.t("nav_signout") : "Logout";
 
     return `
       <header class="top-header">
         <div class="header-left">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="font-weight:800;font-size:1.15rem;color:#0f172a;letter-spacing:-0.02em;" id="header-portal-title">${currentPortalName}</div>
-            <span style="font-size:0.75rem;font-weight:700;padding:2px 8px;border-radius:12px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">
+          <button class="mobile-menu-toggle-btn" onclick="AgriosUI.toggleMobileSidebar()" aria-label="Toggle Navigation Menu">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div class="header-title-wrapper" style="display:flex;align-items:center;gap:8px;">
+            <div style="font-weight:800;font-size:1.1rem;color:#0f172a;letter-spacing:-0.02em;" id="header-portal-title">${currentPortalName}</div>
+            <span class="header-active-zone-badge" style="font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:12px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">
               Active Zone
             </span>
           </div>
@@ -206,7 +236,7 @@ const AgriosUI = {
       const translated = window.AgriosI18n ? window.AgriosI18n.t(tabKey) : item.label;
       const display = (translated && translated !== tabKey) ? translated : item.label;
       return `
-        <a href="javascript:void(0)" class="menu-item ${activeTab === item.id ? 'active' : ''}" onclick="switchTab('${item.id}')" style="position:relative; display:flex; align-items:center;">
+        <a href="javascript:void(0)" class="menu-item ${activeTab === item.id ? 'active' : ''}" onclick="switchTab('${item.id}'); if(window.AgriosUI) AgriosUI.closeMobileSidebar();" style="position:relative; display:flex; align-items:center;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             ${item.icon}
           </svg>
@@ -225,6 +255,7 @@ const AgriosUI = {
           <div class="sidebar-brand-icon">🌱</div>
           <span class="sidebar-brand-text">AGRIOS</span>
           <span class="sidebar-brand-badge">${role}</span>
+          <button class="mobile-sidebar-close-btn" onclick="AgriosUI.closeMobileSidebar()" aria-label="Close Sidebar" title="Close Menu">✕</button>
         </div>
 
         <div class="sidebar-label" data-i18n="nav_navigation">${navLabel}</div>
@@ -234,7 +265,7 @@ const AgriosUI = {
 
         <div class="sidebar-footer" style="border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: auto;">
           <!-- Notifications Tab Docked Directly Above Sign Out -->
-          <a href="javascript:void(0)" class="menu-item ${activeTab === 'notifications' ? 'active' : ''}" onclick="switchTab('notifications')" style="position:relative; display:flex; align-items:center; margin-bottom:4px;">
+          <a href="javascript:void(0)" class="menu-item ${activeTab === 'notifications' ? 'active' : ''}" onclick="switchTab('notifications'); if(window.AgriosUI) AgriosUI.closeMobileSidebar();" style="position:relative; display:flex; align-items:center; margin-bottom:4px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               ${notifIcon}
             </svg>

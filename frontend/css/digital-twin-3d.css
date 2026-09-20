@@ -685,22 +685,68 @@
 /* --- Responsive --- */
 @media (max-width: 768px) {
   .dt3d-canvas-container {
-    height: 50vh;
-    min-height: 350px;
+    height: 48vh;
+    min-height: 320px;
   }
   
   .dt3d-minimap {
     display: none;
   }
+
+  .dt3d-toolbar {
+    left: 6px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .dt3d-toolbar-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.95rem;
+  }
+
+  .dt3d-camera-panel {
+    right: 6px;
+    padding: 4px;
+    gap: 4px;
+  }
   
+  .dt3d-hud {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    gap: 4px;
+  }
+
+  .dt3d-hud-pill {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+  
+  .dt3d-time-control {
+    bottom: 8px;
+    padding: 4px 10px;
+    gap: 6px;
+    max-width: 92%;
+  }
+
   .dt3d-time-slider {
-    width: 120px;
+    width: 90px;
   }
 
   .dt3d-editor-dock {
     width: 95%;
     overflow-x: auto;
     justify-content: flex-start;
+  }
+
+  .dt3d-inspector {
+    padding: 12px 14px;
+  }
+
+  .dt3d-inspector-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
   }
 }
 
