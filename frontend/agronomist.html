@@ -337,6 +337,9 @@
                 <option value="Pisciculture">Pisciculture (Aquaculture)</option>
               </select>
             </div>
+            <button class="btn-primary" id="btn-open-walk-modal" onclick="if(window.AgriosCalibrator) window.AgriosCalibrator.openModal()" style="height:34px; font-size:0.8rem; background:linear-gradient(135deg, #059669, #0284c7); font-weight:700; white-space:nowrap; border-radius:8px; box-shadow:0 2px 10px rgba(5,150,105,0.35); display:inline-flex; align-items:center; gap:6px;">
+              <span>📱</span> Hold Phone & Walk (1st-Time Setup)
+            </button>
             <button class="btn-primary" id="btn-calibrate-submit" onclick="handleWalkAndCalibrate(event)" style="height:34px; font-size:0.8rem; white-space:nowrap;">
               🚀 Calibrate & Build 3D Twin
             </button>
@@ -438,7 +441,13 @@
               <button class="dt3d-toolbar-btn active" data-layer="infrastructure" title="Infrastructure" onclick="window._dt3dToggleLayer('infrastructure', this)">🏗️</button>
               <button class="dt3d-toolbar-btn" data-layer="risks" title="Risk Zones" onclick="window._dt3dToggleLayer('risks', this)">⚠️</button>
               <div class="dt3d-toolbar-divider"></div>
-              <button class="dt3d-toolbar-btn" title="Weather: Clear" onclick="window._dt3dCycleWeather()">🌤️</button>
+              <button class="dt3d-toolbar-btn" data-weather="clear" title="Atmosphere: Clear Sky & High Noon" onclick="window._dt3dSetWeather('clear', this)">☀️</button>
+              <button class="dt3d-toolbar-btn" data-weather="rain" title="Atmosphere: Thunderstorm, Angled Rain & Wet Soil" onclick="window._dt3dSetWeather('rain', this)">🌧️</button>
+              <button class="dt3d-toolbar-btn" data-weather="dusk" title="Atmosphere: Golden Hour & Amber Dusk" onclick="window._dt3dSetWeather('dusk', this)">🌅</button>
+              <button class="dt3d-toolbar-btn" data-weather="night" title="Atmosphere: Starry Night & Glowing Moon" onclick="window._dt3dSetWeather('night', this)">🌙</button>
+              <button class="dt3d-toolbar-btn" data-weather="heatwave" title="Atmosphere: Arid Heatwave" onclick="window._dt3dSetWeather('heatwave', this)">🌡️</button>
+              <div class="dt3d-toolbar-divider"></div>
+              <button class="dt3d-toolbar-btn" title="Cycle Atmosphere" onclick="window._dt3dCycleWeather()">🌤️</button>
               <button class="dt3d-toolbar-btn" title="Fullscreen" onclick="window._dt3dToggleFullscreen()">⛶</button>
             </div>
 
@@ -1038,6 +1047,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/components.js"></script>
 <script src="js/digital_twin.js"></script>
+<script src="js/walk_calibrate_modal.js"></script>
 <script>
   let activeTab = "overview";
   let twinAdapter3D = null;
@@ -1595,14 +1605,35 @@
     }
   };
 
-  let weatherModes = ["clear", "cloudy", "rain", "heatwave"];
+  let weatherModes = ["clear", "cloudy", "rain", "dusk", "night", "heatwave"];
   let currentWeatherIdx = 0;
   window._dt3dCycleWeather = function() {
     if (!twinAdapter3D) return;
     currentWeatherIdx = (currentWeatherIdx + 1) % weatherModes.length;
     const nextWeather = weatherModes[currentWeatherIdx];
-    twinAdapter3D.setWeather(nextWeather);
-    AgriosUI.showToast("Weather Transition", `Atmosphere shifted to: ${nextWeather.toUpperCase()}`, "🌤️");
+    window._dt3dSetWeather(nextWeather);
+  };
+
+  window._dt3dSetWeather = function(mode, btn) {
+    if (!twinAdapter3D) return;
+    twinAdapter3D.setWeather(mode);
+    const idx = weatherModes.indexOf(mode);
+    if (idx !== -1) currentWeatherIdx = idx;
+
+    document.querySelectorAll('.dt3d-toolbar-btn[data-weather]').forEach(b => {
+      b.classList.toggle('active', b.dataset.weather === mode);
+    });
+    if (btn) btn.classList.add('active');
+
+    const weatherLabels = {
+      clear: 'Clear Sky & High Sun',
+      cloudy: 'Overcast & Low Clouds',
+      rain: 'Thunderstorm, Rain & Splash Sheen',
+      dusk: 'Sunset & Amber Horizon',
+      night: 'Starry Night & Glowing Moon',
+      heatwave: 'Arid Heatwave & Thermal Haze'
+    };
+    AgriosUI.showToast("Atmosphere Shifted", weatherLabels[mode] || mode.toUpperCase(), "🌤️");
   };
 
   window._dt3dToggleFullscreen = function() {

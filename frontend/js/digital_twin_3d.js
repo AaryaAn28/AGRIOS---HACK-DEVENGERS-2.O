@@ -415,25 +415,13 @@ export class AgriosDigitalTwin3D {
   }
 
   _createSkyDome() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    
-    // Vertical atmospheric gradient from deep zenith blue to warm hazy golden horizon
-    const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0.0, '#1d4ed8'); // zenith deep sky blue
-    grad.addColorStop(0.35, '#3b82f6'); // azure
-    grad.addColorStop(0.70, '#93c5fd'); // soft atmospheric mist
-    grad.addColorStop(0.92, '#fed7aa'); // warm golden horizon haze
-    grad.addColorStop(1.0, '#fde68a'); // golden rim
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 512, 512);
-
-    const skyTexture = new THREE.CanvasTexture(canvas);
-    const skyGeo = new THREE.SphereGeometry(260, 32, 16);
+    this._skyCanvas = document.createElement('canvas');
+    this._skyCanvas.width = 512;
+    this._skyCanvas.height = 512;
+    this._skyTexture = new THREE.CanvasTexture(this._skyCanvas);
+    const skyGeo = new THREE.SphereGeometry(280, 32, 18);
     const skyMat = new THREE.MeshBasicMaterial({
-      map: skyTexture,
+      map: this._skyTexture,
       side: THREE.BackSide,
       depthWrite: false
     });
@@ -442,7 +430,7 @@ export class AgriosDigitalTwin3D {
     this._skyMesh = skyMesh;
 
     // Atmospheric sun disc
-    const sunDiscGeo = new THREE.CircleGeometry(10, 24);
+    const sunDiscGeo = new THREE.CircleGeometry(11, 24);
     const sunDiscMat = new THREE.MeshBasicMaterial({
       color: 0xfffbeb,
       side: THREE.DoubleSide
@@ -455,6 +443,41 @@ export class AgriosDigitalTwin3D {
 
     // Scene fog for natural aerial perspective
     this.scene.fog = new THREE.FogExp2(0xdbeafe, 0.0028);
+
+    // Initial default sky gradient
+    this._updateSkyDome([
+      { stop: 0.0, color: '#1d4ed8' },
+      { stop: 0.35, color: '#3b82f6' },
+      { stop: 0.70, color: '#93c5fd' },
+      { stop: 0.92, color: '#fed7aa' },
+      { stop: 1.0, color: '#fde68a' }
+    ], { x: 65, y: 115, z: 60 }, 0xfffbeb, 11, false);
+  }
+
+  _updateSkyDome(gradientStops, sunPosition, sunColor, sunSize = 11, isNight = false) {
+    if (!this._skyCanvas) return;
+    const ctx = this._skyCanvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    gradientStops.forEach(s => grad.addColorStop(s.stop, s.color));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    if (this._skyTexture) {
+      this._skyTexture.needsUpdate = true;
+    }
+
+    if (this._sunDisc) {
+      if (sunPosition) {
+        this._sunDisc.position.set(sunPosition.x, sunPosition.y, sunPosition.z);
+        this._sunDisc.lookAt(0, 0, 0);
+      }
+      if (sunColor) {
+        this._sunDisc.material.color.setHex(sunColor);
+      }
+      const scale = sunSize / 11;
+      this._sunDisc.scale.set(scale, scale, scale);
+      this._sunDisc.visible = !isNight;
+    }
   }
 
   _setupMinimap(canvasId) {
@@ -1628,13 +1651,15 @@ export class AgriosDigitalTwin3D {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // INFRASTRUCTURE (Borewell, Weather Station, Sensors, Cameras)
+  // INFRASTRUCTURE (Borewell, Drone, Solar Array, Weather Station, Sensors, Cameras)
   // ─────────────────────────────────────────────────────────────
   _buildInfrastructure(spatialObjects) {
     const { minX, maxX, minZ, maxZ } = this.farmBounds;
 
     this._createBorewell(maxX - 8, 0, maxZ - 18);
     this._createWeatherStation(0, 0, minZ - 4);
+    this._createSolarArray(minX + 6, 0, minZ + 6);
+    this._createAutonomousDrone(0, 16, 0);
 
     this._createSensorNode(minX + 10, minZ + 10, 'Soil Probe Alpha');
     this._createSensorNode(maxX - 10, minZ + 10, 'Soil Probe Beta');
@@ -1644,6 +1669,177 @@ export class AgriosDigitalTwin3D {
     this._createCameraTower(minX - 2, minZ - 2, 'PTZ-Camera-01');
     this._createCameraTower(maxX + 2, minZ - 2, 'PTZ-Camera-02');
     this._createCameraTower(0, maxZ + 2, 'PTZ-Camera-03');
+  }
+
+  // Autonomous Precision Agricultural Survey Drone with Scanning Laser Cone
+  _createAutonomousDrone(x = 0, y = 16, z = 0) {
+    const drone = new THREE.Group();
+    drone.position.set(x, y, z);
+
+    // Carbon-fiber aerodynamic fuselage
+    const bodyGeo = new THREE.BoxGeometry(1.4, 0.35, 1.4);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.3,
+      metalness: 0.8
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    drone.add(body);
+
+    // Avionics dome (GPS puck)
+    const domeGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.25, 16);
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x059669, metalness: 0.5 });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.y = 0.28;
+    drone.add(dome);
+
+    const armMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9 });
+    const rotorMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide
+    });
+    const hubMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.7 });
+
+    const armOffsets = [
+      { x: 1.2, z: 1.2, led: 0x22c55e },  // Starboard Front (Green)
+      { x: -1.2, z: 1.2, led: 0xef4444 }, // Port Front (Red)
+      { x: 1.2, z: -1.2, led: 0xffffff }, // Starboard Rear (White)
+      { x: -1.2, z: -1.2, led: 0xffffff } // Port Rear (White)
+    ];
+
+    const rotorDiscs = [];
+
+    armOffsets.forEach(ao => {
+      // Arm tube
+      const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.6, 8);
+      armGeo.rotateZ(Math.PI / 4 * (ao.x > 0 ? -1 : 1));
+      const arm = new THREE.Mesh(armGeo, armMat);
+      arm.position.set(ao.x * 0.5, 0, ao.z * 0.5);
+      arm.lookAt(ao.x, 0, ao.z);
+      drone.add(arm);
+
+      // Motor hub
+      const hubGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.22, 12);
+      const hub = new THREE.Mesh(hubGeo, hubMat);
+      hub.position.set(ao.x, 0.1, ao.z);
+      drone.add(hub);
+
+      // Spinning rotor disc
+      const rotorGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.02, 16);
+      const rotor = new THREE.Mesh(rotorGeo, rotorMat);
+      rotor.position.set(ao.x, 0.22, ao.z);
+      drone.add(rotor);
+      rotorDiscs.push(rotor);
+
+      // LED navigation beacon
+      const ledGeo = new THREE.SphereGeometry(0.08, 8, 8);
+      const ledMat = new THREE.MeshBasicMaterial({ color: ao.led });
+      const led = new THREE.Mesh(ledGeo, ledMat);
+      led.position.set(ao.x, -0.08, ao.z);
+      drone.add(led);
+    });
+
+    // 4K Multispectral Camera Gimbal
+    const gimbalGeo = new THREE.SphereGeometry(0.28, 12, 12);
+    const gimbalMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
+    const gimbal = new THREE.Mesh(gimbalGeo, gimbalMat);
+    gimbal.position.y = -0.3;
+    drone.add(gimbal);
+
+    // Green survey laser cone pointing downwards to crops
+    const scanGeo = new THREE.ConeGeometry(5.5, 16, 16, 1, true);
+    scanGeo.rotateX(Math.PI);
+    const scanMat = new THREE.MeshBasicMaterial({
+      color: 0x10b981,
+      transparent: true,
+      opacity: 0.14,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const scanCone = new THREE.Mesh(scanGeo, scanMat);
+    scanCone.position.set(0, -8.2, 0);
+    drone.add(scanCone);
+
+    drone.userData = {
+      type: 'drone',
+      name: 'Autonomous Precision Drone (AgriScan-v4)',
+      altitude: '16.0m',
+      sensor: '4K Multispectral NDVI & Thermal Array',
+      battery: '94%',
+      status: 'Surveillance Patrol'
+    };
+
+    this.groups.infrastructure.add(drone);
+    this._droneMesh = drone;
+    this._droneRotors = rotorDiscs;
+
+    const label = this._createLabel('🛰️ AgriScan Drone (16m)', new THREE.Vector3(x, y + 1.8, z), '#10b981', '0.68rem', true);
+    this.groups.labels.add(label);
+    this._droneLabel = label;
+  }
+
+  // 24kW Bifacial Solar Farm Array
+  _createSolarArray(startX, startY, startZ) {
+    const group = new THREE.Group();
+    group.position.set(startX, startY, startZ);
+
+    const rackMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.4 });
+    const panelMat = new THREE.MeshStandardMaterial({
+      color: 0x1e3a8a,
+      roughness: 0.15,
+      metalness: 0.85,
+    });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.9, roughness: 0.2 });
+
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 3; col++) {
+        const px = (col - 1) * 3.4;
+        const pz = (row - 0.5) * 4.2;
+
+        const leg1Geo = new THREE.CylinderGeometry(0.05, 0.05, 1.2, 6);
+        const leg1 = new THREE.Mesh(leg1Geo, rackMat);
+        leg1.position.set(px - 1.2, 0.6, pz + 0.8);
+        group.add(leg1);
+
+        const leg2Geo = new THREE.CylinderGeometry(0.05, 0.05, 2.0, 6);
+        const leg2 = new THREE.Mesh(leg2Geo, rackMat);
+        leg2.position.set(px - 1.2, 1.0, pz - 0.8);
+        group.add(leg2);
+
+        const panelGroup = new THREE.Group();
+        panelGroup.position.set(px, 1.3, pz);
+        panelGroup.rotation.x = 0.48;
+
+        const frameGeo = new THREE.BoxGeometry(3.0, 0.08, 1.8);
+        const frame = new THREE.Mesh(frameGeo, frameMat);
+        panelGroup.add(frame);
+
+        const cellGeo = new THREE.PlaneGeometry(2.85, 1.65);
+        cellGeo.rotateX(-Math.PI / 2);
+        const cell = new THREE.Mesh(cellGeo, panelMat);
+        cell.position.y = 0.045;
+        panelGroup.add(cell);
+
+        group.add(panelGroup);
+      }
+    }
+
+    group.userData = {
+      type: 'infrastructure',
+      name: '24kW Agrivoltaic Solar Array',
+      capacity: '24 kWp Bifacial',
+      output: '18.4 kW Current Generation',
+      status: 'Peak Generating'
+    };
+
+    this.groups.infrastructure.add(group);
+    const label = this._createLabel('☀️ 24kW Solar Array', new THREE.Vector3(startX, 2.8, startZ), '#38bdf8', '0.68rem', true);
+    this.groups.labels.add(label);
+    return group;
   }
 
   _createBorewell(x, y, z) {
@@ -2217,7 +2413,7 @@ export class AgriosDigitalTwin3D {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // WEATHER EFFECTS & DRIFTING CLOUDS
+  // NEXT-GEN WEATHER ENGINE & ATMOSPHERIC AESTHETICS
   // ─────────────────────────────────────────────────────────────
   _applyWeather(weather) {
     if (!weather) weather = { condition: 'clear' };
@@ -2227,41 +2423,185 @@ export class AgriosDigitalTwin3D {
       case 'clear': this._setWeatherClear(); break;
       case 'cloudy': this._setWeatherCloudy(); break;
       case 'rain': this._setWeatherRain(); break;
+      case 'dusk':
+      case 'sunset': this._setWeatherDusk(); break;
+      case 'night': this._setWeatherNight(); break;
       case 'heatwave': this._setWeatherHeatwave(); break;
+      default: this._setWeatherClear(); break;
     }
   }
 
   _setWeatherClear() {
-    if (this._sunLight) { this._sunLight.intensity = 1.35; this._sunLight.color.setHex(0xfffbeb); }
-    if (this._ambientLight) { this._ambientLight.intensity = 0.55; }
-    if (this.scene.fog) { this.scene.fog.density = 0.0028; }
+    if (this._sunLight) {
+      this._sunLight.intensity = 1.45;
+      this._sunLight.color.setHex(0xfffbeb);
+      this._sunLight.position.set(65, 85, 50);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.58;
+      this._ambientLight.color.setHex(0xfff7ed);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0xdbeafe);
+      this.scene.fog.density = 0.0025;
+    }
     this._clearWeatherEffects();
-    this._addClouds(3);
+    this._updateSkyDome([
+      { stop: 0.0, color: '#1d4ed8' },
+      { stop: 0.35, color: '#3b82f6' },
+      { stop: 0.70, color: '#93c5fd' },
+      { stop: 0.92, color: '#fed7aa' },
+      { stop: 1.0, color: '#fde68a' }
+    ], { x: 65, y: 115, z: 60 }, 0xfffbeb, 11, false);
+
+    // Dry soil PBR
+    if (this._terrainMesh && this._terrainMesh.material) {
+      this._terrainMesh.material.roughness = 0.85;
+      this._terrainMesh.material.metalness = 0.04;
+    }
+
+    this._addClouds(4);
   }
 
   _setWeatherCloudy() {
-    if (this._sunLight) { this._sunLight.intensity = 0.6; this._sunLight.color.setHex(0xdbeafe); }
-    if (this._ambientLight) { this._ambientLight.intensity = 0.4; }
-    if (this.scene.fog) { this.scene.fog.density = 0.0045; }
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.55;
+      this._sunLight.color.setHex(0xcbd5e1);
+      this._sunLight.position.set(40, 70, 30);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.45;
+      this._ambientLight.color.setHex(0xe2e8f0);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0x94a3b8);
+      this.scene.fog.density = 0.0048;
+    }
     this._clearWeatherEffects();
-    this._addClouds(12);
+    this._updateSkyDome([
+      { stop: 0.0, color: '#334155' },
+      { stop: 0.40, color: '#64748b' },
+      { stop: 0.75, color: '#94a3b8' },
+      { stop: 1.0, color: '#cbd5e1' }
+    ], { x: 40, y: 80, z: 30 }, 0xe2e8f0, 13, false);
+
+    this._addClouds(14);
   }
 
   _setWeatherRain() {
-    if (this._sunLight) { this._sunLight.intensity = 0.35; this._sunLight.color.setHex(0x94a3b8); }
-    if (this._ambientLight) { this._ambientLight.intensity = 0.3; }
-    if (this.scene.fog) { this.scene.fog.density = 0.007; }
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.28;
+      this._sunLight.color.setHex(0x64748b);
+      this._sunLight.position.set(30, 60, 20);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.32;
+      this._ambientLight.color.setHex(0x475569);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0x475569);
+      this.scene.fog.density = 0.0078;
+    }
     this._clearWeatherEffects();
-    this._addClouds(16);
-    this._addRainParticles();
+    this._updateSkyDome([
+      { stop: 0.0, color: '#0f172a' },
+      { stop: 0.30, color: '#1e293b' },
+      { stop: 0.65, color: '#334155' },
+      { stop: 1.0, color: '#475569' }
+    ], { x: 30, y: 60, z: 20 }, 0x64748b, 8, false);
+
+    // Dynamic wet soil sheen & puddle reflections
+    if (this._terrainMesh && this._terrainMesh.material) {
+      this._terrainMesh.material.roughness = 0.18;
+      this._terrainMesh.material.metalness = 0.30;
+    }
+
+    this._addClouds(18, 0x64748b);
+    this._addRainStreaks();
+    this._lightningTimer = 6.0 + Math.random() * 6.0;
+  }
+
+  _setWeatherDusk() {
+    if (this._sunLight) {
+      this._sunLight.intensity = 1.25;
+      this._sunLight.color.setHex(0xf97316); // warm sunset orange
+      this._sunLight.position.set(90, 15, 60); // Low sun on horizon
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.48;
+      this._ambientLight.color.setHex(0xfdba74);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0xf472b6);
+      this.scene.fog.density = 0.0035;
+    }
+    this._clearWeatherEffects();
+    this._updateSkyDome([
+      { stop: 0.0, color: '#311042' }, // twilight purple
+      { stop: 0.35, color: '#7e22ce' }, // violet
+      { stop: 0.60, color: '#b91c1c' }, // crimson red
+      { stop: 0.85, color: '#ea580c' }, // burning orange
+      { stop: 1.0, color: '#facc15' }  // golden horizon
+    ], { x: 90, y: 15, z: 60 }, 0xfb923c, 16, false);
+
+    // Warm evening soil
+    if (this._terrainMesh && this._terrainMesh.material) {
+      this._terrainMesh.material.roughness = 0.75;
+      this._terrainMesh.material.metalness = 0.08;
+    }
+
+    this._addClouds(6, 0xfca5a5);
+  }
+
+  _setWeatherNight() {
+    if (this._sunLight) {
+      this._sunLight.intensity = 0.18;
+      this._sunLight.color.setHex(0x93c5fd); // moonlight
+      this._sunLight.position.set(-60, 80, -50);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.16;
+      this._ambientLight.color.setHex(0x1e1b4b); // deep night blue
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0x0a0f1d);
+      this.scene.fog.density = 0.0038;
+    }
+    this._clearWeatherEffects();
+    this._updateSkyDome([
+      { stop: 0.0, color: '#020617' }, // pitch night
+      { stop: 0.40, color: '#0b0f19' },
+      { stop: 0.80, color: '#0f172a' },
+      { stop: 1.0, color: '#1e293b' }
+    ], { x: -60, y: 80, z: -50 }, 0xe0f2fe, 9, true);
+
+    this._addStarfield();
   }
 
   _setWeatherHeatwave() {
-    if (this._sunLight) { this._sunLight.intensity = 1.7; this._sunLight.color.setHex(0xffedd5); }
-    if (this._ambientLight) { this._ambientLight.intensity = 0.65; }
-    if (this.scene.fog) { this.scene.fog.density = 0.004; }
+    if (this._sunLight) {
+      this._sunLight.intensity = 1.95;
+      this._sunLight.color.setHex(0xffedd5);
+      this._sunLight.position.set(50, 95, 40);
+    }
+    if (this._ambientLight) {
+      this._ambientLight.intensity = 0.72;
+      this._ambientLight.color.setHex(0xfde68a);
+    }
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(0xd97706);
+      this.scene.fog.density = 0.0042;
+    }
     this._clearWeatherEffects();
-    this._addClouds(1);
+    this._updateSkyDome([
+      { stop: 0.0, color: '#0284c7' },
+      { stop: 0.35, color: '#38bdf8' },
+      { stop: 0.70, color: '#fef08a' },
+      { stop: 0.90, color: '#fed7aa' },
+      { stop: 1.0, color: '#f97316' }
+    ], { x: 50, y: 120, z: 40 }, 0xffedd5, 14, false);
+
+    this._addClouds(2);
   }
 
   _clearWeatherEffects() {
@@ -2271,21 +2611,45 @@ export class AgriosDigitalTwin3D {
     });
     this.cloudMeshes = [];
 
-    if (this.rainParticles) {
-      this.groups.weather.remove(this.rainParticles);
-      this.rainParticles.geometry.dispose();
-      this.rainParticles.material.dispose();
-      this.rainParticles = null;
+    if (this.rainStreaks) {
+      this.groups.weather.remove(this.rainStreaks);
+      this.rainStreaks.geometry.dispose();
+      this.rainStreaks.material.dispose();
+      this.rainStreaks = null;
+      this.rainData = null;
+    }
+
+    if (this.splashPool) {
+      this.splashPool.forEach(sp => {
+        this.groups.weather.remove(sp.mesh);
+        sp.mesh.geometry.dispose();
+        sp.mesh.material.dispose();
+      });
+      this.splashPool = null;
+    }
+
+    if (this.starField) {
+      this.groups.weather.remove(this.starField);
+      this.starField.geometry.dispose();
+      this.starField.material.dispose();
+      this.starField = null;
+    }
+
+    if (this.moonMesh) {
+      this.groups.weather.remove(this.moonMesh);
+      this.moonMesh.geometry.dispose();
+      this.moonMesh.material.dispose();
+      this.moonMesh = null;
     }
   }
 
-  _addClouds(count) {
-    const cloudGeo = new THREE.DodecahedronGeometry(5, 1);
+  _addClouds(count, tintColor = 0xf8fafc) {
+    const cloudGeo = new THREE.DodecahedronGeometry(5.2, 1);
     const cloudMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
+      color: tintColor,
       transparent: true,
-      opacity: 0.85,
-      roughness: 0.9,
+      opacity: 0.88,
+      roughness: 0.92,
     });
 
     for (let i = 0; i < count; i++) {
@@ -2293,39 +2657,150 @@ export class AgriosDigitalTwin3D {
       const puffCount = 3 + Math.floor(Math.random() * 3);
       for (let p = 0; p < puffCount; p++) {
         const puff = new THREE.Mesh(cloudGeo, cloudMat);
-        puff.position.set(p * 3.5 + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 2);
-        const s = 0.6 + Math.random() * 0.6;
+        puff.position.set(p * 3.6 + (Math.random() - 0.5) * 2.2, (Math.random() - 0.5) * 1.6, (Math.random() - 0.5) * 2.2);
+        const s = 0.65 + Math.random() * 0.65;
         puff.scale.set(s, s * 0.6, s);
         cloud.add(puff);
       }
       cloud.position.set(
-        (Math.random() - 0.5) * 120,
-        35 + Math.random() * 10,
-        (Math.random() - 0.5) * 100
+        (Math.random() - 0.5) * 130,
+        34 + Math.random() * 12,
+        (Math.random() - 0.5) * 110
       );
       this.groups.weather.add(cloud);
       this.cloudMeshes.push(cloud);
     }
   }
 
-  _addRainParticles() {
-    const count = 1200;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i += 3) {
-      positions[i] = (Math.random() - 0.5) * 140;
-      positions[i + 1] = Math.random() * 45;
-      positions[i + 2] = (Math.random() - 0.5) * 120;
+  _addRainStreaks() {
+    const count = 2800;
+    const positions = new Float32Array(count * 6);
+    const streakLength = 1.35;
+    const windTiltX = -0.32;
+    const windTiltZ = -0.12;
+
+    this.rainData = [];
+    for (let i = 0; i < count; i++) {
+      const rx = (Math.random() - 0.5) * 160;
+      const ry = Math.random() * 55;
+      const rz = (Math.random() - 0.5) * 140;
+      const speed = 36 + Math.random() * 18;
+
+      positions[i * 6] = rx;
+      positions[i * 6 + 1] = ry;
+      positions[i * 6 + 2] = rz;
+
+      positions[i * 6 + 3] = rx + windTiltX * streakLength;
+      positions[i * 6 + 4] = ry - streakLength;
+      positions[i * 6 + 5] = rz + windTiltZ * streakLength;
+
+      this.rainData.push({ x: rx, y: ry, z: rz, speed });
     }
+
     const rainGeo = new THREE.BufferGeometry();
     rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const rainMat = new THREE.PointsMaterial({
-      color: COLORS.rain,
-      size: 0.35,
+    const rainMat = new THREE.LineBasicMaterial({
+      color: 0x93c5fd,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.65,
     });
-    this.rainParticles = new THREE.Points(rainGeo, rainMat);
-    this.groups.weather.add(this.rainParticles);
+    this.rainStreaks = new THREE.LineSegments(rainGeo, rainMat);
+    this.groups.weather.add(this.rainStreaks);
+
+    // Ground splash rings pool
+    this.splashPool = [];
+    const ringGeo = new THREE.RingGeometry(0.08, 0.42, 16);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xbfdbfe,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide
+    });
+
+    for (let s = 0; s < 45; s++) {
+      const splash = new THREE.Mesh(ringGeo, ringMat.clone());
+      splash.position.set((Math.random() - 0.5) * 130, 0.22, (Math.random() - 0.5) * 110);
+      splash.visible = false;
+      this.groups.weather.add(splash);
+      this.splashPool.push({
+        mesh: splash,
+        active: false,
+        life: 0,
+        maxLife: 0.32 + Math.random() * 0.18
+      });
+    }
+  }
+
+  _spawnSplash(x, z) {
+    if (!this.splashPool) return;
+    const inactive = this.splashPool.find(sp => !sp.active);
+    if (inactive) {
+      inactive.active = true;
+      inactive.life = 0;
+      inactive.mesh.position.set(x, 0.22, z);
+      inactive.mesh.scale.set(0.3, 0.3, 0.3);
+      inactive.mesh.material.opacity = 0.85;
+      inactive.mesh.visible = true;
+    }
+  }
+
+  _triggerLightningFlash() {
+    if (!this._ambientLight || !this._sunLight) return;
+    const origAmb = this._ambientLight.intensity;
+    const origSun = this._sunLight.intensity;
+
+    this._ambientLight.intensity = 2.4;
+    this._sunLight.intensity = 3.2;
+    this._sunLight.color.setHex(0xffffff);
+
+    setTimeout(() => {
+      if (this.currentWeather !== 'rain') return;
+      this._ambientLight.intensity = 0.4;
+      this._sunLight.intensity = 0.5;
+      setTimeout(() => {
+        if (this.currentWeather !== 'rain') return;
+        this._ambientLight.intensity = 2.0;
+        this._sunLight.intensity = 2.8;
+        setTimeout(() => {
+          if (this.currentWeather !== 'rain') return;
+          this._ambientLight.intensity = origAmb;
+          this._sunLight.intensity = origSun;
+          this._sunLight.color.setHex(0x64748b);
+        }, 80);
+      }, 50);
+    }, 60);
+  }
+
+  _addStarfield() {
+    const starCount = 800;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI * 0.44;
+      const r = 250;
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.cos(phi);
+      positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const starMat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 1.25,
+      transparent: true,
+      opacity: 0.85,
+    });
+    this.starField = new THREE.Points(starGeo, starMat);
+    this.groups.weather.add(this.starField);
+
+    // Glowing crescent moon
+    const moonGeo = new THREE.SphereGeometry(7.5, 24, 24);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xf1f5f9 });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moon.position.set(-60, 115, -60);
+    this.moonMesh = moon;
+    this.groups.weather.add(moon);
   }
 
   _createLabel(text, position, color = '#e2e8f0', fontSize = '0.7rem', bold = false) {
@@ -3641,24 +4116,100 @@ export class AgriosDigitalTwin3D {
       }
     }
 
-    // Cloud drift
-    for (const cloud of this.cloudMeshes) {
-      cloud.position.x += delta * 1.5;
-      if (cloud.position.x > 85) cloud.position.x = -85;
+    // 3. Autonomous Surveyor Drone Flight & Rotor Animation
+    if (this._droneMesh) {
+      const droneT = elapsed * 0.22;
+      const pathX = Math.sin(droneT) * 36;
+      const pathZ = Math.cos(droneT * 1.5) * 28;
+      const pathY = 16.0 + Math.sin(elapsed * 1.8) * 0.35;
+      this._droneMesh.position.set(pathX, pathY, pathZ);
+
+      // Compute heading direction
+      const nextX = Math.sin(droneT + 0.05) * 36;
+      const nextZ = Math.cos((droneT + 0.05) * 1.5) * 28;
+      const angleY = Math.atan2(nextX - pathX, nextZ - pathZ);
+      this._droneMesh.rotation.y = angleY;
+      this._droneMesh.rotation.z = Math.sin(droneT * 1.5) * 0.12;
+
+      if (this._droneRotors) {
+        this._droneRotors.forEach((r, idx) => {
+          r.rotation.y += delta * (idx % 2 === 0 ? 35 : -35);
+        });
+      }
+
+      if (this._droneLabel) {
+        this._droneLabel.position.set(pathX, pathY + 1.8, pathZ);
+      }
     }
 
-    // Rain particles
-    if (this.rainParticles) {
-      const positions = this.rainParticles.geometry.attributes.position.array;
-      for (let i = 0; i < positions.length; i += 3) {
-        positions[i + 1] -= delta * 25;
-        if (positions[i + 1] < 0) {
-          positions[i + 1] = 40 + Math.random() * 10;
-          positions[i] = (Math.random() - 0.5) * 140;
-          positions[i + 2] = (Math.random() - 0.5) * 120;
+    // 4. Cloud Drift
+    for (const cloud of this.cloudMeshes) {
+      cloud.position.x += delta * 1.6;
+      if (cloud.position.x > 95) cloud.position.x = -95;
+    }
+
+    // 5. Dynamic Rain Streaks & Ground Splash Rings
+    if (this.rainStreaks && this.rainData) {
+      const pos = this.rainStreaks.geometry.attributes.position.array;
+      const streakLength = 1.35;
+      const windTiltX = -0.32;
+      const windTiltZ = -0.12;
+
+      for (let i = 0; i < this.rainData.length; i++) {
+        const drop = this.rainData[i];
+        drop.y -= delta * drop.speed;
+        drop.x += delta * windTiltX * 8;
+        drop.z += delta * windTiltZ * 8;
+
+        if (drop.y <= 0.2) {
+          this._spawnSplash(drop.x, drop.z);
+          drop.y = 50 + Math.random() * 10;
+          drop.x = (Math.random() - 0.5) * 160;
+          drop.z = (Math.random() - 0.5) * 140;
         }
+
+        const idx = i * 6;
+        pos[idx] = drop.x;
+        pos[idx + 1] = drop.y;
+        pos[idx + 2] = drop.z;
+
+        pos[idx + 3] = drop.x + windTiltX * streakLength;
+        pos[idx + 4] = drop.y - streakLength;
+        pos[idx + 5] = drop.z + windTiltZ * streakLength;
       }
-      this.rainParticles.geometry.attributes.position.needsUpdate = true;
+      this.rainStreaks.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Update Splash Rings
+    if (this.splashPool) {
+      this.splashPool.forEach(sp => {
+        if (sp.active) {
+          sp.life += delta;
+          const progress = sp.life / sp.maxLife;
+          if (progress >= 1.0) {
+            sp.active = false;
+            sp.mesh.visible = false;
+          } else {
+            const s = 1.0 + progress * 2.8;
+            sp.mesh.scale.set(s, s, s);
+            sp.mesh.material.opacity = (1.0 - progress) * 0.75;
+          }
+        }
+      });
+    }
+
+    // Thunderstorm Lightning Flash Timer
+    if (this.currentWeather === 'rain') {
+      this._lightningTimer = (this._lightningTimer || 8.0) - delta;
+      if (this._lightningTimer <= 0) {
+        this._lightningTimer = 6.0 + Math.random() * 8.0;
+        this._triggerLightningFlash();
+      }
+    }
+
+    // Starfield Twinkle in Night Mode
+    if (this.starField && this.starField.material) {
+      this.starField.material.opacity = 0.7 + Math.sin(elapsed * 2.5) * 0.2;
     }
   }
 

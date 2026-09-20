@@ -775,8 +775,8 @@ class AgriosDigitalTwinAdapter {
     const badge = document.getElementById('dt3d-weather-badge');
     if (!badge) return;
 
-    const icons = { clear: '☀️', cloudy: '☁️', rain: '🌧️', heatwave: '🌡️' };
-    const labels = { clear: 'Clear Sky', cloudy: 'Overcast', rain: 'Rainfall', heatwave: 'Heatwave' };
+    const icons = { clear: '☀️', cloudy: '☁️', rain: '🌧️', heatwave: '🌡️', dusk: '🌅', night: '🌙' };
+    const labels = { clear: 'Clear Sky', cloudy: 'Overcast', rain: 'Thunderstorm & Rain', heatwave: 'Heatwave', dusk: 'Golden Dusk', night: 'Starry Night' };
     const condition = weather.condition || 'clear';
 
     badge.innerHTML = `

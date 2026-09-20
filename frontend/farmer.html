@@ -170,9 +170,14 @@
                 <h3 class="panel-title">Living Farm Digital Twin</h3>
                 <p class="panel-subtitle">Real-time parcel hydrology, sensor telemetry, and microclimate monitors.</p>
               </div>
-              <button class="btn-secondary" onclick="toggleIrrigationValve()" id="btn-valve-toggle" style="height:34px; font-size:0.8rem;">
-                🚿 Turn On Solar Drip
-              </button>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button class="btn-primary" onclick="if(window.AgriosCalibrator) window.AgriosCalibrator.openModal()" style="height:34px; font-size:0.8rem; background:linear-gradient(135deg, #059669, #0284c7); font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(5,150,105,0.3);">
+                  📱 Walk & Calibrate Space
+                </button>
+                <button class="btn-secondary" onclick="toggleIrrigationValve()" id="btn-valve-toggle" style="height:34px; font-size:0.8rem;">
+                  🚿 Turn On Solar Drip
+                </button>
+              </div>
             </div>
 
             <!-- Twin Viewport -->
@@ -721,6 +726,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/components.js"></script>
 <script src="js/digital_twin.js"></script>
+<script src="js/walk_calibrate_modal.js"></script>
 <script>
   let activeTab = "overview";
   let twinAdapter = null;
