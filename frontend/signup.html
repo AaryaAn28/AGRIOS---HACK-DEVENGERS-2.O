@@ -325,11 +325,21 @@
   }
 
   function redirectUser(role) {
-    if (role === "government") window.location.href = "government.html";
-    else if (role === "agronomist") window.location.href = "agronomist.html";
-    else if (role === "farmer") window.location.href = "farmer.html";
-    else if (role === "worker") window.location.href = "worker.html";
-    else window.location.href = "government.html";
+    const r = (role || "").toString().toLowerCase().trim();
+    const isFileProto = window.location.protocol === "file:";
+
+    let target = isFileProto ? "government.html" : "/government";
+    if (r === "agronomist") {
+      target = isFileProto ? "agronomist.html" : "/agronomist";
+    } else if (r === "farmer") {
+      target = isFileProto ? "farmer.html" : "/farmer";
+    } else if (r === "worker" || r === "operator" || r === "field_worker") {
+      target = isFileProto ? "worker.html" : "/worker";
+    } else if (r === "government" || r === "admin" || r === "gov") {
+      target = isFileProto ? "government.html" : "/government";
+    }
+
+    window.location.href = target;
   }
 </script>
 </body>

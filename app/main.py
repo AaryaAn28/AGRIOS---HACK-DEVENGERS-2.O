@@ -117,22 +117,27 @@ def get_logout_page():
     return FileResponse(os.path.join(frontend_path, "index.html"))
 
 @app.get("/farmer")
+@app.get("/farmer.html")
 def get_farmer_page():
     return FileResponse(os.path.join(frontend_path, "farmer.html"))
 
 @app.get("/worker")
+@app.get("/worker.html")
 def get_worker_page():
     return FileResponse(os.path.join(frontend_path, "worker.html"))
 
 @app.get("/agronomist")
+@app.get("/agronomist.html")
 def get_agronomist_page():
     return FileResponse(os.path.join(frontend_path, "agronomist.html"))
 
 @app.get("/government")
+@app.get("/government.html")
 def get_government_page():
     return FileResponse(os.path.join(frontend_path, "government.html"))
 
 @app.get("/simulator")
+@app.get("/simulator.html")
 def get_simulator_page():
     return FileResponse(os.path.join(frontend_path, "simulator.html"))
 
