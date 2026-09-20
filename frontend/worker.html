@@ -1066,6 +1066,10 @@
   }
 
   function updateSidebarActive(tabId) {
+    if (window.AgriosUI && typeof window.AgriosUI.updateSidebarActive === 'function') {
+      AgriosUI.updateSidebarActive(tabId);
+      return;
+    }
     const sidebarContainer = document.getElementById("sidebar-container");
     if (!sidebarContainer) return;
     const items = sidebarContainer.querySelectorAll(".menu-item");
