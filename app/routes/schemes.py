@@ -5,7 +5,7 @@ from typing import List, Optional
 from app.database import get_db
 from app.models.scheme import GovScheme, SchemeApplication
 from app.models.user import User
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/api/schemes", tags=["Government Schemes & Subsidies"])
 
@@ -54,7 +54,7 @@ def apply_for_scheme(
 def approve_scheme_application(
     application_id: str,
     disbursed_amount: float,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     app = db.query(SchemeApplication).filter(SchemeApplication.id == application_id).first()
@@ -62,6 +62,22 @@ def approve_scheme_application(
         raise HTTPException(status_code=404, detail="Application not found")
     app.status = "disbursed"
     app.disbursed_amount = disbursed_amount
+    db.commit()
+    db.refresh(app)
+    return app.to_dict()
+
+@router.post("/applications/{application_id}/reject")
+def reject_scheme_application(
+    application_id: str,
+    rejection_reason: Optional[str] = "Eligibility criteria not met or incomplete land registry KYC",
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    app = db.query(SchemeApplication).filter(SchemeApplication.id == application_id).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    app.status = "rejected"
+    app.verification_notes = rejection_reason
     db.commit()
     db.refresh(app)
     return app.to_dict()

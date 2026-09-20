@@ -14,7 +14,10 @@ import '../operations/training_screen.dart';
 import '../operations/leaves_welfare_screen.dart';
 import '../operations/scorecard_screen.dart';
 import '../operations/emergency_sos_screen.dart';
+import '../operations/leaf_scanner_screen.dart';
 import '../reports/official_reports_screen.dart';
+import '../3d_twin/digital_twin_3d_screen.dart';
+import '../sandbox/simulation_sandbox_screen.dart';
 
 class OperatorDashboardScreen extends StatefulWidget {
   const OperatorDashboardScreen({super.key});
@@ -29,6 +32,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
   int _completedCount = 1;
   double _accruedBonus = 3400.0;
   bool _isLoading = false;
+  bool _attendanceLogged = false;
 
   @override
   void initState() {
@@ -58,6 +62,79 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     }
   }
 
+  Future<void> _handleGpsAttendance() async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Text('📍 ', style: TextStyle(fontSize: 22)),
+            Expanded(child: Text('GPS Geotag Attendance', style: AppTextStyles.h3)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('GEOSPATIAL AUDIT LOCK:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
+                  SizedBox(height: 4),
+                  Text('Latitude: 30.9010° N', style: AppTextStyles.code),
+                  Text('Longitude: 75.8573° E', style: AppTextStyles.code),
+                  Text('Accuracy: ±0.35m (SBAS Lock)', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w700)),
+                  Text('Cadre: Sunita Devi (WORKER-001)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Confirm shift duty check-in at Greenfield Model Farm, Ludhiana. Verified coordinates will be stamped on Punjab Agricultural Extension Ledger.',
+              style: AppTextStyles.caption,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final res = await ApiService().logAttendance({
+                'worker_id': 'WORKER-001',
+                'lat': 30.9010,
+                'lon': 75.8573,
+                'accuracy_m': 0.35,
+                'device': 'Trimble TDC600',
+              });
+              if (mounted) {
+                setState(() => _attendanceLogged = true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✓ Verified Check-In: ${res['attendance_id'] ?? 'ATT-LOGGED'}. Geotag recorded!'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            },
+            child: const Text('Confirm Geotag', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOperationTile({
     required String icon,
     required String title,
@@ -69,23 +146,53 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.cardBorder),
-            boxShadow: AppColors.softShadow,
+            gradient: const LinearGradient(
+              colors: [Colors.white, Color(0xFFFAFBFD)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: color.withValues(alpha: 0.08),
+                blurRadius: 14,
+                offset: const Offset(2, 6),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.22),
+                      color.withValues(alpha: 0.08),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withValues(alpha: 0.25)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 alignment: Alignment.center,
                 child: Text(icon, style: const TextStyle(fontSize: 22)),
@@ -139,20 +246,121 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
                 const LinearProgressIndicator(minHeight: 2, color: AppColors.primary),
                 const SizedBox(height: 8),
               ],
+
+              // Welcome Row with Quick Geotag & Scanner Actions
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primaryBorder, width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('👩‍🌾 ', style: TextStyle(fontSize: 20)),
+                        Text(
+                          'KRISHI SAKHI • EXTENSION CADRE',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_attendanceLogged)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryDark,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text('✓ On Duty', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Field Operations Hub', style: AppTextStyles.h2),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Ground truth logs, leaf disease vision scanning, and agronomic task execution.',
+                      style: AppTextStyles.caption,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.primaryDark,
+                              elevation: 2,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: AppColors.primaryBorder),
+                              ),
+                            ),
+                            icon: const Icon(Icons.location_on, size: 16),
+                            label: const Text('GPS Geotag', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            onPressed: _handleGpsAttendance,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.document_scanner_outlined, size: 16),
+                            label: const Text('AI Scanner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeafScannerScreen())),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
               // Locked Directive Banner: Active Dispatched Day
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.primaryBorder),
+                  gradient: const LinearGradient(
+                    colors: [Colors.white, Color(0xFFF8FAFC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: AppColors.softShadow,
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: AppColors.primary.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.lock_clock, color: AppColors.primaryDark, size: 20),
@@ -203,7 +411,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
               ),
               const SizedBox(height: 14),
 
-              // KPI Metric Cards Grid
+              // KPI Metric Cards Grid (with 3D Aesthetics)
               Row(
                 children: [
                   Expanded(
@@ -270,10 +478,19 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
 
               // Operations Tiles
               _buildOperationTile(
+                icon: '📷',
+                title: 'Mobile Leaf AI Vision Scanner',
+                subtitle: 'Neural network foliar pathogen detection & instant prescriptions',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeafScannerScreen())),
+              ),
+              const SizedBox(height: 8),
+
+              _buildOperationTile(
                 icon: '📋',
                 title: 'Day Tasks Execution & Geotagging',
                 subtitle: 'Execute Day $_activeDay field operations with verified GPS coordinates',
-                color: AppColors.primary,
+                color: AppColors.primaryLight,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TasksScreen())),
               ),
               const SizedBox(height: 8),
@@ -347,6 +564,24 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
                 subtitle: 'View, generate and export 8 Punjab Agricultural letterhead reports',
                 color: AppColors.textPrimary,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OfficialReportsScreen())),
+              ),
+              const SizedBox(height: 8),
+
+              _buildOperationTile(
+                icon: '🌐',
+                title: '3D Farm Digital Twin World',
+                subtitle: 'Explore 3D crops, ponds, polyhouses, day slider & CAD layout',
+                color: AppColors.roleAgronomist,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DigitalTwin3dScreen())),
+              ),
+              const SizedBox(height: 8),
+
+              _buildOperationTile(
+                icon: '⚡',
+                title: 'Judge\'s Simulation Sandbox',
+                subtitle: 'Trigger hailstorms, pest outbreaks, canal breaches & observe reaction',
+                color: const Color(0xFFDC2626),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SimulationSandboxScreen())),
               ),
               const SizedBox(height: 20),
             ],

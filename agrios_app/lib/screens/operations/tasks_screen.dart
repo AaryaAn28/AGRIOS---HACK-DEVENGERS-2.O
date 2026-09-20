@@ -48,7 +48,23 @@ class _TasksScreenState extends State<TasksScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      _loadTasks();
+      setState(() {
+        final index = _tasks.indexWhere((t) => t.id == task.id);
+        if (index != -1) {
+          _tasks[index] = TaskModel(
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: 'COMPLETED',
+            priority: task.priority,
+            assignedTo: task.assignedTo,
+            fieldParcel: task.fieldParcel,
+            gpsLat: task.gpsLat,
+            gpsLon: task.gpsLon,
+            dueDate: task.dueDate,
+          );
+        }
+      });
     }
   }
 

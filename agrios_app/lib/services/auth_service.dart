@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../constants/static_content.dart';
+import 'api_service.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -31,6 +32,7 @@ class AuthService extends ChangeNotifier {
       personaCode: 'WORKER-001',
       token: 'demo-token-worker-001',
     );
+    ApiService().setAuthToken(_currentUser!.token);
     notifyListeners();
   }
 
@@ -44,6 +46,7 @@ class AuthService extends ChangeNotifier {
       personaCode: persona['code']?.toString() ?? 'PERSONA-001',
       token: 'demo-token-${persona['id']}',
     );
+    ApiService().setAuthToken(_currentUser!.token);
     notifyListeners();
   }
 
@@ -56,7 +59,7 @@ class AuthService extends ChangeNotifier {
     // Check if matches one of our demo personas
     final matched = StaticContent.quickDemoPersonas.firstWhere(
       (p) => p['role'] == role || p['email'] == email,
-      orElse: () => {
+      orElse: () => <String, dynamic>{
         'id': 'custom-user',
         'name': email.split('@').first,
         'role': role,

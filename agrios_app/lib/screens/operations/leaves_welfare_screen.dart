@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_text_styles.dart';
+import '../../services/api_service.dart';
 import '../../widgets/common_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/status_badge.dart';
@@ -57,14 +58,22 @@ class _LeavesWelfareScreenState extends State<LeavesWelfareScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✓ Wage Advance Authorized! ₹2,500 DBT initiated to registered PNB account.'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+              showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+              final res = await ApiService().requestWageAdvance({
+                'amount': double.tryParse(_amountController.text) ?? 2500,
+                'term': '2 Months',
+              });
+              if (mounted) {
+                Navigator.pop(context); // pop loading
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✓ Wage Advance Authorized! ₹${res['amount']} DBT initiated. TXN: ${res['dbt_transaction_id']}'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
             },
             child: const Text('Authorize DBT', style: TextStyle(color: Colors.white)),
           ),
@@ -146,13 +155,22 @@ class _LeavesWelfareScreenState extends State<LeavesWelfareScreen> {
                   const SizedBox(height: 14),
                   CustomButton(
                     text: 'Submit Leave Application',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('✓ Leave Request Filed: Pending Dr. Priya Sharma review. Cadre auto-reassigned.'),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
+                    onPressed: () async {
+                      showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+                      final res = await ApiService().submitLeaveRequest({
+                        'category': _category,
+                        'reason': _reasonController.text,
+                      });
+                      if (mounted) {
+                        Navigator.pop(context); // pop loading
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('✓ ${res['message']} ID: ${res['leave_id']}'),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                        _reasonController.clear();
+                      }
                     },
                   ),
                 ],

@@ -37,11 +37,20 @@ class _TrainingScreenState extends State<TrainingScreen> {
     }
   }
 
-  void _showOfflineGuideDialog(TrainingModuleModel m) {
+  Future<void> _showOfflineGuideDialog(TrainingModuleModel m) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(child: CircularProgressIndicator()),
+    );
+    final data = await ApiService().getOfflineGuide(m.id);
+    if (!mounted) return;
+    Navigator.pop(context); // pop loading
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('📖 Offline Field Manual: ${m.crop}', style: AppTextStyles.h3),
+        title: Text('📖 ${data['title']}: ${m.crop}', style: AppTextStyles.h3),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,21 +70,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
               const SizedBox(height: 12),
               Text(m.title, style: AppTextStyles.bodyBold),
               const SizedBox(height: 6),
-              Text(m.description, style: AppTextStyles.body.copyWith(fontSize: 13)),
-              const SizedBox(height: 14),
-              const Text('Field Quick-Reference Rx:', style: AppTextStyles.caption),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.successBg,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '• Tilt 25% EC @ 1ml/L water\n• Pseudomonas fluorescens @ 1.5 kg/acre\n• Emergency Hotline: 1800-180-1551',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.primaryDark, height: 1.4),
-                ),
-              ),
+              Text(data['content'] ?? m.description, style: AppTextStyles.body.copyWith(fontSize: 13)),
             ],
           ),
         ),
@@ -125,9 +120,20 @@ class _TrainingScreenState extends State<TrainingScreen> {
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(ctx);
-                  _showCertificateDialog(m);
+                  
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (c) => const Center(child: CircularProgressIndicator()),
+                  );
+                  final score = 100;
+                  final certData = await ApiService().certifyTraining(m.id, score);
+                  if (mounted) {
+                    Navigator.pop(context); // pop loading
+                    _showCertificateDialog(m, certData);
+                  }
                 },
                 child: const Text('Submit & Certify', style: TextStyle(color: Colors.white)),
               ),
@@ -138,7 +144,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
     );
   }
 
-  void _showCertificateDialog(TrainingModuleModel m) {
+  void _showCertificateDialog(TrainingModuleModel m, Map<String, dynamic> certData) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -176,10 +182,12 @@ class _TrainingScreenState extends State<TrainingScreen> {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: AppColors.primaryBorder),
               ),
-              child: const Text('GRADE: DISTINCTION (98.5%)', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.success, fontSize: 11)),
+              child: Text('GRADE: DISTINCTION (${certData['score']}%)', style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.success, fontSize: 11)),
             ),
             const SizedBox(height: 6),
-            const Text('Credential Code: CERT-ICAR-PB-2026-9042', style: AppTextStyles.code),
+            Text('Credential Code: ${certData['certificate_id']}', style: AppTextStyles.code),
+            const SizedBox(height: 4),
+            Text('Issued: ${certData['issue_date']}', style: AppTextStyles.caption),
           ],
         ),
         actions: [

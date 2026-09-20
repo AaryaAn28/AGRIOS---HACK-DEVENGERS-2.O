@@ -16,6 +16,29 @@ class EmergencySosScreen extends StatefulWidget {
 class _EmergencySosScreenState extends State<EmergencySosScreen> {
   bool _isSosActive = false;
   bool _isBroadcasting = false;
+  
+  bool _isLoading = true;
+  Map<String, dynamic>? _stressData;
+  List<Map<String, dynamic>> _protocols = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+  
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final stress = await ApiService().getBiophysicalStress();
+    final protos = await ApiService().getEmergencyProtocols();
+    if (mounted) {
+      setState(() {
+        _stressData = stress;
+        _protocols = protos;
+        _isLoading = false;
+      });
+    }
+  }
 
   void _confirmAndTriggerSos() {
     showDialog(
@@ -97,7 +120,9 @@ class _EmergencySosScreenState extends State<EmergencySosScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+        : SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -204,8 +229,8 @@ class _EmergencySosScreenState extends State<EmergencySosScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('29.4°C WBGT', style: AppTextStyles.h2.copyWith(color: const Color(0xFF0369A1))),
-                            const Text('Ambient: 33.5°C • RH: 62%', style: AppTextStyles.caption),
+                            Text('${_stressData?['wbgt_index'] ?? 29.4}°C WBGT', style: AppTextStyles.h2.copyWith(color: const Color(0xFF0369A1))),
+                            Text('Ambient: ${_stressData?['temperature'] ?? '33.5°C'} • RH: ${_stressData?['humidity'] ?? '62%'}', style: AppTextStyles.caption),
                           ],
                         ),
                       ),
@@ -216,14 +241,21 @@ class _EmergencySosScreenState extends State<EmergencySosScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
-                          children: const [
-                            Text('Rest Allocation', style: AppTextStyles.caption),
-                            Text('15 Mins / Hr', style: AppTextStyles.bodyBold),
+                          children: [
+                            const Text('Rest Allocation', style: AppTextStyles.caption),
+                            Text('${_stressData?['heat_risk_level'] == 'HIGH' ? '15 Mins / Hr' : '10 Mins / Hr'}', style: AppTextStyles.bodyBold),
                           ],
                         ),
                       ),
                     ],
                   ),
+                  if (_stressData?['recommendations'] != null) ...[
+                    const SizedBox(height: 12),
+                    ...(_stressData!['recommendations'] as List).map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('• $r', style: AppTextStyles.caption.copyWith(color: AppColors.info)),
+                    )),
+                  ],
                 ],
               ),
             ),
@@ -240,11 +272,10 @@ class _EmergencySosScreenState extends State<EmergencySosScreen> {
             ),
             const SizedBox(height: 10),
 
-            _buildSopTile('Chemical Spray Drift / Eye Contact', 'Flush eyes with clean water for minimum 15 minutes. Call 108.'),
-            const SizedBox(height: 8),
-            _buildSopTile('Venomous Snakebite (Russell Viper / Krait)', 'Keep patient calm. Do NOT apply tight tourniquets or incisions. Splint limb loosely and transport.'),
-            const SizedBox(height: 8),
-            _buildSopTile('Overhead High-Voltage Tube-Well Cable', 'Maintain 10-meter clearance. Do not approach fallen wires. Call Punjab State Power Corp: 1912.'),
+            ..._protocols.map((p) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildSopTile(p['title'], (p['steps'] as List).join('\n')),
+            )),
           ],
         ),
       ),

@@ -340,6 +340,33 @@ window.AgriosI18n = {
   init() {
     this.currentLang = localStorage.getItem("agrios_lang") || "en";
     this.applyTranslations();
+
+    // Auto-reapply when custom events fire
+    window.addEventListener("agrios:language_changed", () => {
+      this.applyTranslations();
+    });
+
+    // Auto-preserve language across tab switches and dynamic loaders
+    if (window.MutationObserver) {
+      let debounceTimer = null;
+      const observer = new MutationObserver(() => {
+        if (this._suppressObserver) return;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          this._suppressObserver = true;
+          this.applyTranslations();
+          this._suppressObserver = false;
+        }, 60);
+      });
+
+      if (document.body) {
+        observer.observe(document.body, { childList: true, subtree: true });
+      } else {
+        document.addEventListener("DOMContentLoaded", () => {
+          observer.observe(document.body, { childList: true, subtree: true });
+        });
+      }
+    }
   }
 };
 

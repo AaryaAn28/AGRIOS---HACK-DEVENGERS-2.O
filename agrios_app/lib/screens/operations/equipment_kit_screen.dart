@@ -38,57 +38,71 @@ class _EquipmentKitScreenState extends State<EquipmentKitScreen> {
 
   void _showReportDamageDialog() {
     final descController = TextEditingController();
+    String selectedToolId = _tools.isNotEmpty ? _tools.first.id : '';
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('⚠️ Report Damaged Equipment', style: AppTextStyles.h3),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Select Damaged Tool', style: AppTextStyles.caption),
-            const SizedBox(height: 4),
-            DropdownButtonFormField<String>(
-              value: _tools.first.name,
-              isExpanded: true,
-              items: _tools
-                  .map((t) => DropdownMenuItem(value: t.name, child: Text(t.name, style: const TextStyle(fontSize: 12))))
-                  .toList(),
-              onChanged: (_) {},
-            ),
-            const SizedBox(height: 12),
-            const Text('Defect / Malfunction Details', style: AppTextStyles.caption),
-            const SizedBox(height: 4),
-            TextField(
-              controller: descController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                hintText: 'Describe issue (e.g. electrode sensor drift)...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              style: AppTextStyles.body,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✓ KVK Doorstep Swap Ticket Created: TKT-REP-8821. Replacement en-route.'),
-                  backgroundColor: AppColors.success,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) {
+          return AlertDialog(
+            title: const Text('⚠️ Report Damaged Equipment', style: AppTextStyles.h3),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Select Damaged Tool', style: AppTextStyles.caption),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  value: selectedToolId,
+                  isExpanded: true,
+                  items: _tools
+                      .map((t) => DropdownMenuItem(value: t.id, child: Text(t.name, style: const TextStyle(fontSize: 12))))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setDlgState(() => selectedToolId = val);
+                  },
                 ),
-              );
-            },
-            child: const Text('Submit Swap Request', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+                const SizedBox(height: 12),
+                const Text('Defect / Malfunction Details', style: AppTextStyles.caption),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: descController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'Describe issue (e.g. electrode sensor drift)...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  style: AppTextStyles.body,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final damageRes = await ApiService().reportEquipmentDamage({
+                    'tool_id': selectedToolId,
+                    'description': descController.text,
+                  });
+                  final replaceRes = await ApiService().requestEquipmentReplacement(selectedToolId);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('✓ ${replaceRes['message']} Ticket: ${damageRes['ticket_id']}'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Submit Swap Request', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

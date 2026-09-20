@@ -31,6 +31,7 @@ from app.routes.farm_structures import router as farm_structures_router
 from app.routes.crop_plans import router as crop_plans_router
 from app.routes.agrios_ecosystem import router as ecosystem_router
 from app.routes.workforce_operations import router as workforce_ops_router
+from app.routes.biosecurity_operations import router as biosecurity_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -89,6 +90,7 @@ app.include_router(farm_structures_router)
 app.include_router(crop_plans_router)
 app.include_router(ecosystem_router)
 app.include_router(workforce_ops_router)
+app.include_router(biosecurity_router)
 
 @app.get("/health")
 @app.get("/api/health")
@@ -104,9 +106,15 @@ def health_check():
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 
 @app.get("/")
-@app.get("/index.html")
+@app.get("/about")
+@app.get("/about.html")
+def get_about_page():
+    return FileResponse(os.path.join(frontend_path, "about.html"))
+
 @app.get("/login")
-def get_index_page():
+@app.get("/login.html")
+@app.get("/index.html")
+def get_login_page():
     return FileResponse(os.path.join(frontend_path, "index.html"))
 
 @app.get("/logout")

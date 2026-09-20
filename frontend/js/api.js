@@ -418,14 +418,51 @@ const AgriosAPI = {
   },
 
   async listQuarantineZones() {
-    return await this.request("/api/agronomist/quarantine-zones");
+    return await this.request("/api/government/biosecurity/buffer-zones");
   },
 
   async createQuarantineZone(data) {
-    return await this.request("/api/agronomist/quarantine-zones", {
+    return await this.request("/api/government/biosecurity/buffer-zones", {
       method: "POST",
       body: JSON.stringify(data)
     });
+  },
+
+  async getPestRadarOverview() {
+    return await this.request("/api/government/pest-radar/hotspots");
+  },
+
+  async simulatePestSpread(data) {
+    return await this.request("/api/government/pest-radar/simulate-spread", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async listBiosecurityBufferZones() {
+    return await this.request("/api/government/biosecurity/buffer-zones");
+  },
+
+  async createBiosecurityBufferZone(data) {
+    return await this.request("/api/government/biosecurity/buffer-zones", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updateBufferZoneStatus(zoneId, data) {
+    return await this.request(`/api/government/biosecurity/buffer-zones/${zoneId}/status`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getBiosecurityIPMProtocols() {
+    return await this.request("/api/government/biosecurity/ipm-protocols");
+  },
+
+  async getBiosecurityCordonReport() {
+    return await this.request("/api/government/biosecurity/reports/cordon-audit");
   },
 
   async listPrescriptions() {

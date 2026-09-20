@@ -1,7 +1,13 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class ApiConstants {
-  // Android Emulator uses 10.0.2.2 to connect to host localhost.
-  // When testing on real device, change to host LAN IP (e.g. 192.168.x.x).
-  static String baseUrl = 'http://10.0.2.2:8000';
+  // Platform-aware base URL
+  static String get baseUrl {
+    if (kIsWeb) return 'http://localhost:8000';
+    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
+    return 'http://127.0.0.1:8000';
+  }
   static String activeFarmId = '9fca8bd1-344e-46b1-b5f8-4a94ebd4167c';
 
   // Auth Endpoints
@@ -30,6 +36,7 @@ class ApiConstants {
   static String trainingOfflineGuide(String moduleId) =>
       '/api/workforce-ops/training/offline-guide/$moduleId';
   static const String leaves = '/api/workforce-ops/leaves';
+  static const String attendance = '/api/workforce-ops/attendance';
   static const String wageAdvance = '/api/workforce-ops/wage-advance';
   static const String leavesReport = '/api/workforce-ops/leaves/welfare-statement';
   static String scorecard(String workerId) =>

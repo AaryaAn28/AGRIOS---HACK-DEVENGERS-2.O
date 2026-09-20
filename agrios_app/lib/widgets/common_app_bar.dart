@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 import '../services/auth_service.dart';
+import '../screens/help/help_guide_screen.dart';
 import 'language_selector.dart';
 
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -54,6 +55,16 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: LanguageSelector(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.help_outline, color: Colors.white, size: 20),
+          tooltip: 'Help & SOP Guide',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HelpGuideScreen()),
+            );
+          },
         ),
         if (actions != null) ...actions!,
         IconButton(

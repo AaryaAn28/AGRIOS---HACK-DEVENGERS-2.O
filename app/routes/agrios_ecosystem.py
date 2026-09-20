@@ -17,6 +17,7 @@ from app.models.user import User
 from app.models.communication import AdvisoryMessage
 from app.core.events import EventBus, DomainEvent
 from app.utils.auth import get_current_user
+from app.services.biosecurity_service import BiosecurityService
 
 router = APIRouter(prefix="/api", tags=["AGRIOS Ecosystem Interconnected Engine"])
 
@@ -528,22 +529,28 @@ def generate_gov_report(req: GovReportRequest, db: Session = Depends(get_db)):
 
 @router.get("/agronomist/surveillance")
 def get_agronomist_surveillance(db: Session = Depends(get_db)):
-    farms = db.query(Farm).all()
-    alerts = db.query(RiskAlert).filter(RiskAlert.resolved == False).all()
+    overview = BiosecurityService.get_radar_overview(db)
     return {
-        "total_monitored_farms": len(farms),
-        "active_pest_alerts": len(alerts),
+        "total_monitored_farms": overview["metrics"]["total_monitored_farms"],
+        "active_pest_alerts": overview["metrics"]["unresolved_pest_alerts"],
         "hotspots": [
-            {"zone": "Sangrur North Basin", "risk_index": "Elevated", "pest": "Fall Armyworm (Early)", "affected_acres": 35},
-            {"zone": "Bathinda Border Belt", "risk_index": "Moderate", "pest": "Aphid Translocation", "affected_acres": 22},
-            {"zone": "Ludhiana Model Sector", "risk_index": "Low", "pest": "None (Preventative Status)", "affected_acres": 0}
+            {
+                "zone": h["zone_name"],
+                "risk_index": h["risk_index"],
+                "pest": h["pest_species"],
+                "affected_acres": h["affected_acres"],
+                "wind_vector": h.get("wind_vector", ""),
+                "spore_density": h.get("spore_density_m3", 0)
+            }
+            for h in overview["hotspots"]
         ],
-        "quarantine_zones_active": len(_QUARANTINE_ZONES)
+        "quarantine_zones_active": overview["metrics"]["enforced_quarantine_cordons"],
+        "state_readiness_pct": overview["metrics"]["state_biosecurity_readiness_pct"]
     }
 
 @router.get("/agronomist/quarantine-zones")
-def list_quarantine_zones():
-    return _QUARANTINE_ZONES
+def list_quarantine_zones(db: Session = Depends(get_db)):
+    return BiosecurityService.list_all_buffer_zones(db)
 
 class QuarantineZoneCreate(BaseModel):
     district: str
@@ -553,26 +560,9 @@ class QuarantineZoneCreate(BaseModel):
     action_taken: str
 
 @router.post("/agronomist/quarantine-zones")
-def create_quarantine_zone(req: QuarantineZoneCreate):
-    zone = {
-        "id": f"qz-{uuid.uuid4().hex[:6]}",
-        "district": req.district,
-        "pest_type": req.pest_type,
-        "radius_km": req.radius_km,
-        "severity": req.severity,
-        "containment_status": "enforced",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "created_by": "Authorized Agronomist",
-        "action_taken": req.action_taken
-    }
-    _QUARANTINE_ZONES.insert(0, zone)
-
-    event = DomainEvent(
-        event_type="QUARANTINE_ZONE_ACTIVATED",
-        actor_role="agronomist",
-        payload=zone
-    )
-    EventBus.publish(event)
+def create_quarantine_zone(req: QuarantineZoneCreate, db: Session = Depends(get_db)):
+    data = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+    zone = BiosecurityService.create_quarantine_buffer_zone(db, data)
     return zone
 
 @router.get("/agronomist/prescriptions")
