@@ -10,7 +10,6 @@ venv/
 # Mobile App build artifacts and large binaries (>100MB exceeds GitHub limit)
 *.apk
 *.aab
-apk_output/
 agrios_app/.dart_tool/
 agrios_app/build/
 agrios_app/.flutter-plugins
