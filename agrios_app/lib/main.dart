@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'constants/app_colors.dart';
 import 'services/auth_service.dart';
+import 'screens/landing/booking_landing_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/dashboard/operator_dashboard_screen.dart';
 import 'screens/dashboard/farmer_dashboard_screen.dart';
@@ -71,7 +72,7 @@ class AuthGate extends StatelessWidget {
       animation: auth,
       builder: (context, _) {
         if (!auth.isAuthenticated) {
-          return const LoginScreen();
+          return const BookingLandingScreen();
         }
 
         final role = auth.currentUser?.role.toLowerCase() ?? 'worker';

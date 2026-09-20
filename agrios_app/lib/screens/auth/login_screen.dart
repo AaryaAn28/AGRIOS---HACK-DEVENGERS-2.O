@@ -62,6 +62,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Row(
                     children: [
+                      if (Navigator.canPop(context)) ...[
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: AppColors.primaryDark),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Back to Booking',
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       Container(
                         width: 36,
                         height: 36,
