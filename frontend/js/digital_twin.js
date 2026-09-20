@@ -671,6 +671,20 @@ class AgriosDigitalTwinAdapter {
   }
 
   /**
+   * Preview 3D world instantly from questionnaire option selection
+   * @param {string} classification - Farming classification taxonomy
+   * @param {string} cropName - Target crop name
+   */
+  async previewClassification(classification, cropName) {
+    if (!this.engine) return;
+    if (typeof this.engine.previewClassification === 'function') {
+      await this.engine.previewClassification(classification, cropName);
+    } else if (typeof this._rebuildScene === 'function') {
+      this._rebuildScene();
+    }
+  }
+
+  /**
    * Register callback for user interactions
    */
   onUserInteraction(callback) {

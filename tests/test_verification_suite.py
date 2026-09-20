@@ -66,8 +66,9 @@ def test_worker_task_filtering():
     for t in displayed_tasks:
         print(f" -> [{t.get('priority', 'high').upper()}] {t.get('title')} (Assigned: {t.get('assigned_to_user_id')})")
 
-    assert len(displayed_tasks) == 1, f"Expected exactly 1 task for Sunita Devi on Day 1, got {len(displayed_tasks)}!"
-    assert "Weeding" in displayed_tasks[0]["title"], "Expected Day 1 weeding/fertigation task!"
+    routine_tasks = [t for t in displayed_tasks if t.get("task_type") != "spray"]
+    assert len(routine_tasks) == 1, f"Expected exactly 1 routine Day 1 task for Sunita Devi, got {len(routine_tasks)}!"
+    assert "Weeding" in routine_tasks[0]["title"], "Expected Day 1 weeding/fertigation task!"
     print(">>> PASS: Worker Day 1 task filtering successfully shows only Sunita Devi's 1 task (NOT 252)!\n")
 
 

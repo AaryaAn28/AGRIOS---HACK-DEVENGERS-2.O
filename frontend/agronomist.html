@@ -3113,8 +3113,11 @@
       "Terrestrial Field Crops": "terrestrial"
     };
     const mappedCls = clsKeyMap[cls] || "terrestrial";
-    if (twinAdapter3D && typeof twinAdapter3D.setFarmingClassification === "function") {
-      twinAdapter3D.setFarmingClassification(mappedCls);
+    const adapter = twinAdapter3D || window.twinAdapter3D;
+    if (adapter && typeof adapter.previewClassification === "function") {
+      adapter.previewClassification(cls, surveyState.crop_name);
+    } else if (adapter && typeof adapter.setFarmingClassification === "function") {
+      adapter.setFarmingClassification(mappedCls);
     }
     renderWizardStep();
   }
@@ -3122,6 +3125,10 @@
   function selectSubType(subTypeId) {
     surveyState.sub_type = subTypeId;
     renderWizardStep();
+    const adapter = twinAdapter3D || window.twinAdapter3D;
+    if (adapter && typeof adapter.previewClassification === "function") {
+      adapter.previewClassification(surveyState.farming_classification, surveyState.crop_name);
+    }
   }
 
   function selectSeason(season) {
@@ -3131,6 +3138,10 @@
 
   function handleCropSelect(crop) {
     surveyState.crop_name = crop;
+    const adapter = twinAdapter3D || window.twinAdapter3D;
+    if (adapter && typeof adapter.previewClassification === "function") {
+      adapter.previewClassification(surveyState.farming_classification, crop);
+    }
     const cfg = TAXONOMY_CONFIGS[surveyState.farming_classification] || TAXONOMY_CONFIGS["Terrestrial Field Crops"];
     let kb = null;
     if (cfg && cfg.crops) {

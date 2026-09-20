@@ -798,16 +798,25 @@ def request_wage_advance(data: WageAdvanceInput):
 @router.get("/scorecard/{worker_id}")
 def get_worker_scorecard(worker_id: str, db: Session = Depends(get_db)):
     """Dynamically compute worker performance score, punctuality index, and bonus ledger."""
-    # Count real tasks completed in database
-    tasks = db.query(FarmTask).all()
-    completed = len([t for t in tasks if str(t.status).lower() == "completed"])
-    total_tasks = max(len(tasks), 1)
+    # Look up worker in DB
+    worker = db.query(User).filter(
+        (User.id == worker_id) | (User.persona_code == worker_id)
+    ).first()
+    worker_name = worker.full_name if worker else "Field Worker"
+    actual_worker_id = worker.id if worker else worker_id
+
+    # Count tasks assigned to THIS worker (not all tasks in DB)
+    worker_tasks = db.query(FarmTask).filter(
+        (FarmTask.assigned_to_user_id == actual_worker_id) | (FarmTask.assigned_role == "worker")
+    ).all()
+    completed = len([t for t in worker_tasks if str(t.status).lower() == "completed"])
+    total_tasks = max(len(worker_tasks), 1)
 
     ground_truth_count = len(_GROUND_TRUTH_LOGS)
     certifications_earned = 4  # Certified SRI, Rust, Blight, Drip
 
-    # Live computation formulas
-    completion_rate = round(min(100.0, (completed / total_tasks) * 100.0 + 75.0), 1)
+    # Live computation formulas (removed artificial +75.0 bias)
+    completion_rate = round(min(100.0, (completed / total_tasks) * 100.0), 1)
     punctuality_pct = 98.6
     ground_truth_accuracy = 96.4
     safety_compliance_pct = 100.0
@@ -832,12 +841,12 @@ def get_worker_scorecard(worker_id: str, db: Session = Depends(get_db)):
     ]
 
     return {
-        "worker_id": worker_id,
-        "worker_name": "Sunita Devi",
+        "worker_id": actual_worker_id,
+        "worker_name": worker_name,
         "cadre_title": "Krishi Sakhi Senior Extension Field Specialist",
         "composite_performance_score": composite_score,
-        "rating_grade": "A+ (Distinguished Service)",
-        "tasks_completed": completed if completed > 0 else 12,
+        "rating_grade": "A+ (Distinguished Service)" if composite_score >= 90 else ("A" if composite_score >= 80 else "B"),
+        "tasks_completed": completed,
         "hours_logged_this_month": 142.5,
         "task_completion_rate": completion_rate,
         "punctuality_rate": punctuality_pct,

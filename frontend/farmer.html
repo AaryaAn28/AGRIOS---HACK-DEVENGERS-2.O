@@ -1063,14 +1063,13 @@
         return;
       }
 
-      // Filter tasks strictly by the Agronomist's assigned day using word-boundary regex
+      // Filter tasks strictly by the Agronomist's assigned day using word-boundary regex, plus emergency sprays
       const dayRegex = new RegExp(`\\bDay\\s*${activeDay}\\b`, 'i');
       const rawMatchingTasks = tasks.filter(t => {
         const titleStr = t.title || '';
         const descStr = t.description || '';
-        const fullText = `${titleStr} ${descStr}`.toLowerCase();
         const isDayTask = dayRegex.test(titleStr) || dayRegex.test(descStr);
-        const isEmergencySpray = (t.task_type === "spray" || titleStr.includes("Emergency Spray") || titleStr.includes("RX-")) && dayRegex.test(fullText);
+        const isEmergencySpray = (t.task_type === "spray" || titleStr.includes("Emergency Spray") || titleStr.includes("RX-"));
         return isDayTask || isEmergencySpray;
       });
 
@@ -1082,6 +1081,30 @@
         if (!seenTitles.has(norm)) {
           seenTitles.add(norm);
           displayedTasks.push(t);
+        }
+      }
+
+      // Update Today's Field Priority checklist dynamically
+      const checklistContainer = document.getElementById("quick-checklist-container");
+      if (checklistContainer) {
+        if (displayedTasks.length > 0) {
+          checklistContainer.innerHTML = displayedTasks.slice(0, 3).map(t => {
+            const isDone = (t.status || "").toUpperCase() === "COMPLETED";
+            const assignee = t.description?.includes("Sunita") ? "Sunita Devi (Worker)" :
+                             (t.description?.includes("Mamata") ? "Mamata Behera (Worker)" :
+                             (t.description?.includes("Balwinder") ? "Balwinder Singh (Farmer Custodian)" :
+                             (t.assigned_role === "farmer" ? "Farmer Custodian" : "Field Team (Krishi Sakhi)")));
+            return `
+              <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                <div style="font-weight:700; color:#0f172a;">${isDone ? '✓' : '⏳'} ${t.title}</div>
+                <div style="font-size:0.75rem; color:${isDone ? '#059669' : '#d97706'}; font-weight:600;">
+                  ${isDone ? 'Completed' : 'In Progress'} • ${assignee}
+                </div>
+              </div>
+            `;
+          }).join("");
+        } else {
+          checklistContainer.innerHTML = `<div style="padding:10px; color:#64748b; font-size:0.8rem; text-align:center;">No pending priorities for Day ${activeDay}.</div>`;
         }
       }
 
@@ -1099,6 +1122,11 @@
       tbody.innerHTML = displayedTasks.map(t => {
         const isDone = (t.status || "").toUpperCase() === "COMPLETED";
         const isSpray = (t.task_type === 'spray') || (t.title || '').includes('Spray') || (t.title || '').includes('RX-');
+        const assignee = t.description?.includes("Sunita") ? "Sunita Devi (Worker)" :
+                         (t.description?.includes("Mamata") ? "Mamata Behera (Worker)" :
+                         (t.description?.includes("Balwinder") ? "Balwinder Singh (Farmer Custodian)" :
+                         (t.description?.includes("Priya") ? "Dr. Priya Sharma (Agronomist)" :
+                         (t.assigned_role === "farmer" ? "Farmer Custodian" : "Field Cadre"))));
         return `
         <tr style="${isSpray ? 'background:#fef2f2;' : ''}">
           <td>
@@ -1107,20 +1135,40 @@
           </td>
           <td><span class="card-badge badge-neutral">${t.category || t.task_type}</span></td>
           <td><span class="card-badge ${t.priority === 'URGENT' || isSpray ? 'badge-danger' : 'badge-warning'}">${t.priority}</span></td>
-          <td>Field Team (Krishi Sakhi)</td>
+          <td><strong style="color:#1e293b;">${assignee}</strong></td>
           <td><span class="card-badge ${isDone ? 'badge-success' : 'badge-warning'}">${t.status}</span></td>
           <td>
             ${!isDone ? `
               <button class="btn-primary" onclick="completeTask('${t.id}')" style="height:30px; font-size:0.75rem; padding:0 10px; background:${isSpray ? '#dc2626' : '#059669'};">
-                ${isSpray ? '✓ Execute Spray' : '✓ Complete'}
+                ${isSpray ? '✓ Execute Spray' : '✓ Complete & Log'}
               </button>
-            ` : `<span style="font-size:0.75rem; color:#059669; font-weight:700;">Verified</span>`}
+            ` : `<span style="font-size:0.75rem; color:#059669; font-weight:700;">✓ Verified</span>`}
           </td>
         </tr>
       `;
       }).join("");
 
       document.getElementById("card-tasks-ratio").innerText = `${displayedTasks.filter(t => (t.status || '').toUpperCase() === 'COMPLETED').length} / ${displayedTasks.length}`;
+
+      // Refresh farmer dashboard summary metrics from dynamic endpoint
+      try {
+        const sumRes = await fetch(`/api/farmer/dashboard-summary/${currentFarmId}`);
+        if (sumRes.ok) {
+          const sData = await sumRes.json();
+          if (sData.vitality_pct) {
+            const vitEl = document.getElementById("card-vitality-val");
+            if (vitEl) vitEl.innerText = `${sData.vitality_pct}%`;
+          }
+          if (sData.active_stage) {
+            const stEl = document.getElementById("card-stage-val");
+            if (stEl) stEl.innerText = sData.active_stage;
+          }
+          if (sData.mandi_price) {
+            const mEl = document.getElementById("card-mandi-val");
+            if (mEl) mEl.innerText = `₹${sData.mandi_price}`;
+          }
+        }
+      } catch (e) {}
     } catch (err) {
       console.error(err);
     }
@@ -1665,6 +1713,29 @@
   async function loadMachineryReservations() {
     const tbody = document.getElementById("farmer-machinery-body");
     if (!tbody) return;
+    try {
+      const res = await fetch(`/api/machinery/available?farm_id=${currentFarmId}`);
+      if (res.ok) {
+        const list = await res.json();
+        if (list && list.length > 0) {
+          tbody.innerHTML = list.slice(0, 4).map((m, idx) => `
+            <tr>
+              <td><strong style="color:#0f172a; font-family:monospace;">RES-CHC-2026-0${idx + 81}</strong></td>
+              <td>
+                <strong>${m.name}</strong>
+                <div style="font-size:0.75rem; color:#64748b;">Custom Hiring Center (Punjab CHC Pool)</div>
+              </td>
+              <td>Day ${idx + 1} • 06:30 AM - 10:30 AM</td>
+              <td>${idx === 0 ? 'Harjinder Singh (CHC Operator)' : (idx === 1 ? 'Surjit Kumar (Certified)' : 'Balwinder Singh (Self-Drive)')}</td>
+              <td><strong style="color:#059669;">₹${m.rate_per_hour || m.rate || 650} / hr</strong> (Subsidized)</td>
+              <td><span class="card-badge ${m.status === 'available' ? 'badge-success' : 'badge-warning'}">${m.status === 'available' ? 'Confirmed & Dispatched' : 'Scheduled'}</span></td>
+            </tr>
+          `).join("");
+          return;
+        }
+      }
+    } catch(e) {}
+    // Fallback demo rows
     tbody.innerHTML = `
       <tr>
         <td><strong style="color:#0f172a; font-family:monospace;">RES-CHC-2026-081</strong></td>
@@ -1687,17 +1758,6 @@
         <td>Surjit Kumar (Certified)</td>
         <td><strong style="color:#059669;">₹1,100 / hr</strong></td>
         <td><span class="card-badge badge-warning">Slot Reserved</span></td>
-      </tr>
-      <tr>
-        <td><strong style="color:#0f172a; font-family:monospace;">RES-CHC-2026-102</strong></td>
-        <td>
-          <strong>Tractor-Mounted Boom Sprayer (500L)</strong>
-          <div style="font-size:0.75rem; color:#64748b;">PAU Agri Extension Wing</div>
-        </td>
-        <td>Day 4 • 06:30 AM - 09:30 AM</td>
-        <td>Balwinder Singh (Self-Drive)</td>
-        <td><strong style="color:#059669;">₹450 / hr</strong></td>
-        <td><span class="card-badge badge-neutral">Scheduled</span></td>
       </tr>
     `;
   }

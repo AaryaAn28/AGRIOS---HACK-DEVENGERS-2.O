@@ -43,6 +43,12 @@ def ensure_schema():
                     conn.exec_driver_sql("ALTER TABLE users ADD COLUMN registered_by_id VARCHAR(64)")
                 if "has_completed_onboarding" not in existing_cols:
                     conn.exec_driver_sql("ALTER TABLE users ADD COLUMN has_completed_onboarding BOOLEAN DEFAULT 1")
+
+                # Farms table migrations
+                farm_res = conn.exec_driver_sql("PRAGMA table_info(farms)").fetchall()
+                farm_cols = [r[1] for r in farm_res]
+                if "current_growth_day" not in farm_cols:
+                    conn.exec_driver_sql("ALTER TABLE farms ADD COLUMN current_growth_day INTEGER DEFAULT 1")
                 conn.commit()
             except Exception as e:
                 print(f"[Schema Migration Note] {e}")

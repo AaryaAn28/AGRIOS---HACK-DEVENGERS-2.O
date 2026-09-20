@@ -56,4 +56,15 @@ class ApiConstants {
       '/api/digital-twin/workers/$farmId';
   static String digitalTwinWeather(String farmId) =>
       '/api/digital-twin/weather-state/$farmId';
+
+  // Dynamic System & Agronomic Endpoints
+  static const String systemContext = '/api/system/context';
+  static const String cropKnowledgeBase = '/api/crops/knowledge-base';
+  static const String cropTaxonomies = '/api/crops/taxonomies';
+  static const String machineryAvailable = '/api/machinery/available';
+  static const String marketPrices = '/api/finance/market-prices';
+  static const String resourceCatalog = '/api/resources/catalog';
+  static const String workforceCadre = '/api/workforce/cadre';
+  static String farmerDashboardSummary(String farmId) =>
+      '/api/farmer/dashboard-summary/$farmId';
 }

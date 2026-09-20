@@ -790,6 +790,8 @@ export class AgriosDigitalTwin3D {
     this._buildWorkers(sceneData.workers);
     this._buildTractor();
     this._buildPastureZone();
+    this._buildInstancedGrassField();
+    this._buildSurveyAirplane();
     this._applyWeather(sceneData.weather);
 
     console.log(`[3D Twin] Built ${this.farmingClassification.toUpperCase()} World (Crop: ${cleanCropName || 'Wheat'}, Max Days: ${this.maxDays}) with`, this.scene.children.length, 'top-level groups');
@@ -2895,6 +2897,164 @@ export class AgriosDigitalTwin3D {
 
     this.groups.infrastructure.add(group);
     this.pastureGroup = group;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 3D INSTANCED LUSH GRASS FIELD
+  // ─────────────────────────────────────────────────────────────
+  _buildInstancedGrassField() {
+    const grassCount = 2200;
+    const geom = new THREE.BufferGeometry();
+    const w = 0.16, h = 0.58;
+    const vertices = new Float32Array([
+      // Quad 1 (across X)
+      -w, 0, 0,   w, 0, 0,   w, h, 0,
+      -w, 0, 0,   w, h, 0,  -w, h, 0,
+      // Quad 2 (across Z)
+      0, 0, -w,   0, 0, w,   0, h, w,
+      0, 0, -w,   0, h, w,   0, h, -w
+    ]);
+    geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geom.computeVertexNormals();
+
+    const grassMat = new THREE.MeshStandardMaterial({
+      color: 0x4ade80,
+      roughness: 0.65,
+      metalness: 0.08,
+      side: THREE.DoubleSide
+    });
+
+    const instancedGrass = new THREE.InstancedMesh(geom, grassMat, grassCount);
+    instancedGrass.castShadow = false;
+    instancedGrass.receiveShadow = true;
+
+    const dummy = new THREE.Object3D();
+    const bounds = this.farmBounds || { minX: -34, maxX: 34, minZ: -34, maxZ: 34 };
+    let validIdx = 0;
+
+    for (let i = 0; i < grassCount; i++) {
+      const rx = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      const rz = bounds.minZ + Math.random() * (bounds.maxZ - bounds.minZ);
+      // Avoid center roads and office
+      if (Math.abs(rx) < 2.5 || Math.abs(rz) < 2.5) continue;
+      if (rx < -8 && rx > -28 && rz < -16 && rz > -26) continue;
+
+      const ry = this.simplex ? this.simplex.noise2D(rx * 0.04, rz * 0.04) * 0.45 : 0;
+      dummy.position.set(rx, Math.max(0.02, ry), rz);
+      dummy.rotation.y = Math.random() * Math.PI;
+      const s = 0.65 + Math.random() * 0.6;
+      dummy.scale.set(s, s * (0.8 + Math.random() * 0.4), s);
+      dummy.updateMatrix();
+      instancedGrass.setMatrixAt(validIdx++, dummy.matrix);
+    }
+    instancedGrass.count = validIdx;
+    instancedGrass.instanceMatrix.needsUpdate = true;
+    this.groups.fields.add(instancedGrass);
+
+    this.animatedObjects.push({
+      type: 'grassSway',
+      mesh: instancedGrass,
+      count: validIdx,
+      speed: 2.4
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // AGRICULTURAL SURVEY AIRPLANE & PROP DUSTING ENGINE
+  // ─────────────────────────────────────────────────────────────
+  _buildSurveyAirplane() {
+    const plane = new THREE.Group();
+    plane.position.set(0, 26, 0);
+
+    // Streamlined Fuselage (yellow crop duster)
+    const fuseGeo = new THREE.ConeGeometry(0.7, 4.2, 8);
+    fuseGeo.rotateX(Math.PI / 2);
+    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.3 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+    const fuselage = new THREE.Mesh(fuseGeo, yellowMat);
+    fuselage.castShadow = true;
+    plane.add(fuselage);
+
+    // Wings (wide monoplane with ailerons)
+    const wingGeo = new THREE.BoxGeometry(7.2, 0.1, 1.2);
+    const wing = new THREE.Mesh(wingGeo, yellowMat);
+    wing.position.set(0, 0.35, 0.2);
+    wing.castShadow = true;
+    plane.add(wing);
+
+    // Cockpit canopy (tinted blue glass)
+    const canopyGeo = new THREE.SphereGeometry(0.45, 8, 8);
+    canopyGeo.scale(0.8, 0.9, 1.6);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7, roughness: 0.1 });
+    const canopy = new THREE.Mesh(canopyGeo, glassMat);
+    canopy.position.set(0, 0.45, 0.3);
+    plane.add(canopy);
+
+    // Tail Fin (Vertical Stabilizer)
+    const tailGeo = new THREE.BoxGeometry(0.08, 1.1, 0.9);
+    const tail = new THREE.Mesh(tailGeo, yellowMat);
+    tail.position.set(0, 0.65, -1.8);
+    plane.add(tail);
+
+    // Horizontal Stabilizer
+    const horizGeo = new THREE.BoxGeometry(2.4, 0.08, 0.6);
+    const horiz = new THREE.Mesh(horizGeo, whiteMat);
+    horiz.position.set(0, 0.25, -1.8);
+    plane.add(horiz);
+
+    // Front Propeller Spinner & Blades
+    const spinnerGeo = new THREE.ConeGeometry(0.25, 0.5, 8);
+    spinnerGeo.rotateX(-Math.PI / 2);
+    const spinnerMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 });
+    const spinner = new THREE.Mesh(spinnerGeo, spinnerMat);
+    spinner.position.set(0, 0, 2.2);
+
+    const propBladeGeo = new THREE.BoxGeometry(1.6, 0.12, 0.04);
+    const propMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9 });
+    const propBlade = new THREE.Mesh(propBladeGeo, propMat);
+    spinner.add(propBlade);
+    plane.add(spinner);
+
+    // Wingtip Nav Lights
+    const greenLightGeo = new THREE.SphereGeometry(0.08, 6, 6);
+    const greenMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+    const greenLight = new THREE.Mesh(greenLightGeo, greenMat);
+    greenLight.position.set(3.6, 0.35, 0.2);
+
+    const redLightGeo = new THREE.SphereGeometry(0.08, 6, 6);
+    const redMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const redLight = new THREE.Mesh(redLightGeo, redMat);
+    redLight.position.set(-3.6, 0.35, 0.2);
+    plane.add(greenLight, redLight);
+
+    this.groups.infrastructure.add(plane);
+
+    this.animatedObjects.push({
+      type: 'airplaneCircle',
+      group: plane,
+      spinner: spinner,
+      greenLight: greenLight,
+      redLight: redLight,
+      radius: 36,
+      altitude: 26,
+      speed: 0.42,
+      angle: 0
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // QUESTIONNAIRE LIVE 3D RE-CREATION PREVIEW
+  // ─────────────────────────────────────────────────────────────
+  async previewClassification(classification, cropName) {
+    if (!classification) return;
+    this.farmingClassification = classification.toLowerCase();
+    if (cropName) this.cropName = cropName;
+    if (this.sceneData) {
+      this.sceneData.crop_plan = this.sceneData.crop_plan || {};
+      this.sceneData.crop_plan.farming_classification = classification;
+      if (cropName) this.sceneData.crop_plan.crop_name = cropName;
+    }
+    await this.buildScene(this.sceneData || {});
   }
 
   // Autonomous Precision Agricultural Survey Drone with Scanning Laser Cone
@@ -6520,6 +6680,34 @@ export class AgriosDigitalTwin3D {
             }
             anim.mesh.instanceMatrix.needsUpdate = true;
           }
+          break;
+        }
+        case 'grassSway': {
+          if (anim.mesh && anim.mesh.instanceMatrix) {
+            const dummy = new THREE.Object3D();
+            const step = 8;
+            for (let i = 0; i < (anim.count || 100); i += step) {
+              anim.mesh.getMatrixAt(i, dummy.matrix);
+              dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+              dummy.rotation.z = Math.sin(elapsed * (anim.speed || 2.2) + i * 0.2) * 0.08;
+              dummy.rotation.x = Math.cos(elapsed * (anim.speed || 2.2) * 0.8 + i * 0.15) * 0.05;
+              dummy.updateMatrix();
+              anim.mesh.setMatrixAt(i, dummy.matrix);
+            }
+            anim.mesh.instanceMatrix.needsUpdate = true;
+          }
+          break;
+        }
+        case 'airplaneCircle': {
+          anim.angle = (anim.angle || 0) + delta * (anim.speed || 0.42);
+          const x = Math.cos(anim.angle) * (anim.radius || 36);
+          const z = Math.sin(anim.angle) * (anim.radius || 36);
+          anim.group.position.set(x, (anim.altitude || 26) + Math.sin(anim.angle * 2) * 1.5, z);
+          anim.group.rotation.y = -anim.angle + Math.PI / 2;
+          anim.group.rotation.z = -0.22;
+          if (anim.spinner) anim.spinner.rotation.z += delta * 35;
+          if (anim.greenLight) anim.greenLight.visible = (Math.floor(elapsed * 4) % 2 === 0);
+          if (anim.redLight) anim.redLight.visible = (Math.floor(elapsed * 4) % 2 === 0);
           break;
         }
       }

@@ -359,10 +359,14 @@ def dispatch_day_tasks(req: DispatchDayTasksRequest, db: Session = Depends(get_d
             producer="Pathogen_AI_Lab"
         ))
 
-    # Save active dispatched day for worker and farmer portals
+    # Save active dispatched day for worker and farmer portals (in-memory + DB persistence)
     _ACTIVE_DISPATCHED_DAY[actual_farm_id] = req.day_number
     _ACTIVE_DISPATCHED_DAY["default"] = req.day_number
     _ACTIVE_DISPATCHED_DAY["global"] = req.day_number
+    # Persist to DB so it survives server restarts
+    if farm:
+        farm.current_growth_day = req.day_number
+        db.commit()
 
     return {
         "status": "SUCCESS",
@@ -377,9 +381,20 @@ def dispatch_day_tasks(req: DispatchDayTasksRequest, db: Session = Depends(get_d
     }
 
 @router.get("/farm/{farm_id}/active-dispatched-day")
-def get_active_dispatched_day(farm_id: str):
-    """Returns the most recent growth day assigned/dispatched by the Agronomist."""
-    day = _ACTIVE_DISPATCHED_DAY.get(farm_id) or _ACTIVE_DISPATCHED_DAY.get("default") or _ACTIVE_DISPATCHED_DAY.get("global") or 1
+def get_active_dispatched_day(farm_id: str, db: Session = Depends(get_db)):
+    """Returns the most recent growth day assigned/dispatched by the Agronomist.
+    Reads from in-memory cache first, falls back to DB (survives restarts)."""
+    day = _ACTIVE_DISPATCHED_DAY.get(farm_id)
+    if day is None:
+        # Fallback to DB persisted value
+        farm = db.query(Farm).filter(Farm.id == farm_id).first()
+        if not farm:
+            farm = db.query(Farm).first()
+        if farm and farm.current_growth_day:
+            day = farm.current_growth_day
+            _ACTIVE_DISPATCHED_DAY[farm_id] = day  # Re-hydrate cache
+    if day is None:
+        day = _ACTIVE_DISPATCHED_DAY.get("default") or _ACTIVE_DISPATCHED_DAY.get("global") or 1
     return {
         "farm_id": farm_id,
         "active_dispatched_day": day

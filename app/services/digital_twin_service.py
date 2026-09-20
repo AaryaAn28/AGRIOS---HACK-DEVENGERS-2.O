@@ -105,7 +105,7 @@ class DigitalTwinService:
                 role = getattr(user, 'role', 'worker')
                 avatar_color = 'green' if role == 'farmer' else 'blue' if role == 'agronomist' else 'orange'
                 
-                active_task = db.query(Task).filter(Task.assigned_to_id == user.id, Task.status.in_(['pending', 'in_progress'])).first()
+                active_task = db.query(Task).filter(Task.assigned_to_user_id == user.id, Task.status.in_(['pending', 'in_progress'])).first()
                 task_dict = {"title": active_task.title, "type": active_task.task_type, "status": active_task.status} if active_task else None
                 
                 # Positions in farm coordinates (-30 to 30)

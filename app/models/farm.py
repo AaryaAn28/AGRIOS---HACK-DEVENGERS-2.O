@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Text, Integer
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -21,6 +21,7 @@ class Farm(Base):
     soil_type = Column(String(60), default="Alluvial Loam")
     irrigation_source = Column(String(60), default="Canal & Tube Well")
     health_score = Column(Float, default=88.5)  # 0 to 100
+    current_growth_day = Column(Integer, default=1)  # Persisted active dispatched day
     status = Column(String(30), default="optimal")  # optimal, warning, critical
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -42,6 +43,7 @@ class Farm(Base):
             "soil_type": self.soil_type,
             "irrigation_source": self.irrigation_source,
             "health_score": round(self.health_score, 1) if self.health_score is not None else 85.0,
+            "current_growth_day": self.current_growth_day or 1,
             "status": self.status,
             "fields_count": len(self.fields) if self.fields else 0,
             "created_at": self.created_at.isoformat() if self.created_at else None

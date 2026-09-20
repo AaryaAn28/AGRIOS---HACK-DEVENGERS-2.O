@@ -657,15 +657,22 @@ def dispatch_prescription_to_cadre(req: DispatchPrescriptionRequest, db: Session
     farm = db.query(Farm).filter(Farm.id == req.farm_id).first() if req.farm_id != "default" else db.query(Farm).first()
     farm_id = farm.id if farm else req.farm_id
 
+    # Get active growth day so prescription is visible on worker/farmer portals
+    active_day = farm.current_growth_day if farm and farm.current_growth_day else 1
+
+    # Find a worker to assign to
+    worker_user = db.query(User).filter(User.role == "worker").first()
+
     # Create task for field workers
     task = FarmTask(
         farm_id=farm_id,
         title=f"Execute Spray: {req.pathogen}",
-        description=f"Prescription {req.rx_id}: Apply {req.prescription} ({req.dosage}). Enforce strict 48h withholding interval and personal protective gear (PPE).",
+        description=f"Day {active_day} [Emergency Prescription]: Prescription {req.rx_id}: Apply {req.prescription} ({req.dosage}). Enforce strict 48h withholding interval and personal protective gear (PPE).",
         task_type="spray",
         priority=req.urgency or "urgent",
         status="pending",
-        assigned_role="worker"
+        assigned_role="worker",
+        assigned_to_user_id=worker_user.id if worker_user else None
     )
     db.add(task)
     db.commit()
@@ -1323,21 +1330,74 @@ def get_harvest_forecast(farm_id: str, db: Session = Depends(get_db)):
 @router.get("/farmer/dashboard-summary/{farm_id}")
 def get_farmer_dashboard_summary(farm_id: str, db: Session = Depends(get_db)):
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
-    tasks = db.query(FarmTask).filter(FarmTask.farm_id == farm_id).all() if farm else []
+    if not farm:
+        farm = db.query(Farm).first()
+    tasks = db.query(FarmTask).filter(FarmTask.farm_id == farm.id).all() if farm else []
     completed = len([t for t in tasks if t.status in ("completed", "COMPLETED")])
-    total_tasks = len(tasks) if tasks else 3
+    pending = len([t for t in tasks if t.status == "pending"])
+    total_tasks = max(len(tasks), 1)
+
+    # Compute vitality from farm health_score (DB column)
+    vitality = round(farm.health_score, 1) if farm and farm.health_score else 85.0
+
+    # Compute active stage from growth day
+    growth_day = farm.current_growth_day if farm else 1
+    if growth_day <= 15:
+        active_stage = "Stage 1: Sowing & Emergence"
+    elif growth_day <= 40:
+        active_stage = "Stage 2: Tillering & Root Development"
+    elif growth_day <= 80:
+        active_stage = "Stage 3: Vegetative Canopy & Booting"
+    elif growth_day <= 105:
+        active_stage = "Stage 4: Flowering & Grain Filling"
+    else:
+        active_stage = "Stage 5: Maturation & Harvesting"
+
+    # Get latest mandi price from DB or fallback
+    latest_price = db.query(MarketPrice).order_by(MarketPrice.updated_at.desc()).first()
+    mandi_price = latest_price.modal_price if latest_price else 2410
+
+    # Get active crop from fields
+    crop_name = "Wheat"
+    if farm:
+        fields = farm.fields
+        if fields:
+            for f in fields:
+                if f.crops:
+                    crop_name = f.crops[0].crop_name if f.crops[0].crop_name else "Wheat"
+                    break
+
+    # Get assigned agronomist name
+    agronomist = None
+    if farm and farm.assigned_agronomist_id:
+        agronomist = db.query(User).filter(User.id == farm.assigned_agronomist_id).first()
+    if not agronomist:
+        agronomist = db.query(User).filter(User.role == "agronomist").first()
 
     return {
-        "farm_id": farm_id,
-        "farm_name": farm.name if farm else "Green Valley Model Farm",
-        "vitality_pct": 92.4,
-        "active_stage": "Stage 1: Sowing & Emergence",
-        "tasks_completed": completed if tasks else 2,
+        "farm_id": farm.id if farm else farm_id,
+        "farm_name": farm.name if farm else "Model Farm",
+        "total_area_acres": farm.total_area_acres if farm else 10.0,
+        "latitude": farm.latitude if farm else None,
+        "longitude": farm.longitude if farm else None,
+        "soil_type": farm.soil_type if farm else "Alluvial Loam",
+        "district": farm.district if farm else None,
+        "state": farm.state if farm else None,
+        "vitality_pct": vitality,
+        "active_stage": active_stage,
+        "current_growth_day": growth_day,
+        "tasks_completed": completed,
+        "tasks_pending": pending,
         "total_tasks": total_tasks,
-        "mandi_price": 2410,
-        "crop": "Wheat (PBW-550)",
+        "mandi_price": mandi_price,
+        "crop": crop_name,
         "weather_status": "Optimal",
-        "irrigation_status": "Standby"
+        "irrigation_status": "Standby",
+        "assigned_agronomist": {
+            "name": agronomist.full_name if agronomist else "Agronomist",
+            "id": agronomist.id if agronomist else None,
+            "persona_code": agronomist.persona_code if agronomist and hasattr(agronomist, 'persona_code') else "AGRONOMIST"
+        } if agronomist else None
     }
 
 # ----------------- WORKER / KRISHI SAKHI ENDPOINTS -----------------
@@ -1712,3 +1772,177 @@ def global_search(q: str = Query(..., min_length=1), db: Session = Depends(get_d
 
     return {"query": q, "total_matches": len(results), "results": results}
 
+
+# =====================================================================
+# NEW DYNAMIC DATA ENDPOINTS — Replace hardcoded frontend data
+# =====================================================================
+
+@router.get("/system/context")
+def get_system_context(db: Session = Depends(get_db)):
+    """Returns dynamic system-wide context: branding, organization, GPS defaults, jurisdiction."""
+    farm = db.query(Farm).first()
+    agronomist = db.query(User).filter(User.role == "agronomist").first()
+    return {
+        "organization": "Department of Agriculture & Farmers Welfare",
+        "state": farm.state if farm else "Punjab",
+        "district": farm.district if farm else "Ludhiana",
+        "default_gps": {
+            "latitude": farm.latitude if farm and farm.latitude else 30.9010,
+            "longitude": farm.longitude if farm and farm.longitude else 75.8573
+        },
+        "branding": {
+            "header": f"Department of Agriculture, Govt of {farm.state if farm else 'Punjab'} • ICAR Precision Lab",
+            "seal": f"State of {farm.state if farm else 'Punjab'} Seal"
+        },
+        "lead_agronomist": {
+            "name": agronomist.full_name if agronomist else "Lead Agronomist",
+            "persona_code": agronomist.persona_code if agronomist and hasattr(agronomist, 'persona_code') else "AGRONOMIST-001"
+        } if agronomist else None
+    }
+
+@router.get("/crops/knowledge-base")
+def get_crop_knowledge_base():
+    """Returns agronomic reference data for all supported crops (durations, expected yields, seasons)."""
+    return {
+        "crops": [
+            {"name": "Wheat", "scientific": "Triticum aestivum", "duration_days": 120, "expected_yield_qtl": 24.5, "season": "Rabi"},
+            {"name": "Rice", "scientific": "Oryza sativa", "duration_days": 135, "expected_yield_qtl": 28.0, "season": "Kharif"},
+            {"name": "Tomato", "scientific": "Solanum lycopersicum", "duration_days": 105, "expected_yield_qtl": 180.0, "season": "Rabi/Kharif"},
+            {"name": "Potato", "scientific": "Solanum tuberosum", "duration_days": 85, "expected_yield_qtl": 120.0, "season": "Rabi"},
+            {"name": "Maize", "scientific": "Zea mays", "duration_days": 100, "expected_yield_qtl": 32.0, "season": "Kharif"},
+            {"name": "Cotton", "scientific": "Gossypium hirsutum", "duration_days": 165, "expected_yield_qtl": 12.0, "season": "Kharif"},
+            {"name": "Sugarcane", "scientific": "Saccharum officinarum", "duration_days": 340, "expected_yield_qtl": 380.0, "season": "Perennial"},
+            {"name": "Mustard", "scientific": "Brassica juncea", "duration_days": 110, "expected_yield_qtl": 8.5, "season": "Rabi"},
+            {"name": "Chickpea", "scientific": "Cicer arietinum", "duration_days": 100, "expected_yield_qtl": 10.0, "season": "Rabi"},
+            {"name": "Soybean", "scientific": "Glycine max", "duration_days": 95, "expected_yield_qtl": 12.0, "season": "Kharif"},
+            {"name": "Groundnut", "scientific": "Arachis hypogaea", "duration_days": 105, "expected_yield_qtl": 14.0, "season": "Kharif"},
+            {"name": "Banana", "scientific": "Musa acuminata", "duration_days": 330, "expected_yield_qtl": 320.0, "season": "Perennial"},
+            {"name": "Mango", "scientific": "Mangifera indica", "duration_days": 180, "expected_yield_qtl": 65.0, "season": "Summer"},
+            {"name": "Onion", "scientific": "Allium cepa", "duration_days": 120, "expected_yield_qtl": 150.0, "season": "Rabi"},
+            {"name": "Chilli", "scientific": "Capsicum annuum", "duration_days": 135, "expected_yield_qtl": 55.0, "season": "Kharif/Rabi"},
+            {"name": "Turmeric", "scientific": "Curcuma longa", "duration_days": 240, "expected_yield_qtl": 100.0, "season": "Kharif"},
+            {"name": "Pisciculture", "scientific": "Composite Carp Culture", "duration_days": 195, "expected_yield_qtl": 38.0, "season": "Perennial"}
+        ]
+    }
+
+@router.get("/crops/taxonomies")
+def get_crop_taxonomies():
+    """Returns the 5 production system taxonomy configurations for the 11-step questionnaire."""
+    return {
+        "taxonomies": [
+            {"id": "terrestrial", "name": "Terrestrial Field Crops", "subtypes": [
+                "Open Field Cereal Grains", "Grain Legumes & Pulses", "Oilseed Crops", "Fiber & Cash Crops"
+            ]},
+            {"id": "pisciculture", "name": "Pisciculture & Aquaculture", "subtypes": [
+                "Composite Carp Polyculture", "Intensive Biofloc (Zero-Discharge)", "Monoculture Tilapia/Pangasius",
+                "Giant Freshwater Prawn (Scampi)", "Carp Nursery & Spawn Production"
+            ]},
+            {"id": "polyhouse", "name": "Polyhouse & Protected Cultivation", "subtypes": [
+                "Dutch Polyhouse (Climate-Controlled)", "Hydroponic Dutch Buckets", "NFT Closed-Loop Lettuce",
+                "Naturally Ventilated Polyhouse (NVP)", "Plug Nursery & Portray Propagation"
+            ]},
+            {"id": "horticulture", "name": "Commercial Horticulture & Orchards", "subtypes": [
+                "High-Density Orchards", "Vineyards & Trellis Systems", "Floriculture & Cut Flowers",
+                "Truck Vegetables & Market Gardens", "Spice Plantations"
+            ]},
+            {"id": "hill", "name": "Terrace & Hill Agriculture", "subtypes": [
+                "Alpine Terraces & Rain-Fed", "Tea & Coffee Hedgerows", "Hill Pomology (Apple/Pear)",
+                "Highland Spices (Large Cardamom)", "Kuhl Watershed Management"
+            ]}
+        ]
+    }
+
+@router.get("/machinery/available")
+def get_available_machinery(farm_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """Returns available machinery from equipment catalog for booking."""
+    # Check DB for equipment first
+    equipment = db.query(FarmEquipment).all() if hasattr(FarmEquipment, '__tablename__') else []
+    if equipment:
+        return [{"id": e.id, "name": e.name, "rate_per_hour": getattr(e, 'hourly_rate', 850), "status": e.status} for e in equipment]
+    # Fallback reference catalog
+    return [
+        {"id": "mach-001", "name": "John Deere 5310 4WD (55 HP Tractor)", "rate_per_hour": 850, "status": "available"},
+        {"id": "mach-002", "name": "Shaktiman Super Rotavator (7 ft)", "rate_per_hour": 450, "status": "available"},
+        {"id": "mach-003", "name": "Solar Agricultural Drone Sprayer (16L)", "rate_per_acre": 350, "status": "available"},
+        {"id": "mach-004", "name": "Preet Laser Land Leveler", "rate_per_hour": 650, "status": "available"},
+        {"id": "mach-005", "name": "Happy Seeder 9-Tyne Zero-Till Drill", "rate_per_hour": 1100, "status": "available"},
+        {"id": "mach-006", "name": "Boom Sprayer (500L Tractor-Mounted)", "rate_per_hour": 450, "status": "available"}
+    ]
+
+@router.get("/machinery/reservations")
+def get_machinery_reservations(farm_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """Returns active machinery reservations for a farm. Currently returns from scheduled tasks."""
+    if farm_id:
+        tasks = db.query(FarmTask).filter(
+            FarmTask.farm_id == farm_id,
+            FarmTask.task_type.in_(["machinery", "equipment", "sowing", "spraying"])
+        ).order_by(FarmTask.created_at.desc()).limit(10).all()
+        if tasks:
+            return [{"id": t.id, "title": t.title, "status": t.status, "priority": t.priority,
+                      "assigned_to": t.assigned_role, "created_at": t.created_at.isoformat() if t.created_at else None} for t in tasks]
+    return []
+
+@router.get("/finance/market-prices")
+def get_market_prices(db: Session = Depends(get_db)):
+    """Returns latest mandi market prices from DB, with reference MSP rates."""
+    prices = db.query(MarketPrice).order_by(MarketPrice.updated_at.desc()).limit(10).all()
+    if prices:
+        return [p.to_dict() for p in prices]
+    # Fallback reference prices (these are public MSP data from Govt of India)
+    return [
+        {"commodity": "Wheat (Sharbati)", "mandi": "Khanna Grain Market", "modal_price": 2410, "msp": 2275, "spread": 135, "unit": "per Qtl"},
+        {"commodity": "Basmati 1121", "mandi": "Ludhiana Mandi", "modal_price": 3850, "msp": 2320, "spread": 1530, "unit": "per Qtl"},
+        {"commodity": "Paddy (PR-126)", "mandi": "Amritsar APMC", "modal_price": 2280, "msp": 2203, "spread": 77, "unit": "per Qtl"},
+        {"commodity": "Mustard", "mandi": "Bathinda Mandi", "modal_price": 5650, "msp": 5650, "spread": 0, "unit": "per Qtl"}
+    ]
+
+@router.get("/resources/catalog")
+def get_resource_catalog(db: Session = Depends(get_db)):
+    """Returns available agricultural inputs for reordering."""
+    resources = db.query(FarmResource).all()
+    if resources:
+        return [r.to_dict() for r in resources]
+    return [
+        {"id": "res-001", "name": "Basal DAP Fertilizer", "unit": "50 kg bag", "category": "fertilizer"},
+        {"id": "res-002", "name": "Neem Coated Urea 46% N", "unit": "45 kg bag", "category": "fertilizer"},
+        {"id": "res-003", "name": "Certified PBW-550 Wheat Seed", "unit": "40 kg bag", "category": "seed"},
+        {"id": "res-004", "name": "Trichoderma viride Bio-Fungicide", "unit": "1 kg pouch", "category": "bio-input"},
+        {"id": "res-005", "name": "Zinc Sulfate Heptahydrate 21%", "unit": "10 kg bag", "category": "micronutrient"},
+        {"id": "res-006", "name": "Propiconazole 25% EC (Tilt)", "unit": "500 ml bottle", "category": "fungicide"}
+    ]
+
+@router.get("/farms/{farm_id}/assigned-agronomist")
+def get_assigned_agronomist(farm_id: str, db: Session = Depends(get_db)):
+    """Returns the agronomist assigned to a farm."""
+    farm = db.query(Farm).filter(Farm.id == farm_id).first()
+    if not farm:
+        farm = db.query(Farm).first()
+    agronomist = None
+    if farm and farm.assigned_agronomist_id:
+        agronomist = db.query(User).filter(User.id == farm.assigned_agronomist_id).first()
+    if not agronomist:
+        agronomist = db.query(User).filter(User.role == "agronomist").first()
+    if agronomist:
+        return {
+            "id": agronomist.id,
+            "name": agronomist.full_name,
+            "email": agronomist.email,
+            "persona_code": agronomist.persona_code if hasattr(agronomist, 'persona_code') else "AGRONOMIST-001",
+            "role": "agronomist"
+        }
+    return {"id": None, "name": "Lead Agronomist", "persona_code": "AGRONOMIST", "role": "agronomist"}
+
+@router.get("/workforce/cadre")
+def get_workforce_cadre(farm_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """Returns registered workforce cadre (workers + farmers) for a farm."""
+    users = db.query(User).filter(User.role.in_(["worker", "farmer"])).all()
+    cadre = []
+    for u in users:
+        cadre.append({
+            "id": u.id,
+            "name": u.full_name,
+            "role": u.role,
+            "persona_code": u.persona_code if hasattr(u, 'persona_code') else f"{u.role.upper()}-001",
+            "daily_hours_cap": 7.0 if u.role == "worker" else 8.0
+        })
+    return cadre

@@ -16,11 +16,29 @@ router = APIRouter(prefix="/api/tasks", tags=["Tasks & Workforce"])
 def list_tasks(
     farm_id: Optional[str] = None,
     assigned_role: Optional[str] = None,
+    assigned_to_user_id: Optional[str] = None,
     status: Optional[str] = None,
+    growth_day: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    tasks = TaskService.get_tasks(db, farm_id=farm_id, assigned_role=assigned_role, status=status)
+    tasks = TaskService.get_tasks(
+        db, farm_id=farm_id, assigned_role=assigned_role,
+        assigned_user_id=assigned_to_user_id, status=status
+    )
+    # Server-side growth day filtering by checking title/description for "Day X"
+    if growth_day is not None:
+        import re
+        day_pattern = re.compile(rf"\bDay\s*{growth_day}\b", re.IGNORECASE)
+        tasks = [t for t in tasks if day_pattern.search(t.title or "") or day_pattern.search(t.description or "")
+                 or (t.task_type == "spray")]  # Always include spray tasks regardless of day
     return [t.to_dict() for t in tasks]
+
+@router.get("/{task_id}")
+def get_task(task_id: str, db: Session = Depends(get_db)):
+    task = db.query(FarmTask).filter(FarmTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task.to_dict()
 
 @router.post("")
 def create_task(request: TaskCreateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

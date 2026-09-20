@@ -27,7 +27,8 @@ class ApiService {
   Future<List<TaskModel>> getTasks({String? farmId, int? day}) async {
     try {
       final fId = farmId ?? ApiConstants.activeFarmId;
-      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.tasks}?farm_id=$fId');
+      final dayParam = day != null ? '&growth_day=$day' : '';
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.tasks}?farm_id=$fId$dayParam');
       final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
@@ -716,5 +717,114 @@ class ApiService {
       'certified_by': 'Dr. Priya Sharma (Lead Agronomist • PB-AGRO-001)',
       'timestamp': DateTime.now().toIso8601String()
     };
+  }
+
+  // Farmer Dashboard Summary
+  Future<Map<String, dynamic>> getFarmerDashboardSummary([String? farmId]) async {
+    try {
+      final fId = farmId ?? ApiConstants.activeFarmId;
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.farmerDashboardSummary(fId)}');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {
+      'farm_id': farmId ?? ApiConstants.activeFarmId,
+      'farm_name': 'Greenfield Model Farm',
+      'vitality_pct': 92.4,
+      'active_stage': 'Stage 1: Sowing & Emergence',
+      'tasks_completed': 2,
+      'total_tasks': 3,
+      'mandi_price': 2410,
+      'crop': 'Wheat (PBW-550)'
+    };
+  }
+
+  // Mandi Market Prices
+  Future<List<dynamic>> getMarketPrices() async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.marketPrices}');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+    } catch (_) {}
+    return [
+      {'commodity': 'Wheat (Sharbati)', 'mandi': 'Khanna Grain Market', 'modal_price': 2410, 'msp': 2275},
+      {'commodity': 'Basmati 1121', 'mandi': 'Ludhiana Mandi', 'modal_price': 3850, 'msp': 2320},
+    ];
+  }
+
+  // Available Machinery
+  Future<List<dynamic>> getMachineryAvailable([String? farmId]) async {
+    try {
+      final fId = farmId ?? ApiConstants.activeFarmId;
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.machineryAvailable}?farm_id=$fId');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+    } catch (_) {}
+    return [
+      {'id': 'mach-001', 'name': 'John Deere 5310 4WD (55 HP Tractor)', 'rate_per_hour': 850, 'status': 'available'},
+      {'id': 'mach-002', 'name': 'Shaktiman Super Rotavator (7 ft)', 'rate_per_hour': 450, 'status': 'available'},
+    ];
+  }
+
+  // System Context & Branding
+  Future<Map<String, dynamic>> getSystemContext() async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.systemContext}');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {
+      'organization': 'Department of Agriculture & Farmers Welfare',
+      'state': 'Punjab',
+      'district': 'Ludhiana',
+      'default_gps': {'latitude': 30.9010, 'longitude': 75.8573}
+    };
+  }
+
+  // Crop Knowledge Base
+  Future<Map<String, dynamic>> getCropKnowledgeBase() async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.cropKnowledgeBase}');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {'crops': []};
+  }
+
+  // Crop Taxonomies
+  Future<Map<String, dynamic>> getCropTaxonomies() async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.cropTaxonomies}');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {'taxonomies': []};
+  }
+
+  // Workforce Cadre
+  Future<List<dynamic>> getWorkforceCadre([String? farmId]) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.workforceCadre}');
+      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+    } catch (_) {}
+    return [
+      {'id': 'w1', 'name': 'Sunita Devi', 'role': 'worker', 'persona_code': 'WORKER-001'},
+      {'id': 'w2', 'name': 'Balwinder Singh', 'role': 'farmer', 'persona_code': 'FARMER-001'},
+    ];
   }
 }

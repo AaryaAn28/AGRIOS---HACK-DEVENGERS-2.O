@@ -1182,7 +1182,7 @@
         const fullText = `${titleStr} ${descStr}`.toLowerCase();
 
         const isDayTask = dayRegex.test(titleStr) || dayRegex.test(descStr);
-        const isEmergencySpray = (t.task_type === "spray" || titleStr.includes("Emergency Spray") || titleStr.includes("RX-")) && dayRegex.test(fullText);
+        const isEmergencySpray = (t.task_type === "spray" || titleStr.includes("Emergency Spray") || titleStr.includes("RX-"));
 
         if (!isDayTask && !isEmergencySpray) return false;
 
