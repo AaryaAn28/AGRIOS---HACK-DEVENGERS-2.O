@@ -1,12 +1,15 @@
 import re
 import sys
+import os
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 files = {
-    'Government Command Center': 'frontend/government.html',
-    'Agronomist Intelligence Portal': 'frontend/agronomist.html',
-    'Farmer Operational Portal': 'frontend/farmer.html',
-    'Field Worker / Krishi Sakhi Portal': 'frontend/worker.html',
-    'Judge Shock Simulator & Cross-System': 'frontend/simulator.html'
+    'Government Command Center': os.path.join(ROOT_DIR, 'frontend', 'government.html'),
+    'Agronomist Intelligence Portal': os.path.join(ROOT_DIR, 'frontend', 'agronomist.html'),
+    'Farmer Operational Portal': os.path.join(ROOT_DIR, 'frontend', 'farmer.html'),
+    'Field Worker / Krishi Sakhi Portal': os.path.join(ROOT_DIR, 'frontend', 'worker.html'),
+    'Judge Shock Simulator & Cross-System': os.path.join(ROOT_DIR, 'frontend', 'simulator.html')
 }
 
 targets = {

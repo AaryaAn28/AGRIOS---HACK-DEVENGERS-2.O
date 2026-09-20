@@ -1,95 +1,164 @@
-# AGRIOS — The Living Agricultural Operating System
+# 🌱 AGRIOS — The Living Agricultural Operating System
 > **Hack Devengers 2.0 Hackathon Submission**  
-> Unified Agricultural Operating System with 4 Operational Portals, Canonical "God Database", Real-Time WebSocket Telemetry, and 3D Digital Twin Integration Surface.
+> Unified Living Agricultural Operating System connecting Government Command, Agronomist Diagnostic Labs, Farmers, and Krishi Sakhis across a single canonical state with Real-Time WebSockets, 3D WebGL Digital Twin, AI Vision Diagnostics, and a Standalone Mobile Flutter App.
 
 ---
 
-## 🌟 Architecture & Core Principles
+## 🏛️ System Architecture & Portals
 
-AGRIOS replaces traditional fragmented agriculture dashboards with **one living agricultural operating system** where four portals operate over a single canonical state:
+AGRIOS replaces fragmented agricultural tools with **one synchronized operating system** operating over an event-driven canonical state:
 
-1. **🌾 Farmer Portal (`/farmer.html`)**:
-   - Living farm overview, biological vitality score, daily execution checklists
-   - 3D Digital Twin Adapter Surface with NDVI, soil moisture, and thermal stress layers
-   - Machinery & equipment bookings (Tractors, Solar Pumps, Sprayers, Drones)
-   - APMC Mandi market rates, farm profit/loss ledger, and direct crop sales
-   - PM-KISAN and PMFBY subsidy application tracking
+1. **🌾 Fields Today Landing Page (`/`)**:
+   - Modern, high-converting showcase page with live metrics, 7 core agricultural pillars, and instant 1-click persona entry cards.
+2. **🔐 Unified Login Terminal (`/login`)**:
+   - Central authentication terminal with glassmorphic visual backdrop, Google sign-in integration, and 1-click demo persona quick-login.
+3. **👨‍🌾 Farmer Portal (`/farmer.html`)**:
+   - Living farm overview, biological vitality score, active 120-day crop plan stages, custom hiring center machinery bookings (Tractors, Drones, Sprayers), live APMC mandi ticker, and silo aeration storage management.
+4. **👩‍🌾 Krishi Sakhi / Field Worker Portal (`/worker.html`)**:
+   - Daily work plan with GPS geotagging, on-site neural vision leaf scanner, ground truth logs, tool kit diagnostics, agronomist hotline with botanical NLP triage, training modules, and emergency SOS beacon.
+5. **🔬 Lead Agronomist Portal (`/agronomist.html`)**:
+   - Interactive 3D WebGL Digital Twin Farm Model with touch orbit, day slider (Days 1–120), CAD layout tools, multi-day pest risk beacons, prescription formulator, and regional circular broadcasts.
+6. **🏛️ Government Command Center (`/government.html`)**:
+   - Statewide satellite telemetry (NDVI, NDWI, SAVI), GIS basin inspector, biosecurity radar with pest vector spread simulations, 3km/5km cordon sanitaire buffer zones, disaster directives, and PFMS DBT subsidy approvals.
+7. **🧪 Mobile-First Judge Simulation Sandbox (`/simulator.html`)**:
+   - Live shock injection environment for hackathon judges: Unseasonal Hailstorm, Whitefly Pest Swarm, Canal Breach / Flash Flood, and Extreme Heatwave / Drought with real-time cross-portal WebSocket event propagation.
 
-2. **👩‍🌾 Field Worker / Krishi Sakhi Portal (`/worker.html`)**:
-   - Today's Field Work Plan with GPS-verified task execution
-   - AI Crop Photo Scanner: On-site leaf disease detection (Yellow Rust, Blight)
-   - Assigned farm parcel monitoring and ground truth logging
-   - Offline sync telemetry indicator
+---
 
-3. **🔬 Agronomist Portal (`/agronomist.html`)**:
-   - Regional crop health and biosecurity surveillance
-   - Diagnostic Lab: Review Krishi Sakhi crop scans and validate pathogen infections
-   - AI Prescription Builder: Dispatches chemical & mechanical remediation tasks
-   - Scientific advisory broadcast channel to farmers
+## 📂 Project Directory Structure
 
-4. **🏛️ Government Command Center (`/government.html`)**:
-   - Statewide food security quotas and grain buffer reserves
-   - Direct Benefit Transfer (DBT) subsidy pipeline with 1-click approvals
-   - District-level fertilizer strategic inventory monitoring
-   - Macro agro-climatic disaster and canal release advisories
-
-5. **🎮 Mobile-First Judge Demo Controller (`/simulator.html`)**:
-   - Purpose-built for hackathon judges to inject live shocks:
-     - **Pest Outbreak**: Spawns critical yellow rust infestation, drops health, auto-assigns urgent spraying task
-     - **Severe Drought / Heatwave**: Spikes temperature to 42°C, crashes moisture to 14.5%, triggers emergency irrigation
-     - **Machinery Failure**: Marks tractor offline, alerts agronomist for cooperative equipment pooling
-     - **Krishi Sakhi Execution**: Completes today's field checklist, logs GPS ground truth, rewards farm vitality
-     - **Bumper Harvest**: Adds 6,200 kg certified wheat to storage, credits ₹1.51 Lakhs revenue
-     - **Pristine Reset**: Restores system to optimal baseline
-   - Real-time streaming log of domain events over WebSockets
+```text
+AGRIOS - HACK DEVENGERS 2.O/
+├── app/                        # FastAPI Backend Application
+│   ├── core/                   # EventBus, domain events & WebSocket manager
+│   ├── models/                 # SQLAlchemy ORM models (User, Farm, Crop, Task, Risk, etc.)
+│   ├── routes/                 # 20 modular API routers (Auth, Farms, Crops, Digital Twin, etc.)
+│   ├── schemas/                # Pydantic validation schemas
+│   ├── services/               # ML Agronomic Service, Biosecurity Service, Digital Twin Engine
+│   ├── utils/                  # Auth, JWT, Security, and helpers
+│   ├── config.py               # Environment configuration & settings
+│   ├── database.py             # SQLAlchemy session manager & PostgreSQL/SQLite adapter
+│   ├── main.py                 # FastAPI app entry point & lifespan manager
+│   └── seed_agrios.py          # Canonical database seeder
+│
+├── frontend/                   # Web Platform (Pure HTML5, CSS3 & Modern Vanilla JS)
+│   ├── assets/                 # High-resolution artwork, crop geometries, UI icons
+│   ├── css/                    # Vizitor theme, 3D Digital Twin styles
+│   ├── js/                     # AgriosAPI client, Three.js 3D Twin, i18n, realtime WebSockets
+│   ├── about.html              # Landing page ("Fields Today. A Brighter Tomorrow.")
+│   ├── index.html              # Core authentication terminal with demo quick-login
+│   ├── farmer.html             # Farmer operations portal
+│   ├── worker.html             # Krishi Sakhi field companion portal
+│   ├── agronomist.html         # Agronomist diagnostic lab & 3D twin portal
+│   ├── government.html         # State agricultural command center
+│   └── simulator.html          # Judge's live shock simulation sandbox
+│
+├── agrios_app/                 # Standalone Flutter Mobile Application
+│   ├── lib/                    # Dart source (3D twin, Leaf Scanner, Walk-and-Calibrate, 19+ screens)
+│   ├── android/                # Native Android build configuration (Gradle 8.9, Kotlin 2.1)
+│   └── pubspec.yaml            # Flutter project dependencies
+│
+├── apk_output/                 # Pre-built Mobile Artifacts
+│   └── AGRIOS-debug.apk        # Standalone Android Debug APK (168.9 MB)
+│
+├── tests/                      # Automated Integration & Unit Tests
+│   ├── conftest.py             # Test fixtures & test client setup
+│   ├── test_schemes_reject.py  # Subsidy approval & rejection lifecycle tests
+│   └── ...                     # 50 comprehensive tests covering all ecosystem endpoints
+│
+├── scripts/                    # Verification & Developer Tools
+│   ├── test_e2e_journey.py     # End-to-end multi-persona walkthrough test
+│   ├── verify_complete_e2e_walkthrough.py # 6-step judge automated verification
+│   └── verify_feature_count.py # 324-feature contract verification script
+│
+├── Dockerfile                  # Production container definition
+├── render.yaml                 # Render Blueprint specification for cloud deployment
+├── Procfile                    # PaaS process file (uvicorn web server)
+├── requirements.txt            # Pinned Python dependencies
+├── run.py                      # Multi-environment ASGI server launcher
+├── start_agrios.bat            # Windows 1-click server launch
+├── run_tests.bat               # Windows 1-click pytest test suite
+└── verify_e2e.bat              # Windows 1-click E2E verification
+```
 
 ---
 
 ## 🔑 Demo Personas (1-Click Login)
 
-All accounts are pre-seeded with password: `Admin@123`
+All demo accounts are pre-seeded with password: `Admin@123`
 
 | Portal | Role | Name | Email | Jurisdiction / Farm |
 |---|---|---|---|---|
-| **Farmer** | `farmer` | Balwinder Singh | `farmer@agrios.in` | Green Valley Farm, Ludhiana |
-| **Field Worker** | `worker` | Sunita Devi | `worker@agrios.in` | Jandiali Kalan Extension Zone |
-| **Agronomist** | `agronomist` | Dr. Priya Sharma | `agronomist@agrios.in` | Central Punjab Zone |
-| **Government** | `government` | Dr. Vikramaditya Sen | `gov@agrios.in` | Punjab Agriculture Dept |
+| **Lead Agronomist** | `agronomist` | Dr. Priya Sharma | `agronomist@agrios.in` | Central Punjab Agro-Climatic Zone |
+| **Farmer Custodian** | `farmer` | Balwinder Singh | `farmer@agrios.in` | Green Valley Farm, Ludhiana (14.2 Ha) |
+| **Krishi Sakhi** | `worker` | Sunita Devi | `worker@agrios.in` | Jandiali Kalan Extension Division |
+| **Director of Agriculture**| `government` | Dr. Vikramaditya Sen | `gov@agrios.in` | Punjab Agriculture & Food Directorate |
 
 ---
 
-## ⚡ Quickstart
+## ⚡ Local Quickstart
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Prerequisites
+- Python 3.10+ (Tested up to Python 3.14)
 
-2. **Run Server**:
-   ```bash
-   python run.py
-   ```
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-3. **Access Portals**:
-   - Flagship Login: `http://localhost:8000/`
-   - Farmer Portal: `http://localhost:8000/farmer.html`
-   - Krishi Sakhi: `http://localhost:8000/worker.html`
-   - Agronomist: `http://localhost:8000/agronomist.html`
-   - Command Center: `http://localhost:8000/government.html`
-   - Judge Simulator: `http://localhost:8000/simulator.html`
-   - API Docs: `http://localhost:8000/docs`
+### 2. Start the Server
+- **Windows**: Double-click `start_agrios.bat` or run:
+  ```bash
+  python run.py
+  ```
+- **macOS / Linux**:
+  ```bash
+  chmod +x start_agrios.sh
+  ./start_agrios.sh
+  ```
 
-4. **Run Automated Test Suite**:
-   ```bash
-   pytest tests/ -v
-   ```
+### 3. Open in Browser
+- **Landing Page**: [http://localhost:8000/](http://localhost:8000/)
+- **Login Portal**: [http://localhost:8000/login](http://localhost:8000/login)
+- **Judge's Sandbox**: [http://localhost:8000/simulator](http://localhost:8000/simulator)
+- **Interactive OpenAPI Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 4. Run Automated Test Suite
+- **Windows**: Double-click `run_tests.bat` or run:
+  ```bash
+  pytest tests/ -v
+  ```
+- **macOS / Linux**:
+  ```bash
+  chmod +x run_tests.sh
+  ./run_tests.sh
+  ```
 
 ---
 
-## 🛰️ 3D Digital Twin Boundary
+## ☁️ Deploying on Render
 
-Interactive 3D WebGL rendering is reserved for future Claude Opus integration. AGRIOS exposes:
-- **Contract Specification**: `GET /api/digital-twin/contract-spec`
-- **Telemetry Snapshot**: `GET /api/digital-twin/snapshot/{farm_id}`
-- **WebSocket Channel**: `/ws/live-feed` (Events: `DIGITAL_TWIN_TELEMETRY_UPDATED`, `FARM_HEALTH_UPDATED`, `SIMULATION_TRIGGERED`)
-- **Frontend Container Adapter**: `AgriosDigitalTwinAdapter` in `frontend/js/digital_twin.js`
+AGRIOS includes a native `render.yaml` Blueprint file for automated zero-configuration deployment:
+
+1. Push this repository to your GitHub account (`git push origin main`).
+2. Navigate to [Render Dashboard](https://dashboard.render.com/) and click **New +** &rarr; **Blueprint**.
+3. Select your repository: `AGRIOS---HACK-DEVENGERS-2.O`.
+4. Render automatically parses `render.yaml`:
+   - **Environment**: Python 3.11.9
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Healthcheck Path**: `/api/health`
+5. Click **Apply**. Once built, the live web service serves the About page at `https://<your-app>.onrender.com/`.
+
+---
+
+## 📱 Standalone Flutter Mobile App
+
+The native Android app is in `agrios_app/` with full cross-portal parity:
+- **Pre-Built APK**: Located in `apk_output/AGRIOS-debug.apk` (168.9 MB).
+- **Features Included**:
+  - Interactive 3D Farm Model with Orbit Controls & Plant Health Shader simulation
+  - Mobile Leaf Vision AI Camera Scanner with automated dual chemical/organic prescription formulary
+  - GPS Boundary Walk-and-Calibrate tool
+  - Judge Simulation Emergency Trigger
+  - SOP & Help Guide in all screens
