@@ -371,8 +371,8 @@ export class AgriosDigitalTwin3D {
       return;
     }
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = (container.clientWidth && container.clientWidth > 0) ? container.clientWidth : 800;
+    const height = (container.clientHeight && container.clientHeight > 0) ? container.clientHeight : 500;
 
     // 1. Scene & Background
     this.scene = new THREE.Scene();
@@ -435,6 +435,22 @@ export class AgriosDigitalTwin3D {
     this._resizeObserver.observe(container);
 
     console.log('[3D Twin] Engine initialized with upgraded visuals & CAD editor capabilities');
+  }
+
+  _onResize(container) {
+    const el = container || (this.renderer ? this.renderer.domElement.parentElement : null);
+    if (!el || !this.renderer || !this.camera) return;
+    const width = el.clientWidth || 800;
+    const height = el.clientHeight || 500;
+    if (width <= 0 || height <= 0) return;
+
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+
+    this.renderer.setSize(width, height);
+    if (this.labelRenderer) {
+      this.labelRenderer.setSize(width, height);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
